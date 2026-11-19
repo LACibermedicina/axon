@@ -2,7 +2,7 @@
 
 Áudio, foto de partitura ou cifra → partitura de piano com IA. Harmonize compassos selecionados, grave trechos que faltam, edite com drag & drop em camadas, publique na biblioteca e exporte MIDI, PDF, WAV e MP3.
 
-**Versão:** `0.1.5-alpha` (ver [CHANGELOG](CHANGELOG.md))
+**Versão:** `0.1.6-alpha` (ver [CHANGELOG](CHANGELOG.md))
 
 ## Arquitetura
 
@@ -26,6 +26,20 @@
 | `ai-worker/` | Motor musical e pipelines de IA (`harmonia_ai`) e testes |
 | `realtime/` | Servidor WebSocket: chat, sinalização WebRTC e eventos |
 | `frontend/` | Desktop web (Vite + TypeScript + Three.js) |
+
+## Atualizações automáticas
+
+```
+commit no GitHub (main) ──▶ CI: testes + build ──▶ VPS verifica a cada 5 min (systemd timer)
+                                                     └─▶ aplica só se o CI passou ─▶ health check ─▶ ok
+                                                                                     └─ falhou ─▶ rollback
+```
+
+- Estado: Administração → 🔄 Atualizações, ou `/opt/harmonia/data/status/autoupdate.log`.
+- Forçar agora: `sudo -u deploy bash /opt/harmonia/infra/scripts/autoupdate.sh` (`--force` ignora o CI).
+- Pausar: `AUTOUPDATE=0` no `.env` (ou `sudo systemctl disable --now harmonia-autoupdate.timer`).
+- Repositório privado: use `AUTOUPDATE_REPO=git@github.com:LACibermedicina/harmonia.git` e adicione a chave pública do usuário `deploy` como *Deploy key* (somente leitura).
+- O que **não** é atualizado automaticamente: o vhost do nginx, os pacotes do sistema e as unidades systemd. Para esses, rode o instalador de novo.
 
 ## Regra de portas
 

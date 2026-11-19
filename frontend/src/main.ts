@@ -21,7 +21,7 @@ import { PanelDock } from "./core/paneldock";
 import { mountProperties, mountAnnotations } from "./modules/inspector";
 import * as audio from "./core/audio";
 
-const VERSION = "0.1.5-alpha";
+const VERSION = "0.1.6-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1060, innerWidth - 206 - 312 - 24)), height: 640, x: 206, y: 46, mount: mountScoreEditor },
@@ -158,6 +158,32 @@ async function publicRoutes() {
   return false;
 }
 
+/** O servidor se atualiza sozinho; quando a versão muda, oferece recarregar sem perder o trabalho. */
+function watchForUpdates() {
+  let running = "";
+  const check = async () => {
+    try {
+      const v = (await (await fetch("/api/health", { cache: "no-store" })).json()).version as string;
+      if (!running) { running = v; return; }
+      if (v && v !== running && !document.querySelector(".update-bar")) {
+        const bar = h("div", { class: "update-bar", role: "status" },
+          h("span", {}, `✨ Nova versão do harmonIA instalada (${v}).`),
+          h("button", { class: "btn primary", onclick: async () => {
+            if (currentUser && store.compositionId) {
+              try { await api(`/api/compositions/${store.compositionId}`, { method: "PATCH", json: { score: store.score, version: store.version } }); } catch { /* segue */ }
+            }
+            location.reload();
+          } }, "Recarregar agora"),
+          h("button", { class: "btn ghost", onclick: () => bar.remove() }, "Depois"));
+        document.body.append(bar);
+      }
+    } catch { /* offline: tenta de novo depois */ }
+  };
+  check();
+  setInterval(check, 3 * 60 * 1000);
+  addEventListener("focus", check);
+}
+
 async function boot() {
   installIconDefs();
   const app = document.getElementById("app")!;
@@ -180,6 +206,7 @@ async function boot() {
     catch (e: any) { toast("Autosave: " + e.message, "warn"); }
   });
   document.addEventListener("visibilitychange", () => document.hidden && audio.stop());
+  watchForUpdates();
   await restoreSession();
   if (!(await publicRoutes())) {
     open("compose");

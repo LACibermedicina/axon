@@ -25,16 +25,33 @@ scp -q "$ZIP" "$U@$VPS:/tmp/harmonia.zip"
 scp -q ~/.ssh/harmonia_deploy.pub "$U@$VPS:/tmp/harmonia_deploy.pub"
 ssh -t "$U@$VPS" "sudo bash -c 'set -e; rm -rf /tmp/harmonia-src && mkdir -p /tmp/harmonia-src && cd /tmp/harmonia-src && (command -v unzip >/dev/null || apt-get install -y unzip >/dev/null) && unzip -q /tmp/harmonia.zip && bash harmonia/infra/scripts/setup-vps.sh \"$EMAIL\" /tmp/harmonia_deploy.pub; rm -f /tmp/harmonia.zip'"
 
-# 4) Teste da chave de deploy e dados para o GitHub
+# 4) Publica o código no GitHub (origem das atualizações automáticas da VPS)
+REPO_URL="https://github.com/LACibermedicina/harmonia.git"
+rm -rf /tmp/harmonia-git && mkdir -p /tmp/harmonia-git && unzip -q "$ZIP" -d /tmp/harmonia-git
+if [[ -d /tmp/harmonia-git/harmonia/.git ]]; then
+  cd /tmp/harmonia-git/harmonia
+  echo "☁️  Enviando o código para $REPO_URL (pode pedir login do GitHub na 1ª vez)…"
+  if git push "$REPO_URL" HEAD:main --tags 2>/tmp/harmonia-push.log; then
+    echo "✅ GitHub atualizado — a VPS vai aplicar sozinha as próximas versões publicadas lá."
+  elif grep -qiE "rejected|fetch first|non-fast-forward" /tmp/harmonia-push.log; then
+    echo "ℹ️  O GitHub já tem uma versão mais nova que este pacote — nada a enviar."
+  else
+    echo "⚠️  Não consegui enviar ao GitHub (login). Veja /tmp/harmonia-push.log."
+    echo "   Solução rápida: brew install gh && gh auth login && gh auth setup-git — depois rode este instalador de novo."
+  fi
+  cd - >/dev/null
+fi
+
+# 5) Teste da chave de deploy e dados para o GitHub
 if ssh -i ~/.ssh/harmonia_deploy -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy@"$VPS" "docker compose -f /opt/harmonia/docker-compose.yml ps --format '{{.Service}}: {{.State}}'"; then
   echo "✅ Chave de deploy OK."
 fi
 pbcopy < ~/.ssh/harmonia_deploy
 cat <<MSG
 
-──────────────── GitHub (Settings → Environments → production → secrets) ────────────────
-  VPS_HOST     = $VPS
-  VPS_USER     = deploy
-  VPS_SSH_KEY  = (já está na área de transferência — só colar com ⌘V)
-──────────────────────────────────────────────────────────────────────────────────────────
+────────────────────────────── Atualizações automáticas ──────────────────────────────
+  A VPS verifica o GitHub a cada 5 min e aplica sozinha toda versão nova com testes OK.
+  Não é preciso cadastrar secrets no GitHub. (Opcional: deploy por push → variável
+  DEPLOY_MODE=push + secrets VPS_HOST=$VPS, VPS_USER=deploy, VPS_SSH_KEY — chave já copiada.)
+────────────────────────────────────────────────────────────────────────────────────────
 MSG

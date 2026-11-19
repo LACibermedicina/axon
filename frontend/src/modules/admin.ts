@@ -9,7 +9,21 @@ export function mountAdmin(body: HTMLElement) {
   const tabs = h("div", { class: "tabs" });
   const main = h("div");
   body.append(tabs, main);
-  const views: Record<string, () => Promise<HTMLElement>> = { "📊 Visão geral": overview, "👥 Usuários": users, "🌐 Moderação": moderation, "🧾 Auditoria LGPD": audit };
+  const views: Record<string, () => Promise<HTMLElement>> = { "📊 Visão geral": overview, "👥 Usuários": users, "🌐 Moderação": moderation, "🧾 Auditoria LGPD": audit, "🔄 Atualizações": updates };
+
+  async function updates() {
+    const [sys, hc] = await Promise.all([api("/api/admin/system"), api("/api/health")]);
+    const au = sys.autoupdate;
+    const label: Record<string, string> = { ok: "✅ Em dia", updating: "⏳ Aplicando atualização", waiting: "⏳ Aguardando testes (CI)", blocked: "⛔ Versão bloqueada", rolled_back: "↩️ Revertido", error: "⚠️ Erro", disabled: "⏸ Desativado" };
+    return h("div", {},
+      h("div", { class: "stats" },
+        h("div", { class: "stat" }, h("b", {}, hc.version), h("small", {}, "versão em execução")),
+        h("div", { class: "stat" }, h("b", { style: { fontSize: "16px" } }, au ? (label[au.state] || au.state) : "—"), h("small", {}, au ? new Date(au.at).toLocaleString() : "sem registro ainda")),
+        h("div", { class: "stat" }, h("b", { style: { fontSize: "16px" } }, au?.sha ? au.sha.slice(0, 7) : hc.commit), h("small", {}, "commit"))),
+      h("p", {}, au ? au.message : "A atualização automática registra o estado aqui após a primeira verificação (a cada 5 minutos)."),
+      h("p", { class: "hint" }, "Fluxo: alteração publicada no GitHub → testes automáticos (CI) → a VPS verifica a cada 5 min e aplica só versões aprovadas → se o app não responder, volta sozinho para a versão anterior."),
+      sys.log.length ? h("pre", { class: "mono log-box" }, sys.log.join("\n")) : "");
+  }
   let cur = Object.keys(views)[0];
   const go = async (k: string) => {
     cur = k;

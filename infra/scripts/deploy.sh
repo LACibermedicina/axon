@@ -25,6 +25,6 @@ echo "[deploy] portas: HTTP 127.0.0.1:$(env_get .env HTTP_PORT) · TURN $(env_ge
 export GIT_SHA="$SHA"
 docker compose build --pull
 docker compose up -d --remove-orphans
-docker compose exec -T api python -m app.migrate
+for _ in $(seq 1 30); do docker compose exec -T api python -m app.migrate && break; sleep 3; done
 docker image prune -f >/dev/null
 docker compose ps

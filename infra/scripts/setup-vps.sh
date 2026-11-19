@@ -54,7 +54,7 @@ fi
 log "2/9 Pacotes"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y >/dev/null 2>&1 || warn "apt-get update teve avisos (repositórios de terceiros) — seguindo."
-apt-get install -y ca-certificates curl gnupg rsync jq iproute2 openssl unzip dnsutils >/dev/null
+apt-get install -y ca-certificates curl gnupg rsync jq iproute2 openssl unzip dnsutils git >/dev/null
 ok "ok"
 
 # ------------------------------------------------------------ 3. docker/compose
@@ -92,11 +92,12 @@ chmod 700 "/home/${DEPLOY_USER}/.ssh"; chmod 600 "/home/${DEPLOY_USER}/.ssh/auth
 
 # ------------------------------------------------------------------ 5. código
 log "5/9 Código em ${APP_DIR}"
-install -d "$APP_DIR" "$APP_DIR/data/postgres" "$APP_DIR/data/redis" "$APP_DIR/data/media" "$APP_DIR/data/models" "$APP_DIR/data/backups"
+install -d "$APP_DIR" "$APP_DIR/data/postgres" "$APP_DIR/data/redis" "$APP_DIR/data/media" "$APP_DIR/data/models" "$APP_DIR/data/backups" "$APP_DIR/data/status"
 if [[ "$SRC_DIR" != "$APP_DIR" ]]; then
   rsync -a --delete --exclude '.env' --exclude 'data/' --exclude '.git/' --exclude 'node_modules/' "$SRC_DIR/" "$APP_DIR/"
 fi
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
+git config --system --add safe.directory "$APP_DIR" 2>/dev/null || true
 chown -R 70:70 "$APP_DIR/data/postgres" 2>/dev/null || true   # uid do postgres (alpine)
 ok "Versão $(cat "$APP_DIR/VERSION")"
 
@@ -127,6 +128,11 @@ else
   ok ".env existente preservado"
 fi
 env_set "$ENV" AI_ML "$AI_ML"
+# atualização automática (pull do GitHub, só commits com CI verde)
+[[ -n "$(env_get "$ENV" AUTOUPDATE)" ]] || env_set "$ENV" AUTOUPDATE 1
+[[ -n "$(env_get "$ENV" AUTOUPDATE_REPO)" ]] || env_set "$ENV" AUTOUPDATE_REPO "${AUTOUPDATE_REPO:-https://github.com/LACibermedicina/harmonia.git}"
+[[ -n "$(env_get "$ENV" AUTOUPDATE_BRANCH)" ]] || env_set "$ENV" AUTOUPDATE_BRANCH main
+[[ -n "$(env_get "$ENV" AUTOUPDATE_REQUIRE_CI)" ]] || env_set "$ENV" AUTOUPDATE_REQUIRE_CI 1
 env_set "$ENV" API_WORKERS "$([[ "$MEM_MB" -lt 4000 ]] && echo 1 || echo 2)"
 chmod 600 "$ENV"
 
@@ -241,6 +247,36 @@ if [[ "$need_cert" == "1" || ! -d "/etc/letsencrypt/live/${SUBDOMINIO}" ]] && [[
   fi
 elif [[ -d "/etc/letsencrypt/live/${SUBDOMINIO}" ]]; then CERT_OK=1; fi
 
+# ---------------------------------------------- atualização automática (systemd)
+cat > /etc/systemd/system/harmonia-autoupdate.service <<UNIT
+[Unit]
+Description=harmonIA - atualizacao automatica a partir do GitHub
+After=network-online.target docker.service
+Wants=network-online.target
+[Service]
+Type=oneshot
+User=${DEPLOY_USER}
+Group=docker
+WorkingDirectory=${APP_DIR}
+ExecStart=/bin/bash ${APP_DIR}/infra/scripts/autoupdate.sh
+Nice=10
+TimeoutStartSec=45min
+UNIT
+cat > /etc/systemd/system/harmonia-autoupdate.timer <<UNIT
+[Unit]
+Description=harmonIA - verifica atualizacoes a cada 5 minutos
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30
+Persistent=true
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now harmonia-autoupdate.timer >/dev/null
+ok "Atualização automática ativa (a cada 5 min, só versões com CI verde) — log: ${APP_DIR}/data/status/autoupdate.log"
+
 cat > /etc/cron.d/harmonia-backup <<EOF
 40 2 * * * ${DEPLOY_USER} cd ${APP_DIR} && bash infra/scripts/backup.sh
 EOF
@@ -253,3 +289,4 @@ echo "   IA:              $([[ $AI_ML == 1 ]] && echo completa || echo 'leve (se
 echo "   Login admin:     $(env_get "$ENV" ADMIN_EMAIL)"
 echo "   Senha admin:     $(env_get "$ENV" ADMIN_PASSWORD)   ← troque após o 1º acesso"
 echo "   Status:          cd ${APP_DIR} && docker compose ps"
+echo "   Atualizações:    automáticas (GitHub → VPS a cada 5 min) · log: ${APP_DIR}/data/status/autoupdate.log"

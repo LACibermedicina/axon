@@ -1,5 +1,5 @@
 # harmonIA — CI/CD: testes + deploy automático na VPS via SSH a cada push na main
-name: deploy-harmonia
+name: ci-harmonia
 
 on:
   push:
@@ -46,8 +46,11 @@ jobs:
           npm ci
           npm run build
 
+  # Modo padrão é "pull": a VPS verifica o GitHub a cada 5 min e só aplica commits com este CI verde
+  # (infra/scripts/autoupdate.sh). Para deploy por push via SSH, crie a variável DEPLOY_MODE=push.
   deploy:
     needs: test
+    if: ${{ vars.DEPLOY_MODE == 'push' }}
     runs-on: ubuntu-latest
     environment: production
     steps:

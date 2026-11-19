@@ -78,3 +78,23 @@ def unpublish(cid: int, admin: User = Depends(admin_only), db: Session = Depends
     comp.visibility, comp.featured = "private", False
     db.add(AuditLog(user_id=admin.id, action="admin_unpublish", detail={"composition": cid})); db.commit()
     return {"ok": True}
+
+
+@router.get("/system")
+def system(_: User = Depends(admin_only)):
+    """Estado da atualização automática (gravado pelo autoupdate.sh na VPS)."""
+    import json
+    import os
+    base = os.getenv("STATUS_DIR", "/data/status")
+    out: dict = {"autoupdate": None, "log": []}
+    try:
+        with open(os.path.join(base, "autoupdate.json")) as f:
+            out["autoupdate"] = json.load(f)
+    except (OSError, ValueError):
+        pass
+    try:
+        with open(os.path.join(base, "autoupdate.log")) as f:
+            out["log"] = [ln.rstrip() for ln in f.readlines()[-40:]]
+    except OSError:
+        pass
+    return out

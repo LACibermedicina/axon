@@ -79,3 +79,6 @@ def test_admin_only():
     assert c.patch(f"/api/admin/users/{other['id']}", json={"role": "student"}, headers=ha).status_code == 200
     assert c.get("/api/admin/stats", headers=ha).json()["users"] >= 2
     assert any(a["action"] == "admin_patch_user" for a in c.get("/api/admin/audit", headers=ha).json())
+    sysr = c.get("/api/admin/system", headers=ha)
+    assert sysr.status_code == 200 and "autoupdate" in sysr.json()
+    assert c.get("/api/admin/system", headers=h).status_code == 403

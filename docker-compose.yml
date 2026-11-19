@@ -35,7 +35,9 @@ services:
       MEDIA_ROOT: /data/media
       PUBLIC_BASE_URL: https://${SUBDOMINIO}
       GIT_SHA: ${GIT_SHA:-dev}
-    volumes: ["./data/media:/data/media"]
+    volumes:
+      - ./data/media:/data/media
+      - ./data/status:/data/status:ro   # estado da atualização automática (painel Administração)
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }

@@ -445,3 +445,7 @@ body.panel-dragging, body.panel-dragging * { cursor: grabbing !important; user-s
   background: color-mix(in srgb, var(--lc) 14%, #fff); border: 1px solid color-mix(in srgb, var(--lc) 50%, #fff); }
 .layer-tag::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--lc); }
 .score-legend .lg-chips { max-height: 58px; overflow-y: auto; }
+
+.update-bar { position: fixed; top: 34px; left: 50%; transform: translateX(-50%); z-index: 9500; display: flex; gap: 10px; align-items: center;
+  background: #fff; padding: 8px 10px 8px 16px; border-radius: 14px; box-shadow: var(--shadow); animation: pop .25s ease; }
+.log-box { background: #1b1630; color: #d9d2ff; padding: 10px; border-radius: 10px; font-size: 11px; max-height: 260px; overflow: auto; white-space: pre-wrap; }

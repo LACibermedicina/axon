@@ -2,6 +2,25 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.6-alpha] — 2026-11-19
+
+### Adicionado — atualizações automáticas
+- **`infra/scripts/autoupdate.sh` + systemd timer (`harmonia-autoupdate.timer`)**. A cada 5 minutos a VPS:
+  1. consulta o GitHub (`LACibermedicina/harmonia`, branch `main`);
+  2. aplica só commits cujo CI (testes + build) passou;
+  3. reconstrói, reinicia e confere `/api/health`;
+  4. se falhar, faz **rollback** automático para a versão anterior e bloqueia o commit ruim.
+
+  Preserva `.env` e `data/`. É o modelo "pull": nenhuma chave da VPS fica guardada no GitHub.
+- O script executa uma cópia temporária de si mesmo, porque a atualização pode substituir o próprio arquivo, e usa trava (`flock`) contra execuções simultâneas.
+- Aviso no app: quando o servidor muda de versão, aparece "Nova versão instalada — Recarregar agora". Antes de recarregar, salva a composição aberta.
+- Administração → **🔄 Atualizações**: versão em execução, estado (em dia, aguardando CI, aplicando, revertido), commit e log (`/api/admin/system`).
+- `instalar-do-mac.sh` publica o código no GitHub ao final, e esse repositório passa a ser a origem das atualizações.
+
+### Alterado
+- Workflow renomeado para `ci-harmonia`. O job de deploy por SSH só roda com a variável `DEPLOY_MODE=push`; por padrão o CI só testa e a VPS busca sozinha.
+- `deploy.sh` tenta a migração várias vezes enquanto a API inicia. O setup instala `git` e configura as variáveis `AUTOUPDATE_*`.
+
 ## [0.1.5-alpha] — 2026-11-19
 
 ### Corrigido
