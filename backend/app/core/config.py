@@ -7,8 +7,10 @@ from functools import lru_cache
 class Settings:
     def __init__(self) -> None:
         self.project = os.getenv("PROJETO_NOME", "harmonia")
-        self.version = open(os.path.join(os.path.dirname(__file__), "..", "..", "VERSION")).read().strip() \
-            if os.path.exists(os.path.join(os.path.dirname(__file__), "..", "..", "VERSION")) else "0.1.0-alpha"
+        here = os.path.dirname(__file__)
+        vf = next((p for p in (os.path.join(here, "..", "..", "VERSION"), os.path.join(here, "..", "..", "..", "VERSION"))
+                   if os.path.exists(p)), None)
+        self.version = open(vf).read().strip() if vf else "dev"
         self.database_url = os.getenv("DATABASE_URL", "sqlite:///./harmonia.db")
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.jwt_secret = os.getenv("JWT_SECRET", "dev-secret-change-me-dev-secret-change-me")

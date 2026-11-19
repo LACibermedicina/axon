@@ -23,6 +23,7 @@ const D: Record<string, Record<Lang, string>> = {
   graph: { pt: "Fluxo de IA", en: "AI Flow", es: "Flujo de IA", zh: "AI 流程", hi: "एआई प्रवाह" },
   agenda: { pt: "Agenda", en: "Calendar", es: "Agenda", zh: "日程", hi: "कैलेंडर" },
   community: { pt: "Comunidade", en: "Community", es: "Comunidad", zh: "社区", hi: "समुदाय" },
+  admin: { pt: "Administração", en: "Administration", es: "Administración", zh: "管理", hi: "प्रशासन" },
   account: { pt: "Conta", en: "Account", es: "Cuenta", zh: "账户", hi: "खाता" },
   play: { pt: "Tocar", en: "Play", es: "Reproducir", zh: "播放", hi: "चलाएँ" },
   stop: { pt: "Parar", en: "Stop", es: "Detener", zh: "停止", hi: "रोकें" },

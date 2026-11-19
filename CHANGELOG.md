@@ -2,6 +2,17 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.3-alpha] — 2026-11-19
+
+### Adicionado
+- **Administração** (somente o papel `admin`): visão geral com estatísticas, usuários (busca, troca de papel, bloquear/liberar acesso), moderação da biblioteca pública (despublicar) e trilha de auditoria LGPD. Endpoints `/api/admin/*` validados no servidor; o admin não consegue remover o próprio acesso.
+- **Inserir compasso**: um "+" discreto em cada barra de compasso (entre compassos, no início e no final). Alt+clique insere 4 compassos. As notas que cruzam a barra são divididas, e cifras, anotações, gravações e a seleção são deslocadas. Funciona com desfazer (⌘Z).
+
+### Alterado
+- **Fluxo de IA** e **Administração** ficam ocultos no Dock, no menu lateral, nos ícones do desktop e no menu Janelas para quem não é admin. A abertura direta é bloqueada, e as janelas administrativas fecham ao sair da conta.
+- `instalar-do-mac.sh` passa a usar o pacote `harmonia-v*.zip` mais recente e recusa os usuários `deploy` e `root` no login.
+- A API lê a versão do arquivo `VERSION` da raiz também em desenvolvimento.
+
 ## [0.1.2-alpha] — 2026-11-19
 
 ### Adicionado

@@ -1,6 +1,8 @@
 import os, sys, tempfile
 os.environ["DATABASE_URL"] = "sqlite:///" + tempfile.mktemp(suffix=".db")
 os.environ["MEDIA_ROOT"] = tempfile.mkdtemp()
+os.environ["ADMIN_EMAIL"] = "admin@m3d.pro"
+os.environ["ADMIN_PASSWORD"] = "admin-segredo-1"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "ai-worker"))
 import fakeredis
 from fastapi.testclient import TestClient
@@ -61,3 +63,19 @@ def test_flow():
     # LGPD
     exp = c.get("/api/account/export", headers=h).json()
     assert exp["user"]["email"] == "a@b.com" and exp["compositions"]
+
+
+def test_admin_only():
+    h = auth()
+    assert c.get("/api/admin/users", headers=h).status_code == 403
+    assert c.get("/api/admin/stats", headers=h).status_code == 403
+    r = c.post("/api/auth/login", json={"email": "admin@m3d.pro", "password": "admin-segredo-1"}).json()
+    ha = {"Authorization": "Bearer " + r["token"]}
+    assert r["user"]["role"] == "admin"
+    users = c.get("/api/admin/users", headers=ha).json()
+    me = next(u for u in users if u["email"] == "admin@m3d.pro")
+    other = next(u for u in users if u["email"] == "a@b.com")
+    assert c.patch(f"/api/admin/users/{me['id']}", json={"role": "viewer"}, headers=ha).status_code == 400
+    assert c.patch(f"/api/admin/users/{other['id']}", json={"role": "student"}, headers=ha).status_code == 200
+    assert c.get("/api/admin/stats", headers=ha).json()["users"] >= 2
+    assert any(a["action"] == "admin_patch_user" for a in c.get("/api/admin/audit", headers=ha).json())

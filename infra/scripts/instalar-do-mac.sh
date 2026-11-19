@@ -3,12 +3,14 @@
 set -euo pipefail
 VPS="159.223.22.82"
 [[ "$(uname)" == "Darwin" ]] || { echo "⚠️  Rode este script no seu Mac (Terminal), não na VPS."; exit 1; }
-read -rp "Usuário SSH da VPS [lucasdasilvateixeira]: " U </dev/tty; U="${U:-lucasdasilvateixeira}"
+read -rp "Seu usuário SSH na VPS (o que tem sudo) [lucasdasilvateixeira]: " U </dev/tty; U="${U:-lucasdasilvateixeira}"
+if [[ "$U" == "deploy" || "$U" == "root" ]]; then echo "ℹ️  Use o seu usuário pessoal (com sudo), não '$U'. Usando lucasdasilvateixeira."; U="lucasdasilvateixeira"; fi
 read -rp "E-mail para o certificado SSL (Let's Encrypt): " EMAIL </dev/tty
 [[ "$EMAIL" == *@*.* ]] || { echo "E-mail inválido"; exit 1; }
 
-ZIP="$(ls -t ~/Downloads/harmonia-v0.1.2-alpha*.zip ~/Desktop/harmonia-v0.1.2-alpha*.zip ~/dev/harmonia-v0.1.2-alpha*.zip ./harmonia-v0.1.2-alpha*.zip 2>/dev/null | head -1 || true)"
-[[ -n "$ZIP" && -f "$ZIP" ]] || { echo "❌ Não achei harmonia-v0.1.2-alpha.zip em Downloads/Desktop/dev. Baixe o arquivo do chat e rode de novo."; exit 1; }
+# Usa o pacote mais recente (harmonia-vX.Y.Z-alpha.zip) — ou o caminho passado como 1º argumento
+ZIP="${1:-$(ls -t ~/Downloads/harmonia-v*.zip ~/Desktop/harmonia-v*.zip ~/dev/harmonia-v*.zip 2>/dev/null | head -1 || true)}"
+[[ -n "$ZIP" && -f "$ZIP" ]] || { echo "❌ Não achei harmonia-v*.zip em Downloads/Desktop/dev. Baixe o arquivo do chat e rode de novo."; exit 1; }
 echo "📦 Pacote: $ZIP"
 
 # 1) Chave pessoal do Mac → login sem senha na VPS (pede a senha só desta vez)

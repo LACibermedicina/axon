@@ -94,6 +94,37 @@ class Store {
       }
     }, "merge");
   }
+
+  /** Insere `count` compassos vazios antes do compasso `at` (at = measures → no final).
+   *  Desloca notas, cifras, anotações, gravações e seleção; notas que cruzam o ponto são divididas. */
+  insertMeasure(at: number, count = 1) {
+    const s = this.score;
+    const bpm = (s.timeSig[0] * 4) / s.timeSig[1];
+    at = Math.max(0, Math.min(at, s.measures));
+    const cut = at * bpm, shift = bpm * count;
+    this.mutate((sc) => {
+      for (const l of sc.layers) {
+        const extra: typeof l.notes = [];
+        for (const n of l.notes) {
+          if (n.start >= cut - 1e-6) n.start += shift;
+          else if (n.start + n.dur > cut + 1e-6) { // cruza a barra: divide em duas partes
+            extra.push({ ...n, id: Math.random().toString(36).slice(2, 12), start: cut + shift, dur: n.start + n.dur - cut, lyric: null });
+            n.dur = cut - n.start;
+          }
+        }
+        l.notes.push(...extra);
+        if (l.kind === "recording") {
+          if (l.measures) l.measures = l.measures.map((m) => (m >= at ? m + count : m));
+          if ((l.audioOffset || 0) >= cut * (60 / sc.tempo) - 1e-6) l.audioOffset = (l.audioOffset || 0) + shift * (60 / sc.tempo);
+        }
+      }
+      while (sc.chords.length < sc.measures) sc.chords.push([]);
+      sc.chords.splice(at, 0, ...Array.from({ length: count }, () => []));
+      for (const a of sc.annotations) if (a.measure >= at) a.measure += count;
+      sc.measures += count;
+      this.selectedMeasures = new Set([...this.selectedMeasures].map((m) => (m >= at ? m + count : m)));
+    }, "insert-measure");
+  }
 }
 
 export const store = new Store();

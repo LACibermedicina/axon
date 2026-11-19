@@ -193,6 +193,16 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       const last = sys.firstMeasure + k === s.measures;
       g.append(svg("line", { x1: bx, x2: bx, y1: sys.trebleY, y2: sys.bassY + 40, class: last ? "barline final" : "barline" }));
     }
+    // "+" discreto nas barras: insere compasso entre os compassos e ao final
+    for (let k = sys.index === 0 ? 0 : 1; k <= sys.nMeasures; k++) {
+      const at = sys.firstMeasure + k;
+      const bx = sys.left + k * mW;
+      const isEnd = at === s.measures;
+      const pg = svg("g", { class: "ins-measure" + (isEnd ? " end" : ""), "data-insert": at, transform: `translate(${bx + (isEnd ? 12 : 0)},${sys.trebleY - 12})` });
+      const title = svg("title", {}, isEnd ? "Adicionar compasso no final" : at === 0 ? "Inserir compasso no início" : `Inserir compasso entre ${at} e ${at + 1}`);
+      pg.append(title, svg("circle", { r: 7, "data-insert": at }), svg("path", { d: "M-3.5 0H3.5M0 -3.5V3.5", "data-insert": at }));
+      g.append(pg);
+    }
     // claves, armadura, fórmula
     g.append(svg("text", { x: 14, y: sys.trebleY + 31, class: "clef" }, "𝄞"));
     g.append(svg("text", { x: 14, y: sys.bassY + 21, class: "clef bass" }, "𝄢"));
@@ -339,6 +349,13 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const chordM = t0.closest<SVGElement>("[data-chord-measure]")?.dataset.chordMeasure;
     const annEl = t0.closest<SVGGElement>(".annotation");
 
+    const ins = t0.closest<SVGElement>("[data-insert]")?.dataset.insert;
+    if (ins !== undefined) {
+      const at = +ins;
+      store.insertMeasure(at, ev.altKey ? 4 : 1);
+      toast(ev.altKey ? `4 compassos inseridos a partir do ${at + 1}` : at >= store.score.measures - 1 ? "Compasso adicionado no final" : `Compasso inserido na posição ${at + 1}`, "ok", 1800);
+      return;
+    }
     if (measureBand !== undefined) {
       const m = +measureBand;
       if (ev.shiftKey && store.selectedMeasures.size) {

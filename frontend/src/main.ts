@@ -16,9 +16,10 @@ import { mountAgenda } from "./modules/agenda";
 import { mountCommunity } from "./modules/community";
 import { mountAccount } from "./modules/account";
 import { mountAvatar } from "./modules/avatar";
+import { mountAdmin } from "./modules/admin";
 import * as audio from "./core/audio";
 
-const VERSION = "0.1.2-alpha";
+const VERSION = "0.1.3-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: 1060, height: 640, x: 206, y: 46, mount: mountScoreEditor },
@@ -30,9 +31,21 @@ const APPS: Record<string, AppDef> = {
   agenda: { id: "agenda", title: t("agenda"), icon: ICONS.agenda, width: 820, height: 520, mount: mountAgenda },
   community: { id: "community", title: t("community"), icon: ICONS.community, width: 860, height: 540, mount: mountCommunity },
   account: { id: "account", title: t("account"), icon: ICONS.account, width: 460, height: 560, mount: mountAccount },
+  admin: { id: "admin", title: t("admin"), icon: ICONS.admin, width: 920, height: 560, mount: mountAdmin },
 };
-const ORDER = ["compose", "import", "layers", "mixer", "library", "graph", "agenda", "community", "account"];
-const open = (id: string) => APPS[id] && openApp(APPS[id]);
+const ORDER = ["compose", "import", "layers", "mixer", "library", "graph", "agenda", "community", "admin", "account"];
+// Funções administrativas: visíveis e acessíveis somente ao papel admin (o servidor também valida)
+const ADMIN_ONLY = new Set(["graph", "admin"]);
+const isAdmin = () => currentUser?.role === "admin";
+const allowed = (id: string) => !ADMIN_ONLY.has(id) || isAdmin();
+const visible = () => ORDER.filter(allowed);
+const open = (id: string) => {
+  if (!APPS[id]) return;
+  if (!allowed(id)) { toast("Acesso restrito ao administrador", "warn"); return; }
+  return openApp(APPS[id]);
+};
+// Ao sair/trocar de conta, fecha janelas administrativas abertas
+addEventListener("auth", () => openWindows().forEach((w) => !allowed(w.app.id) && w.close()));
 
 function menubar() {
   const clock = h("span", { class: "clock", "data-noi18n": "" });
@@ -46,13 +59,19 @@ function menubar() {
     const m = h("div", { class: "mb-menu" }, h("button", { class: "mb-item", onclick: (e: Event) => { e.stopPropagation(); document.querySelectorAll(".mb-menu.open").forEach((x) => x !== m && x.classList.remove("open")); m.classList.toggle("open"); } }, label), dd);
     return m;
   };
+  const menuDyn = (label: string, items: () => [string, () => void][]) => {
+    const m = menu(label, []);
+    const dd = m.querySelector(".dropdown")!;
+    m.querySelector(".mb-item")!.addEventListener("click", () => dd.replaceChildren(...items().map(([l, fn]) => h("button", { onclick: () => { m.classList.remove("open"); fn(); } }, l))));
+    return m;
+  };
   addEventListener("click", () => document.querySelectorAll(".mb-menu.open").forEach((x) => x.classList.remove("open")));
   return h("header", { class: "menubar" },
     h("button", { class: "mb-logo", onclick: () => about(), "aria-label": "Sobre o harmonIA" }, h("b", {}, "harmon"), h("i", {}, "IA")),
     menu("Arquivo", [["Nova composição", () => { if (confirm("Começar uma composição nova? (a atual continua na biblioteca se foi salva)")) store.load({ title: "Sem título", tempo: 96, timeSig: [4, 4], keySig: 0, measures: 8, layers: [], chords: [], annotations: [] }); }],
       ["Importar áudio / foto / cifra…", () => open("import")], ["Biblioteca", () => open("library")], ["Exportar…", () => open("mixer")]]),
     menu("Editar", [["Desfazer ⌘Z", () => store.undoOp()], ["Refazer ⇧⌘Z", () => store.redoOp()], ["Selecionar todos os compassos", () => { store.selectedMeasures = new Set([...Array(store.score.measures).keys()]); store.emit("selection"); }]]),
-    menu("Janelas", ORDER.map((id) => [APPS[id].title, () => open(id)] as [string, () => void])),
+    menuDyn("Janelas", () => visible().map((id) => [APPS[id].title, () => open(id)] as [string, () => void])),
     menu("Ajuda", [["Atalhos de teclado", shortcuts], ["Sobre / versão", about]]),
     h("span", { class: "spacer" }), clock, userBtn);
 }
@@ -68,16 +87,16 @@ function sidebar() {
   const nav = h("nav", { class: "sidebar", "aria-label": "Navegação" });
   const draw = () => nav.replaceChildren(
     h("button", { class: "sb-toggle", title: "Recolher/expandir", onclick: () => document.body.classList.toggle("sb-collapsed") }, "☰"),
-    ...ORDER.map((id) => h("button", { class: "sb-item" + (openWindows().some((w) => w.app.id === id) ? " running" : ""), onclick: () => open(id), title: APPS[id].title },
+    ...visible().map((id) => h("button", { class: "sb-item" + (openWindows().some((w) => w.app.id === id) ? " running" : ""), onclick: () => open(id), title: APPS[id].title },
       h("span", { class: "sb-ic", html: APPS[id].icon }), h("span", { class: "sb-label", "data-i18n": id }, t(id)))));
-  onWindowsChange(draw); draw();
+  onWindowsChange(draw); addEventListener("auth", draw); draw();
   return nav;
 }
 
 function dock() {
   const d = h("footer", { class: "dock", role: "toolbar", "aria-label": "Dock" });
   const draw = () => {
-    d.replaceChildren(...ORDER.map((id) => {
+    d.replaceChildren(...visible().map((id) => {
       const running = openWindows().filter((w) => w.app.id === id);
       return h("button", { class: "dock-item" + (running.length ? " running" : ""), "aria-label": APPS[id].title,
         onclick: () => (running.length && running[0].el.classList.contains("min") ? restoreWindow(running[0]) : open(id)) },
@@ -90,14 +109,17 @@ function dock() {
     });
     d.onpointerleave = () => d.querySelectorAll<HTMLElement>(".dock-item").forEach((it) => it.style.setProperty("--s", "1"));
   };
-  onWindowsChange(draw); draw();
+  onWindowsChange(draw); addEventListener("auth", draw); draw();
   return d;
 }
 
 function desktopIcons() {
-  return h("div", { class: "desk-icons" }, ...["import", "library", "graph"].map((id) =>
+  const box = h("div", { class: "desk-icons" });
+  const draw = () => box.replaceChildren(...["import", "library", "graph", "admin"].filter(allowed).map((id) =>
     h("button", { class: "desk-icon", ondblclick: () => open(id), onclick: (e: Event) => (e.currentTarget as HTMLElement).classList.toggle("sel") },
       h("span", { html: APPS[id].icon }), h("small", { "data-i18n": id }, t(id)))));
+  addEventListener("auth", draw); draw();
+  return box;
 }
 
 function shortcuts() {

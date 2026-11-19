@@ -2,7 +2,7 @@
 
 Áudio, foto de partitura ou cifra → partitura de piano com IA. Harmonize compassos selecionados, grave trechos que faltam, edite com drag & drop em camadas, publique na biblioteca e exporte MIDI, PDF, WAV e MP3.
 
-**Versão:** `0.1.2-alpha` (ver [CHANGELOG](CHANGELOG.md))
+**Versão:** `0.1.3-alpha` (ver [CHANGELOG](CHANGELOG.md))
 
 ## Arquitetura
 
@@ -34,7 +34,7 @@ Nenhuma porta abaixo de 1024 e nenhuma porta já ocupada é usada. O setup escol
 ## Instalação rápida (do Mac, um comando)
 
 ```bash
-ZIP="$(ls -t ~/Downloads/harmonia-v0.1.2-alpha*.zip | head -1)" && unzip -o -q -j "$ZIP" 'harmonia/infra/scripts/instalar-do-mac.sh' -d /tmp && bash /tmp/instalar-do-mac.sh
+ZIP="$(ls -t ~/Downloads/harmonia-v*.zip | head -1)" && unzip -o -q -j "$ZIP" 'harmonia/infra/scripts/instalar-do-mac.sh' -d /tmp && bash /tmp/instalar-do-mac.sh
 ```
 
 ## Primeira instalação manual (VPS 159.223.22.82)
