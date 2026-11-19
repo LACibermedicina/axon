@@ -2,18 +2,20 @@
 
 Áudio, foto de partitura ou cifra → partitura de piano com IA. Harmonize compassos selecionados, grave trechos que faltam, edite com drag & drop em camadas, publique na biblioteca e exporte MIDI, PDF, WAV e MP3.
 
-**Versão:** `0.1.0-alpha` (ver [CHANGELOG](CHANGELOG.md))
+**Versão:** `0.1.1-alpha` (ver [CHANGELOG](CHANGELOG.md))
 
 ## Arquitetura
 
 ```
-             Internet ──443──▶ nginx (frontend estático + proxy, TLS Let's Encrypt)
+  Internet ─443─▶ proxy JÁ EXISTENTE no host (nginx/apache/caddy + Let's Encrypt)   ← harmonIA não abre 80/443
+                    │
+                    └──▶ 127.0.0.1:HTTP_PORT (porta alta livre, ex. 20080) ──▶ nginx da stack (container :8080)
                                  │ /api ─────────▶ api (FastAPI) ──▶ postgres
                                  │                    │  jobs leves (síncronos)
                                  │                    └─▶ redis (fila) ──▶ ai-worker (Demucs, Basic Pitch,
                                  │                                          pYIN, Whisper, oemer, Verovio, FluidSynth)
                                  └ /ws ──────────▶ realtime (chat, WebRTC, eventos de jobs) ◀── redis pub/sub
-             coturn (3478 + 49160-49200/udp) — relay WebRTC
+  coturn: TURN_PORT + faixa TURN_MIN_PORT–TURN_MAX_PORT/udp (portas altas livres) — relay WebRTC
 ```
 
 | Pasta | Conteúdo |
@@ -25,22 +27,17 @@
 | `realtime/` | Servidor WebSocket: chat, sinalização WebRTC e eventos |
 | `frontend/` | Desktop web (Vite + TypeScript + Three.js) |
 
+## Regra de portas
+
+Nenhuma porta abaixo de 1024 e nenhuma porta já ocupada é usada. O setup escolhe portas altas livres e grava no `.env`. Para ver o estado atual: `make ports`. Os detalhes de publicação estão em [`infra/host-proxy/README.md`](infra/host-proxy/README.md).
+
 ## Primeira instalação (VPS 159.223.22.82)
 
-1. DNS: crie o registro **A** `harmonia.m3d.pro → 159.223.22.82`.
-2. Na VPS, como root (depois de copiar o repositório ou baixar o script):
-   ```bash
-   sudo bash infra/scripts/setup-vps.sh seu-email@m3d.pro
-   ```
-   ⚠️ O script ativa o UFW e desativa o login por senha no SSH. **Antes de fechar a sessão atual, teste o acesso `ssh deploy@159.223.22.82` em outra janela.**
-3. Gere uma chave só para o deploy e autorize-a:
-   ```bash
-   ssh-keygen -t ed25519 -f harmonia_deploy -N ""
-   ssh-copy-id -i harmonia_deploy.pub deploy@159.223.22.82
-   ```
-4. No GitHub, em **Settings → Environments → production → Secrets**, crie: `VPS_HOST=159.223.22.82`, `VPS_USER=deploy` e `VPS_SSH_KEY` (o conteúdo de `harmonia_deploy`).
-5. Opcional: preencha `ANTHROPIC_API_KEY` em `/opt/harmonia/.env` para ativar a tradução contextual e o assistente.
-6. Faça `git push` na `main` e acompanhe em **Actions**.
+1. DNS: registro **A** `harmonia.m3d.pro → 159.223.22.82` (não é necessário se usar o túnel Cloudflare).
+2. Copie o projeto para a VPS e rode como root: `bash infra/scripts/setup-vps.sh seu-email@m3d.pro`.
+   O script escolhe as portas, configura o vhost no proxy existente e emite o certificado.
+3. GitHub → Environment `production` → secrets `VPS_HOST`, `VPS_USER=deploy` e `VPS_SSH_KEY`.
+4. `git push` na `main`.
 
 ## Desenvolvimento local
 

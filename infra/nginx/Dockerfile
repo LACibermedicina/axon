@@ -6,7 +6,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: nginx servindo estáticos + proxy
-FROM nginx:1.27-alpine
-RUN rm /etc/nginx/conf.d/default.conf
+# Stage 2: nginx sem privilégios (usuário nginx, porta 8080 — nenhuma porta < 1024)
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY --from=web /web/dist /usr/share/nginx/html
+EXPOSE 8080

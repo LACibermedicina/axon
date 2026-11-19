@@ -72,10 +72,16 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
             "cd ${{ env.APP_DIR }} && bash infra/scripts/deploy.sh ${{ github.sha }}"
 
-      - name: Health check
+      - name: Health check interno (127.0.0.1:HTTP_PORT na VPS)
         run: |
-          for i in $(seq 1 20); do
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+            cd ${{ env.APP_DIR }} && P=$(grep -E "^HTTP_PORT=" .env | cut -d= -f2)
+            for i in $(seq 1 40); do curl -fsS "http://127.0.0.1:$P/api/health" && exit 0; sleep 6; done; exit 1'
+
+      - name: Health check público (HTTPS via proxy do host)
+        run: |
+          for i in $(seq 1 10); do
             if curl -fsS https://harmonia.m3d.pro/api/health; then exit 0; fi
             sleep 6
           done
-          echo "Health check falhou" && exit 1
+          echo "::warning::App ok internamente, mas https://harmonia.m3d.pro não responde — verifique o vhost do proxy/DNS (infra/host-proxy/README.md)"

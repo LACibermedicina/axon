@@ -20,7 +20,7 @@ const broadcast = (room, msg, except) => {
 function turnCredentials(userId) {
   const user = `${Math.floor(Date.now() / 1000) + 3600}:${userId}`;
   const cred = crypto.createHmac("sha1", process.env.TURN_SECRET || "dev").update(user).digest("base64");
-  return { urls: [`turn:${process.env.SUBDOMINIO || "localhost"}:3478`], username: user, credential: cred };
+  return { urls: [`turn:${process.env.SUBDOMINIO || "localhost"}:${process.env.TURN_PORT}?transport=udp`, `turn:${process.env.SUBDOMINIO || "localhost"}:${process.env.TURN_PORT}?transport=tcp`], username: user, credential: cred };
 }
 
 wss.on("connection", (ws, req) => {

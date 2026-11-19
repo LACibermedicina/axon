@@ -1,5 +1,8 @@
 # harmonIA — stack de produção (harmonia.m3d.pro)
-# Redes: "edge" (só nginx exposto) e "internal" (sem acesso externo direto)
+# Regra de portas: nada < 1024 e nada já ocupado no host.
+#  - nginx: publicado SOMENTE em 127.0.0.1:${HTTP_PORT} (porta alta livre, escolhida pelo setup/deploy)
+#  - coturn: ${TURN_PORT} e relay ${TURN_MIN_PORT}-${TURN_MAX_PORT} (portas altas livres)
+#  - demais serviços: só na rede interna, sem nenhuma porta no host
 name: harmonia
 
 x-common: &common
@@ -14,21 +17,12 @@ services:
     <<: *common
     build:
       context: .
-      dockerfile: infra/nginx/Dockerfile   # build multi-stage do frontend + nginx
-    ports: ["80:80", "443:443"]
+      dockerfile: infra/nginx/Dockerfile   # build do frontend + nginx sem privilégios (escuta 8080)
+    ports: ["127.0.0.1:${HTTP_PORT:?rode infra/scripts/setup-vps.sh}:8080"]
     volumes:
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot:ro
     depends_on: [api, realtime]
     networks: [edge, internal]
-
-  certbot:
-    image: certbot/certbot:latest
-    profiles: ["tools"]
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
 
   api:
     <<: *common
@@ -45,7 +39,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
-    networks: [internal]
+    networks: [internal, egress]   # egress: tradução/assistente via API de IA
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 20s
@@ -62,7 +56,7 @@ services:
       - ./data/media:/data/media
       - ./data/models:/data/models
     depends_on: [redis]
-    networks: [internal]
+    networks: [internal, egress]   # egress: baixar modelos (Whisper/Demucs) na 1ª execução
     deploy:
       resources:
         limits: { memory: 6g }
@@ -98,13 +92,23 @@ services:
   coturn:
     <<: *common
     image: coturn/coturn:4.6
-    network_mode: host   # TURN precisa de portas UDP reais para WebRTC
+    network_mode: host   # TURN precisa das portas UDP reais (todas altas e livres)
     command: >
       -n --realm=${SUBDOMINIO} --use-auth-secret --static-auth-secret=${TURN_SECRET}
-      --listening-port=3478 --min-port=49160 --max-port=49200
-      --no-cli --no-tls --no-dtls --fingerprint
+      --listening-port=${TURN_PORT:?rode setup-vps.sh} --min-port=${TURN_MIN_PORT} --max-port=${TURN_MAX_PORT}
+      --no-cli --no-tls --no-dtls --fingerprint --no-tcp-relay
+
+  # Opcional: publicação sem nenhuma porta de entrada (COMPOSE_PROFILES=tunnel)
+  cloudflared:
+    <<: *common
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on: [nginx]
+    networks: [edge]
 
 networks:
   edge: {}
+  egress: {}
   internal:
     internal: true
