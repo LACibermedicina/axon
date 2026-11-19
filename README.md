@@ -2,7 +2,7 @@
 
 Áudio, foto de partitura ou cifra → partitura de piano com IA. Harmonize compassos selecionados, grave trechos que faltam, edite com drag & drop em camadas, publique na biblioteca e exporte MIDI, PDF, WAV e MP3.
 
-**Versão:** `0.1.4-alpha` (ver [CHANGELOG](CHANGELOG.md))
+**Versão:** `0.1.5-alpha` (ver [CHANGELOG](CHANGELOG.md))
 
 ## Arquitetura
 

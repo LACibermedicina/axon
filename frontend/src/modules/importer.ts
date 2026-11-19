@@ -25,8 +25,22 @@ export function mountImporter(body: HTMLElement) {
   fetch("/api/health").then((r) => r.json()).then((hc) => {
     if (hc.ai_full) return;
     panes.querySelectorAll<HTMLElement>('[data-pane="audio"], [data-pane="image"]').forEach((p) =>
-      p.prepend(h("div", { class: "lyrics-check" }, "ℹ️ Este servidor está em modo de IA leve: a transcrição automática de áudio e de fotos está desativada. Você pode escrever a melodia no editor, gravar trechos, usar cifras e harmonizar normalmente.")));
+      p.prepend(h("div", { class: "lyrics-check" }, p.dataset.pane === "audio"
+        ? "ℹ️ Modo de IA leve: a transcrição extrai a melodia principal (voz ou instrumento solo) e estima os acordes. Separação de voz, polifonia e letra cantada exigem a IA completa."
+        : "ℹ️ Modo de IA leve: a leitura de fotos de partitura (OMR) exige a IA completa e está desativada neste servidor.")));
   }).catch(() => {});
+}
+
+/** Leva o resultado para a tela de Composição como camada(s) nova(s) e mostra onde estão. */
+function deliver(r: any, what: string) {
+  const ids = store.mergeResult(r);
+  dispatchEvent(new CustomEvent("open-app", { detail: "compose" }));
+  dispatchEvent(new CustomEvent("open-app", { detail: "layers" }));
+  const names = store.score.layers.filter((l) => ids.includes(l.id)).map((l) => `${l.name} (${l.notes.length} notas)`);
+  if (!ids.length) toast(`${what}: nenhuma nota reconhecida. Tente recortar um trecho mais limpo ou ajustar o ganho.`, "warn", 7000);
+  else toast(`${what} → ${ids.length} camada(s) na Composição: ${names.join(" · ")}`, "ok", 7000);
+  if (r.notice) setTimeout(() => toast(r.notice, "info", 9000), 600);
+  return ids;
 }
 
 function dropZone(accept: string, label: string, onFile: (f: File) => void) {
@@ -107,12 +121,11 @@ function audioPane() {
       const wav = await audio.trimToWav(buf, a, b, +gain.value);
       const up = await upload("audio", wav, (file?.name || "audio").replace(/\.\w+$/, "") + "-trecho.wav");
       busy(go, true, "IA ouvindo e transcrevendo… (pode levar alguns minutos)");
-      const r = await runJob("transcribe_audio", { asset: up.path, mode: mode.value, separate: sep.checked, lyrics: lyr.checked,
+      const r = await runJob("transcribe_audio", { asset: up.path, source_name: file?.name, mode: mode.value, separate: sep.checked, lyrics: lyr.checked,
         expected_lyrics: expected.value || undefined, tempo: tempo.value ? +tempo.value : undefined, timeSig: store.score.timeSig },
         (st) => busy(go, true, st === "running" ? "Transcrevendo…" : "Na fila…"));
-      store.mergeResult(r);
+      deliver(r, "Transcrição do áudio");
       showResult(r);
-      toast(`Transcrição concluída: ${r.layers.length} camada(s), ${r.measures} compassos`, "ok");
     } catch (e: any) { toast(e.message, "error"); }
     finally { busy(go, false); }
   });
@@ -182,8 +195,7 @@ function imagePane() {
       const up = await upload("image", blob, "partitura.png");
       busy(go, true, "Lendo a partitura…");
       const r = await runJob("transcribe_image", { asset: up.path }, (s) => busy(go, true, s === "running" ? "Reconhecendo símbolos…" : "Na fila…"));
-      store.mergeResult(r);
-      toast(`Partitura lida: ${r.measures} compassos. Confira e corrija no editor — OMR pode errar em fotos difíceis.`, "ok", 6000);
+      deliver(r, "Leitura da partitura");
     } catch (e: any) { toast(e.message, "error"); }
     finally { busy(go, false); }
   });
@@ -207,15 +219,14 @@ function cifraPane() {
     try {
       if (currentUser) {
         const r = await runJob("parse_cifra", { text: ta.value, timeSig: store.score.timeSig, style: style.value, chords_per_measure: +perLine.value });
-        store.mergeResult(r);
+        deliver(r, "Cifra");
         if (r.lyricsSyllables?.length) toast(`Letra detectada (${r.lyricsSyllables.length} sílabas). Use "Letra → notas" nas Camadas após escrever a melodia.`, "info", 6000);
       } else {
         const bpm = beatsPerMeasure(store.score);
         const chords = parseCifraBars(ta.value, bpm);
         const l = newLayer("harmony", "Harmonia (cifra)", "bass"); l.notes = voiceChords(chords, bpm, style.value);
-        store.mergeResult({ chords, layers: [l], measures: chords.length });
+        deliver({ chords, layers: [l], measures: chords.length }, "Cifra");
       }
-      toast("Cifra convertida em acordes e acompanhamento de piano", "ok");
     } catch (e: any) { toast(e.message, "error"); }
     finally { busy(go, false); }
   });

@@ -31,7 +31,58 @@ def _measures_of(notes: list[dict], bpm: int) -> int:
 
 
 # ------------------------------------------------------------------ áudio
+def _ml_available() -> bool:
+    import importlib.util
+    return all(importlib.util.find_spec(m) for m in ("librosa", "basic_pitch", "demucs"))
+
+
+def _label(p: dict) -> str:
+    name = (p.get("source_name") or "").rsplit(".", 1)[0][:40]
+    return f" — {name}" if name else ""
+
+
+def job_transcribe_audio_lite(p: dict) -> dict:
+    """Modo leve (sem PyTorch): melodia por YIN + acordes por cromagrama + acompanhamento de piano."""
+    from .pipelines import lite_audio, ml
+    src = str(MEDIA / p["asset"])
+    trim = p.get("trim") or {}
+    wav = ml.trim_audio(src, trim.get("start"), trim.get("end"), trim.get("gain_db", 0))
+    y = lite_audio.load_audio(wav)
+    num, den = p.get("timeSig", [4, 4])
+    bpm_measure = int(num * 4 / den)
+    tempo, offset = lite_audio.tempo_and_offset(y)
+    if p.get("tempo"):
+        tempo = float(p["tempo"])
+    mode = p.get("mode", "both")
+    tag = _label(p)
+    layers, chords = [], []
+    events = lite_audio.melody_events(y)
+    # o tempo 1 do compasso 1 não pode cair depois da primeira nota (senão ela seria descartada)
+    first = min([e["start_s"] for e in events], default=offset)
+    while first < offset - 0.06:
+        offset -= 60.0 / tempo
+    offset = max(offset, first - 60.0 / tempo * bpm_measure) if offset < 0 else offset
+    mel = rhythm.seconds_to_beats(events, tempo, offset=offset)
+    n_measures = max(_measures_of(mel, bpm_measure), int((len(y) / lite_audio.SR - offset) / (60 / tempo) // bpm_measure) + 1)
+    if mode in ("melody", "both") and mel:
+        if p.get("expected_lyrics"):
+            rhythm.align_lyrics(mel, rhythm.tokenize_lyrics(p["expected_lyrics"]))
+        layers.append(_layer("melody", "Melodia transcrita" + tag, mel))
+    if mode in ("harmony", "both"):
+        chords = lite_audio.chords_by_measure(y, tempo, offset, bpm_measure, n_measures, per_measure=2)
+        layers.append(_layer("harmony", "Harmonia estimada" + tag, harmony.voice_chords(chords, bpm_measure, "block"), staff="bass"))
+    all_notes = [n for l in layers for n in l["notes"]]
+    tonic, mode_k = detect_key(all_notes) if all_notes else (0, "major")
+    return {"tempo": round(tempo), "timeSig": [num, den], "keySig": key_fifths(tonic, mode_k),
+            "key": {"tonic": tonic, "mode": mode_k}, "measures": n_measures, "layers": layers, "chords": chords,
+            "lyricsCheck": None, "engine": "lite",
+            "notice": "Transcrição no modo leve: melodia monofônica e acordes estimados. Para separar voz, "
+                      "transcrever polifonia e letra cantada, ative a IA completa (servidor com ≥ 8 GB de RAM)."}
+
+
 def job_transcribe_audio(p: dict) -> dict:
+    if not _ml_available():
+        return job_transcribe_audio_lite(p)
     from .pipelines import ml
     src = str(MEDIA / p["asset"])
     trim = p.get("trim") or {}

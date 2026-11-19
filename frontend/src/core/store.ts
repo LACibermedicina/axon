@@ -7,9 +7,19 @@ const LAYER_COLORS: Record<LayerKind, string> = {
   melody: "#ff6b9a", harmony: "#5b8cff", voice: "#ffb547", bass: "#36c99a", omr: "#a77bff", recording: "#ff8a4c",
 };
 
+// eslint-disable-next-line prefer-const
+let storeRef: { score: Score } | null = null;
+// Paleta de cores bem distintas entre si: cada camada nova recebe uma cor ainda não usada
+export const LAYER_PALETTE = ["#e5487f", "#3d7bff", "#f39c12", "#17a589", "#8e44ad", "#e4572e", "#2e86c1", "#c0392b", "#27ae60", "#d4ac0d", "#6c5ce7", "#00a8a8"];
+export function nextLayerColor(preferred?: string): string {
+  const used = new Set((storeRef?.score.layers ?? []).map((l) => l.color.toLowerCase()));
+  if (preferred && !used.has(preferred.toLowerCase())) return preferred;
+  return LAYER_PALETTE.find((c) => !used.has(c)) || LAYER_PALETTE[used.size % LAYER_PALETTE.length];
+}
+
 export function newLayer(kind: LayerKind, name: string, staff: "treble" | "bass" = "treble"): Layer {
   return { id: uid(), name, kind, staff, notes: [], visible: true, muted: false, solo: false, locked: false,
-    volume: 0.8, color: LAYER_COLORS[kind], program: 0 };
+    volume: 0.8, color: nextLayerColor(LAYER_COLORS[kind]), program: 0 };
 }
 
 export function demoScore(): Score {
@@ -78,13 +88,21 @@ class Store {
   }
 
   /** Mescla resultado de IA (transcrição/cifra/harmonização) na composição aberta. */
-  mergeResult(r: Partial<Score> & { layers?: Layer[]; chords?: any[][] }, opts: { replaceChordsIn?: number[] } = {}) {
+  mergeResult(r: Partial<Score> & { layers?: Layer[]; chords?: any[][] }, opts: { replaceChordsIn?: number[] } = {}): string[] {
+    const added: string[] = [];
     this.mutate((s) => {
       if (r.tempo) s.tempo = r.tempo;
       if (r.timeSig) s.timeSig = r.timeSig as [number, number];
       if (typeof r.keySig === "number") s.keySig = r.keySig;
       if (r.measures) s.measures = Math.max(s.measures, r.measures);
-      for (const l of r.layers || []) s.layers.push({ ...newLayer(l.kind, l.name, l.staff), ...l });
+      for (const l of r.layers || []) {
+        const nl = { ...newLayer(l.kind, l.name, l.staff), ...l, visible: true };
+        nl.color = nextLayerColor(l.color); // garante cor única por camada
+        if (s.layers.some((x) => x.id === nl.id)) nl.id = uid();
+        nl.notes = (l.notes || []).map((n) => ({ ...n, id: n.id || uid() }));
+        s.layers.push(nl); added.push(nl.id);
+      }
+      if (added.length) this.selectedLayer = added[0];
       if (r.chords) {
         r.chords.forEach((cell, m) => {
           if (!cell?.length) return;
@@ -93,6 +111,47 @@ class Store {
         });
       }
     }, "merge");
+    return added;
+  }
+
+  /** Copia ou recorta as notas selecionadas (ou o conteúdo dos compassos selecionados) para nova(s) camada(s).
+   *  Cria uma camada por pauta de origem (Sol/Fá) para manter a notação coerente. */
+  extractToNewLayer(mode: "copy" | "cut", source: "notes" | "measures"): { created: number; moved: number; skippedLocked: number } {
+    const s = this.score;
+    const bpm = (s.timeSig[0] * 4) / s.timeSig[1];
+    const ms = [...this.selectedMeasures];
+    const pick = (l: Layer) => l.notes.filter((n) => source === "notes" ? this.selectedNotes.has(n.id) : ms.includes(Math.floor(n.start / bpm + 1e-9)));
+    const srcLayers = s.layers.filter((l) => l.kind !== "recording" && (source === "notes" || l.visible));
+    let skippedLocked = 0;
+    const byStaff: Record<string, { notes: typeof s.layers[0]["notes"]; from: string[] }> = {};
+    for (const l of srcLayers) {
+      const ns = pick(l);
+      if (!ns.length) continue;
+      if (mode === "cut" && l.locked) { skippedLocked += ns.length; continue; }
+      (byStaff[l.staff] ||= { notes: [], from: [] }).notes.push(...ns);
+      byStaff[l.staff].from.push(l.name);
+    }
+    const staffs = Object.keys(byStaff);
+    if (!staffs.length) return { created: 0, moved: 0, skippedLocked };
+    const range = source === "measures" ? ` (c.${Math.min(...ms) + 1}${ms.length > 1 ? "–" + (Math.max(...ms) + 1) : ""})` : "";
+    let moved = 0;
+    const newIds: string[] = [];
+    this.mutate((sc) => {
+      for (const st of staffs) {
+        const g = byStaff[st];
+        const ids = new Set(g.notes.map((n) => n.id));
+        const from = [...new Set(g.from)];
+        const nl = newLayer(st === "bass" ? "harmony" : "melody", `${mode === "cut" ? "Recorte" : "Cópia"} de ${from.length > 1 ? from.length + " camadas" : from[0]}${range}`, st as "treble" | "bass");
+        nl.notes = g.notes.map((n) => ({ ...n, id: uid() }));
+        if (mode === "cut") for (const l of sc.layers) if (!l.locked) l.notes = l.notes.filter((n) => !ids.has(n.id));
+        sc.layers.push(nl); newIds.push(nl.id);
+        moved += nl.notes.length;
+      }
+      this.selectedLayer = newIds[0];
+      this.selectedMeasures.clear();
+      this.selectedNotes = new Set(sc.layers.filter((l) => newIds.includes(l.id)).flatMap((l) => l.notes.map((n) => n.id)));
+    }, "extract-layer");
+    return { created: newIds.length, moved, skippedLocked };
   }
 
   /** Insere `count` compassos vazios antes do compasso `at` (at = measures → no final).
@@ -155,6 +214,7 @@ class Store {
 }
 
 export const store = new Store();
+storeRef = store;
 
 // Autosave com debounce (quando autenticado e com composição aberta)
 let t: number | undefined;

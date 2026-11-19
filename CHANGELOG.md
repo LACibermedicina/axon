@@ -2,6 +2,29 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.5-alpha] — 2026-11-19
+
+### Corrigido
+- **A transcrição agora chega à Composição como camada.** No modo leve (servidor pequeno), o áudio caía num erro porque dependia do PyTorch. Agora existe um motor de transcrição leve, que usa só numpy e ffmpeg:
+  - **melodia:** detecção de altura por YIN, com vibrato e glissando;
+  - **andamento:** detectado pelos ataques;
+  - **acordes:** por cromagrama, por meio compasso, com acompanhamento de piano.
+  Ao terminar, a janela de Composição é aberta, o painel Camadas é revelado, a camada nova fica ativa e uma notificação diz quais camadas foram criadas. O mesmo vale para a cifra e para a foto.
+- As camadas criadas por importação recebem o nome do arquivo de origem (ex.: "Melodia transcrita — minha-musica").
+- Selecionar compassos limpa a seleção de notas e vice-versa, para não haver ambiguidade sobre o que será copiado ou recortado.
+
+### Adicionado
+- **Copiar ou recortar para nova camada** as notas ou os compassos selecionados:
+  - pela barra de seleção acima da partitura, pelo painel Propriedades ou pelos atalhos ⌘⇧C / ⌘⇧X;
+  - é criada uma camada por pauta de origem (Sol/Fá);
+  - camadas bloqueadas não são recortadas.
+- **Identidade visual por camada**:
+  - cada camada nova recebe uma cor ainda não usada;
+  - cabeça, haste, bandeirola, linhas suplementares, ponto, acidente e sílaba da nota usam a cor da camada;
+  - a barra de duração ganha uma **textura própria por camada** (lisa, listrada, pontilhada, xadrez, vertical, ondas), que distingue as camadas também sem depender de cor;
+  - legenda de camadas acima da partitura (clique ativa a camada, duplo clique oculta) e tooltip "Camada: …" em cada nota;
+  - anotações e gravações mostram a cor da camada, e o painel Propriedades mostra a etiqueta da camada das notas selecionadas.
+
 ## [0.1.4-alpha] — 2026-11-19
 
 ### Adicionado

@@ -43,6 +43,19 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
   return el;
 }
 
+/** Padrão SVG da camada: cor + textura (lisa, listras, pontos, xadrez, verticais, ondas) pelo índice. */
+export function layerPattern(id: string, color: string, i: number) {
+  const kinds = [
+    `<rect width="8" height="8" fill="${color}"/>`,
+    `<rect width="8" height="8" fill="${color}" opacity=".55"/><path d="M-2 2 L2 -2 M0 8 L8 0 M6 10 L10 6" stroke="${color}" stroke-width="2.4"/>`,
+    `<rect width="8" height="8" fill="${color}" opacity=".45"/><circle cx="4" cy="4" r="2" fill="${color}"/>`,
+    `<rect width="8" height="8" fill="${color}" opacity=".5"/><path d="M0 0 H4 V4 H0Z M4 4 H8 V8 H4Z" fill="${color}"/>`,
+    `<rect width="8" height="8" fill="${color}" opacity=".5"/><rect x="0" width="3" height="8" fill="${color}"/>`,
+    `<rect width="8" height="8" fill="${color}" opacity=".45"/><path d="M0 5 Q2 2 4 5 T8 5" stroke="${color}" stroke-width="1.8" fill="none"/>`,
+  ];
+  return `<pattern id="pat-${id}" width="8" height="8" patternUnits="userSpaceOnUse">${kinds[i % kinds.length]}</pattern>`;
+}
+
 interface SysGeom { index: number; y: number; firstMeasure: number; nMeasures: number; left: number; trebleY: number; bassY: number; }
 
 export function mountScoreEditor(body: HTMLElement, win: Win) {
@@ -113,7 +126,37 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const canvas = h("div", { class: "score-canvas", tabindex: "0" });
   const paper = svg("svg", { class: "score-svg" });
   canvas.append(paper);
-  body.append(header, toolbar, canvas, status);
+  const legend = h("div", { class: "score-legend", "data-noi18n": "" });
+  body.append(header, toolbar, legend, canvas, status);
+
+  function renderLegend() {
+    const s = store.score; const bpm = beatsPerMeasure(s);
+    const chips = s.layers.map((l, i) => {
+      const sw = document.createElementNS(SVGNS, "svg");
+      sw.setAttribute("width", "26"); sw.setAttribute("height", "12");
+      sw.innerHTML = `<defs>${layerPattern("sw-" + l.id, l.color, i)}</defs><rect x="1" y="1" width="24" height="10" rx="4" fill="url(#pat-sw-${l.id})" stroke="${l.color}"/>`;
+      return h("button", { class: "lg-chip" + (l.id === store.selectedLayer ? " on" : "") + (l.visible ? "" : " hidden-l"), style: { "--lc": l.color } as any,
+        title: `${l.name} — clique: ativar · duplo clique: mostrar/ocultar`,
+        onclick: () => { store.selectedLayer = l.id; store.emit("selection"); },
+        ondblclick: () => store.mutate(() => (l.visible = !l.visible), "layer") },
+        sw, h("span", {}, l.name), h("small", {}, String(l.kind === "recording" ? "🎙" : l.notes.length)));
+    });
+    const nSel = store.selectedNotes.size, mSel = store.selectedMeasures.size;
+    const src: "notes" | "measures" | null = nSel ? "notes" : mSel ? "measures" : null;
+    const label = nSel ? `${nSel} nota(s)` : mSel ? `${mSel} compasso(s)` : "";
+    const act = (mode: "copy" | "cut") => () => extract(mode, src!);
+    legend.replaceChildren(h("div", { class: "lg-chips" }, ...chips),
+      src ? h("div", { class: "sel-actions" }, h("b", {}, label),
+        h("button", { class: "btn ghost", title: "Copiar para nova camada (⌘⇧C)", onclick: act("copy") }, "⧉ Copiar p/ nova camada"),
+        h("button", { class: "btn ghost", title: "Recortar para nova camada (⌘⇧X)", onclick: act("cut") }, "✂ Recortar p/ nova camada")) : "");
+    void bpm;
+  }
+
+  function extract(mode: "copy" | "cut", src: "notes" | "measures") {
+    const r = store.extractToNewLayer(mode, src);
+    if (!r.created) { toast(r.skippedLocked ? "As notas selecionadas estão em camadas bloqueadas" : "Nenhuma nota na seleção", "warn"); return; }
+    toast(`${mode === "cut" ? "Recortadas" : "Copiadas"} ${r.moved} nota(s) para ${r.created} nova(s) camada(s)` + (r.skippedLocked ? ` · ${r.skippedLocked} em camada bloqueada ignorada(s)` : ""), "ok", 4000);
+  }
   body.classList.add("score-editor");
 
   function setTool(tl: Tool) {
@@ -142,10 +185,13 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     paper.setAttribute("height", String(systems.length * SYS_H + 20));
     paper.replaceChildren();
     const defs = svg("defs");
-    defs.innerHTML = `<filter id="nshadow"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-opacity=".35"/></filter>`;
+    // Identidade de camada: cor + padrão da barra de duração (distinguível também sem cor)
+    defs.innerHTML = `<filter id="nshadow"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-opacity=".35"/></filter>` +
+      s.layers.map((l, i) => layerPattern(l.id, l.color, i)).join("");
     paper.append(defs);
     for (const sys of systems) drawSystem(sys, s, bpm, mW);
     drawPlayhead();
+    renderLegend();
     status.textContent = `${s.measures} compassos · ${s.timeSig.join("/")} · ${KEY_NAMES[s.keySig] ?? ""} · ♩=${s.tempo} · camada ativa: ${store.layer()?.name ?? "—"}${store.selectedMeasures.size ? ` · seleção: compassos ${[...store.selectedMeasures].sort((a, b) => a - b).map((m) => m + 1).join(", ")}` : ""}`;
   }
 
@@ -180,6 +226,8 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
         const ag = svg("g", { class: "annotation", "data-ann": a.id, transform: `translate(${ax},${sys.y + 52})` });
         const tw = Math.min(mW * 1.6, 12 + a.text.length * 6.2);
         ag.append(svg("rect", { x: 0, y: -2, width: tw, height: 18, rx: 6, fill: a.color, opacity: 0.9 }), svg("text", { x: 6, y: 11, class: "ann-text" }, a.text));
+        const al = a.layerId ? s.layers.find((l) => l.id === a.layerId) : null;
+        if (al) { ag.append(svg("rect", { x: 0, y: -2, width: 4, height: 18, rx: 2, fill: al.color }), svg("title", {}, `Anotação da camada ${al.name}`)); }
         g.append(ag);
       }
     }
@@ -232,7 +280,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       if (l.kind === "recording") {
         for (const m of l.measures || []) if (m >= sys.firstMeasure && m < sys.firstMeasure + sys.nMeasures) {
           const rx = sys.left + (m - sys.firstMeasure) * mW;
-          lg.append(svg("rect", { x: rx + 4, y: sys.trebleY + 44, width: mW - 8, height: 16, rx: 8, class: "rec-clip" }), svg("text", { x: rx + 10, y: sys.trebleY + 56, class: "rec-label" }, "🎙 " + l.name));
+          lg.append(svg("rect", { x: rx + 4, y: sys.trebleY + 44, width: mW - 8, height: 16, rx: 8, class: "rec-clip", fill: `url(#pat-${l.id})`, stroke: l.color }), svg("text", { x: rx + 10, y: sys.trebleY + 56, class: "rec-label" }, "🎙 " + l.name));
         }
         continue;
       }
@@ -240,12 +288,12 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       const top = l.staff === "bass" ? BASS_TOP : TREBLE_TOP;
       for (const n of l.notes) {
         if (n.start >= toBeat || n.start < fromBeat) continue;
-        drawNote(lg, n, sys, staffY, top, bpm, mW, s.keySig, l.staff, l.color);
+        drawNote(lg, n, sys, staffY, top, bpm, mW, s.keySig, l.staff, l.color, l.id, l.name);
       }
     }
   }
 
-  function drawNote(g: SVGGElement, n: Note, sys: SysGeom, staffY: number, top: number, bpm: number, mW: number, fifths: number, staff: string, color: string) {
+  function drawNote(g: SVGGElement, n: Note, sys: SysGeom, staffY: number, top: number, bpm: number, mW: number, fifths: number, staff: string, color: string, layerId = "", layerName = "") {
     const { step, letter, acc } = spell(n.pitch, fifths);
     const y = staffY + (top - step) * LS / 2;
     const x = xOf(sys, n.start, bpm, mW);
@@ -253,7 +301,8 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const ng = svg("g", { class: "note" + (sel ? " sel" : ""), "data-id": n.id });
     // barra de duração (didática) – limitada ao fim do sistema
     const endX = Math.min(xOf(sys, Math.min(n.start + n.dur, (sys.firstMeasure + sys.nMeasures) * bpm) - 1e-6, bpm, mW), sys.left + sys.nMeasures * mW);
-    ng.append(svg("rect", { x: x - 1, y: y - 4, width: Math.max(6, endX - x), height: 8, rx: 4, class: "dur-bar", fill: color }));
+    ng.append(svg("title", {}, `Camada: ${layerName} · ${SOLFEGE[n.pitch % 12]}${Math.floor(n.pitch / 12) - 1} · ${n.dur} tempo(s)`));
+    ng.append(svg("rect", { x: x - 1, y: y - 4, width: Math.max(6, endX - x), height: 8, rx: 4, class: "dur-bar", fill: layerId ? `url(#pat-${layerId})` : color, stroke: color }));
     ng.append(svg("rect", { x: Math.max(x + 4, endX - 6), y: y - 5, width: 7, height: 10, rx: 3, class: "dur-handle", "data-resize": n.id }));
     // linhas suplementares
     const bottomStep = top - 8;
@@ -280,6 +329,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     if (Math.abs(d - base * 1.5) < 1e-3) ng.append(svg("circle", { cx: x + 12, cy: y - (step % 2 === 0 ? 3 : 0), r: 1.8, class: "dot" }));
     if (n.effect) ng.append(svg("text", { x: x - 4, y: y - 12, class: "effect" }, ({ vibrato: "∿", glissando: "↗", fermata: "𝄐", staccato: "·", falsetto: "°" } as any)[n.effect] || "✦"));
     if (n.lyric && staff === "treble") ng.append(svg("text", { x: x - 2, y: sys.trebleY + 40 + 34, class: "lyric" + (n.lyric === "_" ? " melisma" : "") }, n.lyric === "_" ? "—" : n.lyric));
+    void color;
     g.append(ng);
   }
 
@@ -358,6 +408,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     }
     if (measureBand !== undefined) {
       const m = +measureBand;
+      store.selectedNotes.clear(); // seleção de compassos substitui a de notas
       if (ev.shiftKey && store.selectedMeasures.size) {
         const a = Math.min(...store.selectedMeasures, m), b = Math.max(...store.selectedMeasures, m);
         for (let i = a; i <= b; i++) store.selectedMeasures.add(i);
@@ -381,6 +432,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       if (tool === "lyrics") { editLyric(id, loc); return; }
       if (f.l.locked) { toast(`Camada "${f.l.name}" está bloqueada`, "warn"); return; }
       store.selectedLayer = f.l.id;
+      store.selectedMeasures.clear(); // seleção de notas substitui a de compassos
       if (ev.shiftKey) store.selectedNotes.has(id) ? store.selectedNotes.delete(id) : store.selectedNotes.add(id);
       else if (!store.selectedNotes.has(id)) store.selectedNotes = new Set([id]);
       const ids = [...store.selectedNotes];
@@ -449,6 +501,12 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   canvas.addEventListener("keydown", (e) => {
     const mod = e.metaKey || e.ctrlKey;
     if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? store.redoOp() : store.undoOp(); return; }
+    if (mod && e.shiftKey && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x")) {
+      e.preventDefault();
+      const src = store.selectedNotes.size ? "notes" : store.selectedMeasures.size ? "measures" : null;
+      if (src) extract(e.key.toLowerCase() === "x" ? "cut" : "copy", src);
+      return;
+    }
     if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); store.selectedNotes = new Set(store.layer()?.notes.map((n) => n.id) || []); store.emit("selection"); return; }
     if (e.key === " ") { e.preventDefault(); togglePlay(); return; }
     const k = { v: "select", n: "pencil", e: "erase", c: "chord", l: "lyrics", a: "annotate" }[e.key.toLowerCase()] as Tool | undefined;

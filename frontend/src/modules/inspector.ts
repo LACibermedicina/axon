@@ -12,6 +12,12 @@ const noteName = (p: number) => `${SOLFEGE[p % 12]}${Math.floor(p / 12) - 1} (${
 function field(label: string, ...ctl: (Node | string)[]) { return h("label", { class: "prop" }, h("span", {}, label), h("div", { class: "prop-ctl" }, ...ctl)); }
 function section(title: string, ...kids: (Node | string | null | false)[]) { return h("div", { class: "prop-sec" }, h("h5", {}, title), ...kids); }
 
+function extract(mode: "copy" | "cut", src: "notes" | "measures") {
+  const r = store.extractToNewLayer(mode, src);
+  if (!r.created) { toast(r.skippedLocked ? "As notas estão em camadas bloqueadas" : "Nenhuma nota na seleção", "warn"); return; }
+  toast(`${mode === "cut" ? "Recortadas" : "Copiadas"} ${r.moved} nota(s) para ${r.created} nova(s) camada(s)`, "ok");
+}
+
 // ---------------------------------------------------------------- Propriedades
 export function mountProperties(body: HTMLElement) {
   body.classList.add("props");
@@ -53,6 +59,7 @@ export function mountProperties(body: HTMLElement) {
         store.mutate(() => notes.forEach(({ n, l }) => { if (l === to || l.locked) return; l.notes = l.notes.filter((x) => x.id !== n.id); to.notes.push(n); }), "move-layer");
       } }, ...s.layers.filter((l) => l.kind !== "recording").map((l) => h("option", { value: l.id, selected: one?.l.id === l.id }, l.name)));
       kids.push(section(one ? "Nota selecionada" : `${notes.length} notas selecionadas`,
+        h("div", { class: "row" }, ...[...new Set(notes.map(({ l }) => l))].map((l) => h("span", { class: "layer-tag", style: { "--lc": l.color } as any }, l.name))),
         one ? h("div", { class: "note-id" }, h("b", {}, noteName(one.n.pitch)),
           h("small", {}, `compasso ${Math.floor(one.n.start / bpm) + 1}, tempo ${+((one.n.start % bpm) + 1).toFixed(2)}`)) : null,
         h("div", { class: "row" },
@@ -67,6 +74,9 @@ export function mountProperties(body: HTMLElement) {
         field("Efeito", h("select", { onchange: (e: Event) => edit((n) => (n.effect = (e.target as HTMLSelectElement).value || null)) },
           ...EFFECTS.map(([v, l]) => h("option", { value: v, selected: (one?.n.effect || "") === v }, l)))),
         field("Camada", layerSel),
+        h("div", { class: "row" },
+          h("button", { class: "btn ghost", title: "⌘⇧C", onclick: () => extract("copy", "notes") }, "⧉ Copiar p/ nova camada"),
+          h("button", { class: "btn ghost", title: "⌘⇧X", onclick: () => extract("cut", "notes") }, "✂ Recortar p/ nova camada")),
         h("button", { class: "btn danger", onclick: () => { store.mutate((x) => x.layers.forEach((l) => !l.locked && (l.notes = l.notes.filter((n) => !store.selectedNotes.has(n.id)))), "delete"); store.selectedNotes.clear(); store.emit("selection"); } }, "Apagar nota(s)")));
     }
 
@@ -87,6 +97,9 @@ export function mountProperties(body: HTMLElement) {
         h("div", { class: "row" },
           h("button", { class: "btn accent", onclick: () => dispatchEvent(new CustomEvent("harmonia:action", { detail: "harmonize" })) }, "✨ Harmonizar"),
           h("button", { class: "btn", onclick: () => dispatchEvent(new CustomEvent("harmonia:action", { detail: "play-selection" })) }, "▶ Ouvir")),
+        h("div", { class: "row" },
+          h("button", { class: "btn ghost", onclick: () => extract("copy", "measures") }, "⧉ Copiar p/ nova camada"),
+          h("button", { class: "btn ghost", onclick: () => extract("cut", "measures") }, "✂ Recortar p/ nova camada")),
         h("div", { class: "row" },
           h("button", { class: "btn ghost", onclick: () => store.insertMeasure(ms[0]) }, "+ antes"),
           h("button", { class: "btn ghost", onclick: () => store.insertMeasure(ms[ms.length - 1] + 1) }, "+ depois"),
@@ -121,7 +134,7 @@ export function mountAnnotations(body: HTMLElement) {
   const add = () => {
     if (!inp.value.trim()) return;
     const m = [...store.selectedMeasures][0] ?? 0;
-    store.mutate((s) => s.annotations.push({ id: uid(), measure: m, beat: 0, text: inp.value.trim(), color: color.value }), "annotate");
+    store.mutate((s) => s.annotations.push({ id: uid(), measure: m, beat: 0, text: inp.value.trim(), color: color.value, layerId: store.selectedLayer || undefined }), "annotate");
     inp.value = "";
   };
   inp.addEventListener("keydown", (e) => e.key === "Enter" && add());
@@ -130,6 +143,7 @@ export function mountAnnotations(body: HTMLElement) {
     const anns = [...store.score.annotations].sort((a, b) => a.measure - b.measure || a.beat - b.beat);
     list.replaceChildren(...(anns.length ? anns.map((a) => h("div", { class: "ann-item", style: { "--ac": a.color } as any },
       h("button", { class: "chip", title: "Selecionar compasso", onclick: () => { store.selectedMeasures = new Set([a.measure]); store.emit("selection"); } }, `c.${a.measure + 1}`),
+      (() => { const l = store.score.layers.find((x) => x.id === a.layerId); return l ? h("span", { class: "layer-tag", style: { "--lc": l.color } as any, title: "Camada " + l.name }, "") : ""; })(),
       h("input", { value: a.text, onchange: (e: Event) => store.mutate(() => (a.text = (e.target as HTMLInputElement).value), "annotate") }),
       h("button", { class: "p-btn", title: "Remover", onclick: () => store.mutate((s) => (s.annotations = s.annotations.filter((x) => x.id !== a.id)), "annotate") }, "✕")))
       : [h("p", { class: "hint" }, "Sem anotações. Selecione um compasso e escreva acima, ou use a ferramenta ✦ no editor.")]));
