@@ -21,6 +21,12 @@ export function mountImporter(body: HTMLElement) {
     const p = mk(); p.classList.add("pane"); p.dataset.pane = id; panes.append(p);
   }
   show("audio");
+  // Servidor em modo leve: avisa antes do envio (transcrição de áudio/foto exige IA completa)
+  fetch("/api/health").then((r) => r.json()).then((hc) => {
+    if (hc.ai_full) return;
+    panes.querySelectorAll<HTMLElement>('[data-pane="audio"], [data-pane="image"]').forEach((p) =>
+      p.prepend(h("div", { class: "lyrics-check" }, "ℹ️ Este servidor está em modo de IA leve: a transcrição automática de áudio e de fotos está desativada. Você pode escrever a melodia no editor, gravar trechos, usar cifras e harmonizar normalmente.")));
+  }).catch(() => {});
 }
 
 function dropZone(accept: string, label: string, onFile: (f: File) => void) {

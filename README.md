@@ -2,7 +2,7 @@
 
 Áudio, foto de partitura ou cifra → partitura de piano com IA. Harmonize compassos selecionados, grave trechos que faltam, edite com drag & drop em camadas, publique na biblioteca e exporte MIDI, PDF, WAV e MP3.
 
-**Versão:** `0.1.1-alpha` (ver [CHANGELOG](CHANGELOG.md))
+**Versão:** `0.1.2-alpha` (ver [CHANGELOG](CHANGELOG.md))
 
 ## Arquitetura
 
@@ -31,7 +31,13 @@
 
 Nenhuma porta abaixo de 1024 e nenhuma porta já ocupada é usada. O setup escolhe portas altas livres e grava no `.env`. Para ver o estado atual: `make ports`. Os detalhes de publicação estão em [`infra/host-proxy/README.md`](infra/host-proxy/README.md).
 
-## Primeira instalação (VPS 159.223.22.82)
+## Instalação rápida (do Mac, um comando)
+
+```bash
+ZIP="$(ls -t ~/Downloads/harmonia-v0.1.2-alpha*.zip | head -1)" && unzip -o -q -j "$ZIP" 'harmonia/infra/scripts/instalar-do-mac.sh' -d /tmp && bash /tmp/instalar-do-mac.sh
+```
+
+## Primeira instalação manual (VPS 159.223.22.82)
 
 1. DNS: registro **A** `harmonia.m3d.pro → 159.223.22.82` (não é necessário se usar o túnel Cloudflare).
 2. Copie o projeto para a VPS e rode como root: `bash infra/scripts/setup-vps.sh seu-email@m3d.pro`.

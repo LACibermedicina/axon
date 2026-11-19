@@ -2,6 +2,21 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.2-alpha] — 2026-11-19
+
+### Adicionado
+- `infra/scripts/instalar-do-mac.sh`: instala e atualiza a partir do Mac com um único comando. Ele envia o pacote, cria a chave pessoal e a chave de deploy, roda o setup com sudo e deixa o `VPS_SSH_KEY` copiado na área de transferência.
+- **Modo de IA leve** (`AI_ML=0`, escolhido automaticamente com menos de 8 GB de RAM ou 20 GB de disco livre): o ai-worker fica com ~700 MB, sem PyTorch. Editor, cifra, harmonização e exportação MIDI/MusicXML/PDF/WAV/MP3 continuam funcionando; a transcrição de áudio e foto mostra aviso claro. `/api/health` informa `ai_full`.
+- O próprio setup agora constrói, sobe, migra e testa a stack. O site fica no ar antes mesmo do GitHub Actions.
+
+### Alterado (servidor compartilhado com Odoo e outros serviços)
+- O setup deixa de mexer no firewall quando o UFW está desligado, e nunca liga o UFW por conta própria.
+- vhost do nginx com rollback automático se `nginx -t` falhar, e suporte a `conf.d` quando não existe `sites-enabled`.
+- Antes do certbot, confere se o DNS do subdomínio aponta para o IP público. Se não apontar, informa o comando para rodar depois.
+- Usuário `deploy` corrigido: home e shell bash, entra só com chave, fica no grupo `docker` e sai do grupo `sudo` (menor privilégio).
+- Checagens prévias de disco (mínimo de 4 GB) e swap; `apt-get update` tolera repositórios de terceiros com chave GPG vencida.
+- Instala o plugin `docker compose` se estiver faltando. A API usa 1 worker em máquinas com menos de 4 GB de RAM.
+
 ## [0.1.1-alpha] — 2026-11-19
 
 ### Alterado — regra de portas: nenhuma porta < 1024 e nenhuma porta já em uso

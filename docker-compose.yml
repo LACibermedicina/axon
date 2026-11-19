@@ -47,7 +47,10 @@ services:
 
   ai-worker:
     <<: *common
-    build: ./ai-worker
+    build:
+      context: ./ai-worker
+      args:
+        ML: ${AI_ML:-0}   # 0 = leve (sem PyTorch) · 1 = IA completa (≥ 8 GB RAM)
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       MEDIA_ROOT: /data/media
@@ -59,7 +62,7 @@ services:
     networks: [internal, egress]   # egress: baixar modelos (Whisper/Demucs) na 1ª execução
     deploy:
       resources:
-        limits: { memory: 6g }
+        limits: { memory: "${AI_WORKER_MEM:-6g}" }
 
   realtime:
     <<: *common

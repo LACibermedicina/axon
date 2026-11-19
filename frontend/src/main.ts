@@ -18,7 +18,7 @@ import { mountAccount } from "./modules/account";
 import { mountAvatar } from "./modules/avatar";
 import * as audio from "./core/audio";
 
-const VERSION = "0.1.1-alpha";
+const VERSION = "0.1.2-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: 1060, height: 640, x: 206, y: 46, mount: mountScoreEditor },

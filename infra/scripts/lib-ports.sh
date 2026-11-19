@@ -82,7 +82,6 @@ own_ports() {
 ensure_ports() {
   local f="$1"; ENV_FILE="$f"
   local mine; mine=" $(own_ports | tr '\n' ' ') "
-  local ok_port
   ok_port() { [[ -n "$1" && "$1" -ge 1024 ]] && { [[ "$mine" == *" $1 "* ]] || port_is_free "$1"; }; }
 
   local http; http="$(env_get "$f" HTTP_PORT)"

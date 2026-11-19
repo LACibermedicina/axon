@@ -51,6 +51,10 @@ def main():
             result = HANDLERS[kind](job["payload"])
             _set(jid, status="done", result=result, seconds=round(time.time() - t0, 2))
             log.info("job %s (%s) ok em %.1fs", jid, kind, time.time() - t0)
+        except ModuleNotFoundError as e:
+            log.warning("job %s (%s) requer IA completa: %s", jid, kind, e)
+            _set(jid, status="error", error="Transcrição por IA indisponível neste servidor (modo leve). "
+                 "Ela exige a IA completa (AI_ML=1, ≥ 8 GB de RAM). Cifra, harmonização, edição e exportação seguem disponíveis.")
         except Exception as e:  # noqa: BLE001
             log.error("job %s falhou: %s", jid, traceback.format_exc())
             _set(jid, status="error", error=str(e))

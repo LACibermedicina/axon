@@ -14,4 +14,6 @@ for r in (auth, compositions, media, ai, account):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "project": s.project, "version": s.version, "commit": s.git_sha}
+    import os
+    return {"status": "ok", "project": s.project, "version": s.version, "commit": s.git_sha,
+            "ai_full": os.getenv("AI_ML", "0") == "1"}
