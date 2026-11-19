@@ -4,11 +4,10 @@ resumo musical da composição aberta, quando o próprio usuário pergunta."""
 import hashlib
 import json
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from ..core.config import settings
+from ..core import llm
 from ..core.security import current_user, optional_user
 from .media import rds
 
@@ -17,17 +16,8 @@ LANGS = {"zh": "Mandarim (chinês simplificado)", "es": "Espanhol", "en": "Ingl�
 
 
 async def _claude(system: str, user: str, max_tokens: int = 2000) -> str:
-    s = settings()
-    if not s.anthropic_key:
-        raise HTTPException(503, "IA não configurada (ANTHROPIC_API_KEY ausente)")
-    async with httpx.AsyncClient(timeout=60) as c:
-        r = await c.post("https://api.anthropic.com/v1/messages",
-                         headers={"x-api-key": s.anthropic_key, "anthropic-version": "2023-06-01"},
-                         json={"model": s.ai_model, "max_tokens": max_tokens, "system": system,
-                               "messages": [{"role": "user", "content": user}]})
-    if r.status_code >= 400:
-        raise HTTPException(502, "Falha no provedor de IA")
-    return "".join(b.get("text", "") for b in r.json().get("content", []))
+    """Mantido pelo nome histórico: agora usa a cadeia de provedores com failover (core/llm.py)."""
+    return await llm.complete(system, user, max_tokens)
 
 
 class TranslateIn(BaseModel):

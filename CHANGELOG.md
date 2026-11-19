@@ -2,6 +2,16 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.7-alpha] — 2026-11-19
+
+### Adicionado — failover entre provedores de IA
+- `backend/app/core/llm.py`: tradução contextual e assistente Maestro usam uma cadeia de provedores **Anthropic → OpenAI → Gemini → OpenRouter** (ordem configurável em `AI_PROVIDERS`). Entram na cadeia só os provedores com chave.
+  - Em timeout, erro de rede, 429/5xx ou chave inválida, o próximo provedor responde.
+  - O provedor que falhou fica em pausa crescente (circuit breaker, `AI_COOLDOWN_S`).
+  - As chaves nunca são logadas nem devolvidas pela API.
+- `infra/scripts/configurar-ia.sh`: grava as chaves no `.env` da VPS com digitação **oculta**, faz backup do `.env`, define a ordem e reinicia só a API.
+- Administração → **🤖 IA**: provedores, modelo, estado (ok/em pausa), chamadas e o botão **Testar failover**, que mostra qual provedor respondeu.
+
 ## [0.1.6-alpha] — 2026-11-19
 
 ### Adicionado — atualizações automáticas

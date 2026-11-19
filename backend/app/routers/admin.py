@@ -98,3 +98,19 @@ def system(_: User = Depends(admin_only)):
     except OSError:
         pass
     return out
+
+
+@router.get("/ai")
+def ai_status(_: User = Depends(admin_only)):
+    """Provedores de IA (sem expor chaves): ordem de failover, modelo, saúde."""
+    from ..core import llm
+    return {"providers": llm.status()}
+
+
+@router.post("/ai/test")
+async def ai_test(_: User = Depends(admin_only)):
+    from ..core import llm
+    t0 = __import__("time").time()
+    text, provider = await llm.complete_ex("Responda apenas: ok", "teste de conectividade", 10, timeout=20)
+    return {"provider": provider, "reply": text.strip()[:40], "ms": int((__import__("time").time() - t0) * 1000),
+            "providers": llm.status()}

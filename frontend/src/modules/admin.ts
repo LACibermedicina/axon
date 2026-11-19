@@ -9,7 +9,28 @@ export function mountAdmin(body: HTMLElement) {
   const tabs = h("div", { class: "tabs" });
   const main = h("div");
   body.append(tabs, main);
-  const views: Record<string, () => Promise<HTMLElement>> = { "📊 Visão geral": overview, "👥 Usuários": users, "🌐 Moderação": moderation, "🧾 Auditoria LGPD": audit, "🔄 Atualizações": updates };
+  const views: Record<string, () => Promise<HTMLElement>> = { "📊 Visão geral": overview, "👥 Usuários": users, "🌐 Moderação": moderation, "🧾 Auditoria LGPD": audit, "🔄 Atualizações": updates, "🤖 IA": aiProviders };
+
+  async function aiProviders() {
+    const r = await api("/api/admin/ai");
+    const out = h("div", { class: "row" });
+    const table = (provs: any[]) => h("table", { class: "grid-table" },
+      h("thead", {}, h("tr", {}, ...["Ordem", "Provedor", "Chave", "Modelo", "Estado", "Chamadas"].map((t) => h("th", {}, t)))),
+      h("tbody", {}, ...provs.map((p: any) => h("tr", { class: p.configured ? "" : "muted" },
+        h("td", {}, String(p.position)), h("td", {}, h("b", {}, p.name)), h("td", {}, p.configured ? "✅ configurada" : "—"),
+        h("td", { class: "mono" }, p.model),
+        h("td", {}, !p.configured ? "inativo" : p.paused ? `⏸ em pausa (${p.lastError})` : p.lastOk ? "✅ ok" : "pronto"),
+        h("td", {}, String(p.calls))))));
+    const box = h("div", {}, table(r.providers));
+    const btn = h("button", { class: "btn primary", onclick: async () => {
+      btn.disabled = true; out.textContent = "Testando…";
+      try { const t = await api("/api/admin/ai/test", { method: "POST" }); out.textContent = `✅ Respondeu: ${t.provider} em ${t.ms} ms`; box.replaceChildren(table(t.providers)); }
+      catch (e: any) { out.textContent = "❌ " + e.message; }
+      finally { btn.disabled = false; }
+    } }, "Testar failover") as HTMLButtonElement;
+    return h("div", {}, box, h("div", { class: "row" }, btn, out),
+      h("p", { class: "hint" }, "Se um provedor falhar (erro, limite ou lentidão), o próximo da lista responde e o que falhou fica em pausa por alguns minutos. As chaves ficam só no .env da VPS e nunca aparecem aqui. Para gravar ou trocar: sudo bash /opt/harmonia/infra/scripts/configurar-ia.sh"));
+  }
 
   async function updates() {
     const [sys, hc] = await Promise.all([api("/api/admin/system"), api("/api/health")]);
