@@ -125,6 +125,33 @@ class Store {
       this.selectedMeasures = new Set([...this.selectedMeasures].map((m) => (m >= at ? m + count : m)));
     }, "insert-measure");
   }
+
+  /** Exclui os compassos indicados: remove o conteúdo e puxa o restante para trás. */
+  deleteMeasures(list: number[]) {
+    const s = this.score;
+    const bpm = (s.timeSig[0] * 4) / s.timeSig[1];
+    const del = [...new Set(list)].filter((m) => m >= 0 && m < s.measures).sort((a, b) => a - b);
+    if (!del.length || del.length >= s.measures) return false;
+    const removedBefore = (beat: number) => del.filter((m) => (m + 1) * bpm <= beat + 1e-6).length;
+    const inDeleted = (beat: number) => del.includes(Math.floor(beat / bpm + 1e-9));
+    this.mutate((sc) => {
+      for (const l of sc.layers) {
+        l.notes = l.notes.filter((n) => !inDeleted(n.start));
+        for (const n of l.notes) {
+          // nota que invadia um compasso excluído é encurtada até a barra (coordenadas originais)
+          const bar = (Math.floor(n.start / bpm + 1e-9) + 1) * bpm;
+          if (n.start + n.dur > bar + 1e-6 && inDeleted(bar)) n.dur = Math.max(0.25, bar - n.start);
+          n.start -= removedBefore(n.start) * bpm;
+        }
+        if (l.measures) l.measures = l.measures.filter((m) => !del.includes(m)).map((m) => m - del.filter((d) => d < m).length);
+      }
+      sc.chords = sc.chords.filter((_, m) => !del.includes(m));
+      sc.annotations = sc.annotations.filter((a) => !del.includes(a.measure)).map((a) => ({ ...a, measure: a.measure - del.filter((d) => d < a.measure).length }));
+      sc.measures -= del.length;
+      this.selectedMeasures.clear();
+    }, "delete-measure");
+    return true;
+  }
 }
 
 export const store = new Store();

@@ -2,6 +2,25 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.4-alpha] — 2026-11-19
+
+### Adicionado
+- **Painel lateral direito acoplável**, do lado oposto ao menu lateral esquerdo, com os painéis da partitura:
+  - **Propriedades**: dados da partitura (título, andamento, fórmula, tonalidade, nº de compassos). Para notas selecionadas: altura (±semitom/oitava, nome em solfejo e cifra), duração, intensidade, sílaba, efeito vocal, mover de camada, apagar. Para compassos selecionados: cifra, harmonizar, ouvir, inserir antes/depois, limpar, excluir.
+  - **Camadas**: o gestor de camadas passa de janela para painel, com layout compacto.
+  - **Anotações**: lista, edição inline, cor, ir ao compasso e remover.
+- Comportamento dos painéis:
+  - arrastar o cabeçalho para fora do dock (ou ⇱ ou duplo clique) transforma o painel em flutuante, movível e redimensionável;
+  - arrastar de volta sobre o dock reacopla o painel na posição da linha guia; o mesmo gesto reordena os painéis dentro do dock;
+  - cada painel pode ser recolhido (▾) ou fechado (✕);
+  - o dock inteiro recolhe para uma faixa de ícones (☰), como o menu esquerdo, e ↺ restaura o layout padrão;
+  - o layout fica salvo no navegador.
+- `store.deleteMeasures()`: exclui compassos e puxa o conteúdo seguinte para trás (cifras, anotações e gravações acompanham; notas que invadiam o trecho são encurtadas).
+
+### Alterado
+- Os ícones 3D usam gradientes globais (corrige ícones sem cor quando o mesmo ícone aparece em vários lugares).
+- A janela de Composição se ajusta à largura disponível entre os dois menus laterais; ícones do desktop, Maestro e janelas maximizadas respeitam o dock direito.
+
 ## [0.1.3-alpha] — 2026-11-19
 
 ### Adicionado

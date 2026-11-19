@@ -348,3 +348,75 @@ kbd { background: #fff; border: 1px solid var(--line); border-bottom-width: 2px;
 .grid-table td { padding: 6px 9px; border-top: 1px solid var(--line); vertical-align: middle; }
 .grid-table tr.muted td { opacity: .5; }
 .grid-table td.mono { font-size: 11px; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------- dock direito de painéis (acoplável) */
+body { --rdock: 312px; }
+.rdock { position: absolute; top: 80px; right: 10px; bottom: 96px; width: calc(var(--rdock) - 14px); z-index: 60; display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; border-radius: 16px; background: var(--glass-d); backdrop-filter: blur(22px); transition: width .25s; }
+.rdock-head { display: flex; align-items: center; gap: 6px; color: #fff; padding: 0 2px; }
+.rdock-head b { flex: 1; font-size: 12px; letter-spacing: .3px; opacity: .9; }
+.rdock-head .ic-btn { background: transparent; color: #fff; }
+.rdock-stack { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.rdock-strip { display: none; flex-direction: column; gap: 6px; align-items: center; }
+.rdock.collapsed .rdock-stack, .rdock.collapsed .rdock-head b, .rdock.collapsed .rdock-head .ic-btn { display: none; }
+.rdock.collapsed .rdock-strip { display: flex; }
+.strip-btn { border: 0; background: none; padding: 2px; border-radius: 10px; width: 36px; height: 36px; }
+.strip-btn svg { width: 32px; height: 32px; display: block; }
+.strip-btn.off { opacity: .45; } .strip-btn.float { outline: 2px dashed rgba(255, 255, 255, .5); }
+.strip-btn:hover { background: rgba(255, 255, 255, .15); }
+.rdock.drop-target { box-shadow: 0 0 0 2px #ffd36e inset, 0 0 30px rgba(255, 211, 110, .35); }
+.drop-guide { position: absolute; left: 10px; right: 10px; height: 4px; border-radius: 2px; background: #ffd36e; box-shadow: 0 0 10px #ffd36e; pointer-events: none; }
+body.panel-dragging, body.panel-dragging * { cursor: grabbing !important; user-select: none; }
+
+.panel { display: flex; flex-direction: column; min-height: 120px; flex: 1 1 200px; background: var(--glass); backdrop-filter: blur(30px);
+  border-radius: 12px; box-shadow: 0 6px 20px -8px rgba(10, 0, 40, .45); overflow: hidden; transition: box-shadow .2s, opacity .15s; }
+.panel.collapsed { flex: 0 0 auto; min-height: 0; }
+.panel.collapsed .panel-body { display: none; }
+.panel.collapsed .p-btn:first-of-type { transform: rotate(-90deg); }
+.panel.dragging { opacity: .85; box-shadow: 0 20px 50px rgba(10, 0, 40, .55); }
+.panel.flash { box-shadow: 0 0 0 2px var(--accent), 0 0 24px rgba(124, 92, 255, .6); }
+.panel-head { display: flex; align-items: center; gap: 5px; padding: 6px 8px; cursor: grab; user-select: none; background: rgba(255, 255, 255, .5); border-bottom: 1px solid var(--line); touch-action: none; }
+.panel-head b { font-size: 12.5px; }
+.panel-head .grip { font-size: 10px; letter-spacing: -2px; color: var(--ink2); }
+.p-ic svg { width: 18px; height: 18px; display: block; }
+.p-btn { border: 0; background: transparent; width: 22px; height: 22px; border-radius: 6px; color: var(--ink2); font-size: 12px; transition: transform .15s, background .15s; }
+.p-btn:hover { background: rgba(124, 92, 255, .14); color: var(--accent); }
+.panel-body { flex: 1; overflow: auto; padding: 8px 10px; position: relative; font-size: 12.5px; }
+.float-layer { position: fixed; inset: 0; pointer-events: none; z-index: 8600; }
+.panel.floating { position: fixed; pointer-events: auto; resize: both; min-width: 240px; max-width: 90vw; max-height: 85vh; box-shadow: var(--shadow); }
+.panel.floating.collapsed { resize: none; height: auto !important; }
+
+/* elementos do desktop respeitam a largura do dock direito */
+.desk-icons { right: calc(var(--rdock) + 10px); }
+.avatar-wrap { right: calc(var(--rdock) + 12px); }
+.win.max { width: calc(100vw - 212px - var(--rdock)) !important; }
+
+/* propriedades */
+.props .prop-sec { margin-bottom: 12px; }
+.props h5, .ann-panel h5 { margin: 2px 0 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink2); }
+.prop { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.prop > span { font-size: 11px; color: var(--ink2); font-weight: 600; }
+.prop-ctl { display: flex; gap: 4px; align-items: center; }
+.prop-ctl input:not([type="range"]):not([type="color"]), .prop-ctl select { width: 100%; min-width: 0; }
+.prop-ctl input[type="range"] { width: 100%; accent-color: var(--accent); }
+.prop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.note-id { display: flex; flex-direction: column; margin-bottom: 4px; } .note-id b { font-size: 15px; color: var(--accent); }
+.props .row .btn { padding: 4px 8px; }
+
+/* camadas no painel estreito: linha em duas faixas */
+.panel .layers-app .toolbar select { max-width: 110px; }
+.panel .layer-row { flex-wrap: wrap; row-gap: 4px; padding: 6px; }
+.panel .layer-row .lname { flex: 1 1 calc(100% - 110px); }
+.panel .layer-row .ic-btn { width: 26px; height: 24px; }
+.panel .layer-row .vol { flex: 1; min-width: 60px; }
+.panel .hint { font-size: 11px; }
+.panel .sheet { inset: auto 6px 6px; }
+
+/* anotações */
+.ann-panel .row input:not([type="color"]) { flex: 1; min-width: 0; }
+.ann-panel input[type="color"] { width: 28px; height: 28px; padding: 0; border: 0; background: none; }
+.ann-list { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.ann-item { display: flex; gap: 5px; align-items: center; background: #fff; border-left: 4px solid var(--ac); border-radius: 8px; padding: 4px 6px; }
+.ann-item input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 2px; }
+
+@media (max-width: 820px) { .rdock { display: none; } body { --rdock: 0px; } }

@@ -1,7 +1,7 @@
 // harmonIA — desktop estilo macOS: barra de menus, seletor de idiomas, menu lateral, ícones, Dock e janelas.
 import "./styles/main.css";
 import { initWM, openApp, AppDef, onWindowsChange, openWindows, restoreWindow } from "./core/wm";
-import { ICONS } from "./core/icons";
+import { ICONS, installIconDefs } from "./core/icons";
 import { h, toast } from "./core/ui";
 import { LANGS, setLang, lang, t, watchI18n } from "./core/i18n";
 import { restoreSession, currentUser, api } from "./core/api";
@@ -17,14 +17,15 @@ import { mountCommunity } from "./modules/community";
 import { mountAccount } from "./modules/account";
 import { mountAvatar } from "./modules/avatar";
 import { mountAdmin } from "./modules/admin";
+import { PanelDock } from "./core/paneldock";
+import { mountProperties, mountAnnotations } from "./modules/inspector";
 import * as audio from "./core/audio";
 
-const VERSION = "0.1.3-alpha";
+const VERSION = "0.1.4-alpha";
 
 const APPS: Record<string, AppDef> = {
-  compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: 1060, height: 640, x: 206, y: 46, mount: mountScoreEditor },
+  compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1060, innerWidth - 206 - 312 - 24)), height: 640, x: 206, y: 46, mount: mountScoreEditor },
   import: { id: "import", title: t("import"), icon: ICONS.import, width: 760, height: 560, mount: mountImporter },
-  layers: { id: "layers", title: t("layers"), icon: ICONS.layers, width: 560, height: 440, mount: mountLayers },
   mixer: { id: "mixer", title: t("mixer"), icon: ICONS.mixer, width: 820, height: 460, mount: mountMixer },
   library: { id: "library", title: t("library"), icon: ICONS.library, width: 900, height: 560, mount: mountLibrary },
   graph: { id: "graph", title: t("graph"), icon: ICONS.graph, width: 1100, height: 420, mount: mountGraph },
@@ -33,13 +34,20 @@ const APPS: Record<string, AppDef> = {
   account: { id: "account", title: t("account"), icon: ICONS.account, width: 460, height: 560, mount: mountAccount },
   admin: { id: "admin", title: t("admin"), icon: ICONS.admin, width: 920, height: 560, mount: mountAdmin },
 };
-const ORDER = ["compose", "import", "layers", "mixer", "library", "graph", "agenda", "community", "admin", "account"];
+const ORDER = ["compose", "props", "layers", "notes", "import", "mixer", "library", "graph", "agenda", "community", "admin", "account"];
 // Funções administrativas: visíveis e acessíveis somente ao papel admin (o servidor também valida)
 const ADMIN_ONLY = new Set(["graph", "admin"]);
 const isAdmin = () => currentUser?.role === "admin";
 const allowed = (id: string) => !ADMIN_ONLY.has(id) || isAdmin();
+const titleOf = (id: string) => APPS[id]?.title ?? t(id);
+const iconOf = (id: string) => APPS[id]?.icon ?? PANEL_ICONS[id];
 const visible = () => ORDER.filter(allowed);
+// Painéis da partitura (dock direito acoplável) — abrem como painel, não como janela
+const PANEL_IDS = new Set(["props", "layers", "notes"]);
+let panels: PanelDock;
+const PANEL_ICONS: Record<string, string> = { props: ICONS.props, layers: ICONS.layers, notes: ICONS.notes };
 const open = (id: string) => {
+  if (PANEL_IDS.has(id)) { panels?.reveal(id); return; }
   if (!APPS[id]) return;
   if (!allowed(id)) { toast("Acesso restrito ao administrador", "warn"); return; }
   return openApp(APPS[id]);
@@ -71,7 +79,7 @@ function menubar() {
     menu("Arquivo", [["Nova composição", () => { if (confirm("Começar uma composição nova? (a atual continua na biblioteca se foi salva)")) store.load({ title: "Sem título", tempo: 96, timeSig: [4, 4], keySig: 0, measures: 8, layers: [], chords: [], annotations: [] }); }],
       ["Importar áudio / foto / cifra…", () => open("import")], ["Biblioteca", () => open("library")], ["Exportar…", () => open("mixer")]]),
     menu("Editar", [["Desfazer ⌘Z", () => store.undoOp()], ["Refazer ⇧⌘Z", () => store.redoOp()], ["Selecionar todos os compassos", () => { store.selectedMeasures = new Set([...Array(store.score.measures).keys()]); store.emit("selection"); }]]),
-    menuDyn("Janelas", () => visible().map((id) => [APPS[id].title, () => open(id)] as [string, () => void])),
+    menuDyn("Janelas", () => visible().map((id) => [(PANEL_IDS.has(id) ? "▸ Painel: " : "") + titleOf(id), () => open(id)] as [string, () => void])),
     menu("Ajuda", [["Atalhos de teclado", shortcuts], ["Sobre / versão", about]]),
     h("span", { class: "spacer" }), clock, userBtn);
 }
@@ -87,8 +95,8 @@ function sidebar() {
   const nav = h("nav", { class: "sidebar", "aria-label": "Navegação" });
   const draw = () => nav.replaceChildren(
     h("button", { class: "sb-toggle", title: "Recolher/expandir", onclick: () => document.body.classList.toggle("sb-collapsed") }, "☰"),
-    ...visible().map((id) => h("button", { class: "sb-item" + (openWindows().some((w) => w.app.id === id) ? " running" : ""), onclick: () => open(id), title: APPS[id].title },
-      h("span", { class: "sb-ic", html: APPS[id].icon }), h("span", { class: "sb-label", "data-i18n": id }, t(id)))));
+    ...visible().filter((id) => !PANEL_IDS.has(id)).map((id) => h("button", { class: "sb-item" + (openWindows().some((w) => w.app.id === id) ? " running" : ""), onclick: () => open(id), title: titleOf(id) },
+      h("span", { class: "sb-ic", html: iconOf(id) }), h("span", { class: "sb-label", "data-i18n": id }, t(id)))));
   onWindowsChange(draw); addEventListener("auth", draw); draw();
   return nav;
 }
@@ -96,7 +104,7 @@ function sidebar() {
 function dock() {
   const d = h("footer", { class: "dock", role: "toolbar", "aria-label": "Dock" });
   const draw = () => {
-    d.replaceChildren(...visible().map((id) => {
+    d.replaceChildren(...visible().filter((id) => !PANEL_IDS.has(id)).map((id) => {
       const running = openWindows().filter((w) => w.app.id === id);
       return h("button", { class: "dock-item" + (running.length ? " running" : ""), "aria-label": APPS[id].title,
         onclick: () => (running.length && running[0].el.classList.contains("min") ? restoreWindow(running[0]) : open(id)) },
@@ -151,10 +159,17 @@ async function publicRoutes() {
 }
 
 async function boot() {
+  installIconDefs();
   const app = document.getElementById("app")!;
   const winLayer = h("div", { class: "win-layer" });
   app.append(menubar(), langbar(), sidebar(), desktopIcons(), winLayer, dock());
   initWM(winLayer);
+  panels = new PanelDock(app);
+  panels.register([
+    { id: "props", title: t("props"), icon: ICONS.props, mount: mountProperties },
+    { id: "layers", title: t("layers"), icon: ICONS.layers, mount: mountLayers },
+    { id: "notes", title: t("notes"), icon: ICONS.notes, mount: mountAnnotations },
+  ]);
   watchI18n(winLayer);
   mountAvatar();
   addEventListener("open-app", (e: any) => open(e.detail));
@@ -168,7 +183,6 @@ async function boot() {
   await restoreSession();
   if (!(await publicRoutes())) {
     open("compose");
-    setTimeout(() => open("layers"), 150);
   }
   if (lang !== "pt") setLang(lang);
 }

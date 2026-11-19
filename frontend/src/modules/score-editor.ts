@@ -653,6 +653,13 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     } catch (e: any) { busy(btn, false); toast("Microfone indisponível: " + e.message, "error"); }
   }
 
+  // Ações disparadas pelos painéis laterais (Propriedades)
+  const onAction = (e: Event) => {
+    const a = (e as CustomEvent).detail;
+    if (a === "harmonize") harmonize(harmBtn as HTMLButtonElement, false);
+    if (a === "play-selection") { if (audio.isPlaying()) togglePlay(); togglePlay(); }
+  };
+  addEventListener("harmonia:action", onAction);
   const off = store.on((reason) => {
     if (reason === "autosave") return;
     if (reason === "load" || reason === "merge" || reason === "tempo" || reason === "key" || reason === "ts") {
@@ -666,5 +673,5 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   setTool("select");
   render();
   win.setTitle(`${t("compose")} — ${store.score.title}`);
-  return () => { off(); ro.disconnect(); audio.stop(); };
+  return () => { off(); ro.disconnect(); audio.stop(); removeEventListener("harmonia:action", onAction); };
 }
