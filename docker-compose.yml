@@ -1,0 +1,110 @@
+# harmonIA — stack de produção (harmonia.m3d.pro)
+# Redes: "edge" (só nginx exposto) e "internal" (sem acesso externo direto)
+name: harmonia
+
+x-common: &common
+  restart: unless-stopped
+  env_file: .env
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  nginx:
+    <<: *common
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile   # build multi-stage do frontend + nginx
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on: [api, realtime]
+    networks: [edge, internal]
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["tools"]
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+
+  api:
+    <<: *common
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      MEDIA_ROOT: /data/media
+      PUBLIC_BASE_URL: https://${SUBDOMINIO}
+      GIT_SHA: ${GIT_SHA:-dev}
+    volumes: ["./data/media:/data/media"]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 20s
+      retries: 5
+
+  ai-worker:
+    <<: *common
+    build: ./ai-worker
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      MEDIA_ROOT: /data/media
+      MODELS_DIR: /data/models
+    volumes:
+      - ./data/media:/data/media
+      - ./data/models:/data/models
+    depends_on: [redis]
+    networks: [internal]
+    deploy:
+      resources:
+        limits: { memory: 6g }
+
+  realtime:
+    <<: *common
+    build: ./realtime
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+    depends_on: [redis]
+    networks: [internal]
+
+  db:
+    <<: *common
+    image: postgres:16-alpine
+    volumes: ["./data/postgres:/var/lib/postgresql/data"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 10
+
+  redis:
+    <<: *common
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
+    volumes: ["./data/redis:/data"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep PONG"]
+      interval: 10s
+
+  coturn:
+    <<: *common
+    image: coturn/coturn:4.6
+    network_mode: host   # TURN precisa de portas UDP reais para WebRTC
+    command: >
+      -n --realm=${SUBDOMINIO} --use-auth-secret --static-auth-secret=${TURN_SECRET}
+      --listening-port=3478 --min-port=49160 --max-port=49200
+      --no-cli --no-tls --no-dtls --fingerprint
+
+networks:
+  edge: {}
+  internal:
+    internal: true

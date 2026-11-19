@@ -1,0 +1,63 @@
+import os, sys, tempfile
+os.environ["DATABASE_URL"] = "sqlite:///" + tempfile.mktemp(suffix=".db")
+os.environ["MEDIA_ROOT"] = tempfile.mkdtemp()
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "ai-worker"))
+import fakeredis
+from fastapi.testclient import TestClient
+from app import migrate
+from app.routers import media
+media._r = fakeredis.FakeRedis(decode_responses=True)
+from app.main import app
+
+migrate.main()
+c = TestClient(app)
+
+
+def auth():
+    r = c.post("/api/auth/register", json={"email": "a@b.com", "name": "Ana Lima", "password": "segredo123", "consent": True})
+    if r.status_code == 409:
+        r = c.post("/api/auth/login", json={"email": "a@b.com", "password": "segredo123"})
+    return {"Authorization": "Bearer " + r.json()["token"]}
+
+
+def test_flow():
+    assert c.get("/api/health").json()["status"] == "ok"
+    assert c.post("/api/auth/register", json={"email": "x@b.com", "name": "X", "password": "segredo123", "consent": False}).status_code == 400
+    h = auth()
+    me = c.get("/api/auth/me", headers=h).json()
+    assert me["email"] == "a@b.com" and me["role"] == "composer"
+    comp = c.post("/api/compositions", json={"title": "Valsa"}, headers=h).json()
+    cid = comp["id"]
+    # cifra síncrona
+    r = c.post("/api/jobs", json={"type": "parse_cifra", "payload": {"text": "| C | Am | F | G7 |"}}, headers=h).json()
+    res = r["result"]
+    assert res["measures"] == 4 and res["layers"][0]["notes"]
+    score = comp["score"] | {"layers": res["layers"] + [{"id": "m", "name": "Mel", "kind": "melody", "staff": "treble",
+             "notes": [{"pitch": 72, "start": 0, "dur": 4}, {"pitch": 77, "start": 4, "dur": 4}]}], "chords": res["chords"], "measures": 4}
+    p = c.patch(f"/api/compositions/{cid}", json={"score": score, "version": 1}, headers=h)
+    assert p.status_code == 200
+    assert c.patch(f"/api/compositions/{cid}", json={"score": score, "version": 1}, headers=h).status_code == 409
+    hz = c.post("/api/jobs", json={"type": "harmonize", "payload": {"score": score, "measures": [1, 2]}}, headers=h).json()
+    assert hz["result"]["chords"][1]
+    # async export enfileirado
+    j = c.post("/api/jobs", json={"type": "export", "payload": {"score": score, "formats": ["mid"]}}, headers=h).json()
+    assert j["status"] == "queued"
+    assert c.get(f"/api/jobs/{j['id']}", headers=h).json()["status"] == "queued"
+    # publicar + biblioteca + link
+    pub = c.post(f"/api/compositions/{cid}/publish", json={"visibility": "public", "featured": True}, headers=h).json()
+    lib = c.get("/api/library/public").json()
+    assert lib[0]["author"] == "Ana" and lib[0]["featured"]
+    assert c.get("/api/share/" + pub["shareUrl"].split("/")[-1]).json()["title"] == "Valsa"
+    pl = c.post("/api/playlists", json={"title": "Meu álbum", "kind": "album"}, headers=h).json()
+    pl = c.put(f"/api/playlists/{pl['id']}/items", json={"compositionIds": [cid, 999]}, headers=h).json()
+    assert len(pl["items"]) == 1
+    # upload com validação de conteúdo
+    bad = c.post("/api/assets", data={"kind": "audio"}, files={"file": ("x.wav", b"notaudio", "audio/wav")}, headers=h)
+    assert bad.status_code == 415
+    ok = c.post("/api/assets", data={"kind": "audio"}, files={"file": ("x.wav", b"RIFF0000WAVE", "audio/wav")}, headers=h)
+    assert ok.status_code == 200
+    assert c.get(ok.json()["url"]).status_code == 200
+    assert c.get("/api/media/../../etc/passwd").status_code == 404
+    # LGPD
+    exp = c.get("/api/account/export", headers=h).json()
+    assert exp["user"]["email"] == "a@b.com" and exp["compositions"]
