@@ -114,3 +114,12 @@ def test_admin_ai_credentials_and_diagnose(monkeypatch):
     assert res["offline"]["ok"] and res["mymemory"]["ok"] and d["working"] >= 1
     assert c.delete("/api/admin/ai/credentials/minha-ia", headers=ha).status_code == 200
     assert not any(p["name"] == "minha-ia" for p in c.get("/api/admin/ai", headers=ha).json()["providers"])
+
+
+def test_guest_login():
+    r = c.post("/api/auth/guest").json()
+    hg = {"Authorization": "Bearer " + r["token"]}
+    assert r["user"]["role"] == "guest" and r["user"]["guest"]
+    comp = c.post("/api/compositions", json={"title": "Rascunho"}, headers=hg)
+    assert comp.status_code == 200
+    assert c.post(f"/api/compositions/{comp.json()['id']}/publish", json={"visibility": "public"}, headers=hg).status_code == 403

@@ -27,7 +27,7 @@ export function mountCommunity(body: HTMLElement) {
     body.querySelector(".room-name")!.textContent = "# " + r; log.replaceChildren();
   }
   ws.onopen = () => join(room);
-  ws.onerror = () => toast("Chat indisponível no momento", "warn");
+  ws.onerror = () => { log.replaceChildren(h("p", { class: "hint" }, "Chat indisponível no momento — tentaremos de novo quando você reabrir.")); };
   ws.onmessage = async (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === "hello") ice = m.ice;
@@ -68,4 +68,15 @@ export function mountCommunity(body: HTMLElement) {
   }
   function hangup() { local?.getTracks().forEach((t) => t.stop()); local = null; peers.forEach((p) => p.close()); peers.clear(); videos.replaceChildren(); callBtn.textContent = "📹 Entrar na chamada"; }
   return () => { hangup(); ws.close(); };
+}
+
+
+/** Versão para painel (acoplável/flutuante): remonta ao entrar/sair da conta. */
+export function mountCommunityPanel(body: HTMLElement) {
+  body.classList.add("community-panel");
+  let cleanup: void | (() => void);
+  const remount = () => { if (typeof cleanup === "function") cleanup(); body.replaceChildren(); cleanup = mountCommunity(body); };
+  addEventListener("auth", remount);
+  remount();
+  return () => { removeEventListener("auth", remount); if (typeof cleanup === "function") cleanup(); };
 }

@@ -2,6 +2,27 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.2.0-alpha] — 2026-11-21
+
+### Corrigido
+- **CI com ✗ em todos os commits**: os testes do `ai-worker` rodavam `pytest` sem o pacote no caminho de importação. Adicionado `ai-worker/tests/conftest.py` e o workflow agora usa `python -m pytest -q tests`. Como a atualização automática só aplica commits com CI verde, nada novo chegava à VPS.
+- **Deploy acusava "HTTP_PORT=20080 ocupada"** quando a porta era do próprio harmonIA: a posse da porta agora é confirmada por `/api/health` (`"project":"harmonia"`); divergência de portas TURN só gera aviso; `migrate` com novas tentativas.
+- **Diagnóstico de IA**: mostra a mensagem do próprio provedor (com chaves mascaradas) e dicas para 400/402/404/429.
+
+### Adicionado
+- **Tela de login** na abertura, com **"Entrar como visitante (sem senha)"** (papel `guest`: compor, IA, exportar, biblioteca; não publica).
+- **Passo a passo para novos usuários** em 2 passos: (1) compor e harmonizar · subir imagem · gravar o tema · subir áudio; (2) capturar **só a melodia** (harmonizar depois) ou **melodia + harmonia**. Botão para pular direto à estação completa com projeto vazio. Reabrível em **Ajuda → Passo a passo inicial**.
+- **⟲ Do zero**: reinicia a composição numa partitura vazia.
+- **Pautas e claves**: ocultar a mão esquerda, mostrar só a pauta inferior e trocar clave (Sol, Fá, Dó) de cada pauta.
+- **● Nova voz**: grava livremente sobre os compassos (a partir da seleção), com contagem e metrônomo; a gravação vira uma camada nova e a transcrição entra como voz/harmonia em camadas próprias.
+- **Grupos de camadas**: criar, renomear, recolher, visível/mudo/solo/trava do grupo inteiro, arrastar camadas para o grupo.
+- **Mesa de Edição** no menu lateral direito; **Comunidade** como quadro discreto, móvel, que pode ser fechado ou acoplado ao menu lateral.
+- **Área de notificações** (sino na barra superior): trabalhos concluídos/falhos e avisos ficam registrados.
+- **Maestro** começa minimizado como ícone de ajuda; clique para despertá-lo.
+
+### Alterado
+- Quadros sobrepostos agora são opacos (sem transparência).
+
 ## [0.1.9-alpha] — 2026-11-21
 
 ### Adicionado — versão para celular (detecção automática)

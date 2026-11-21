@@ -24,10 +24,25 @@ export function mountAvatar() {
   const level = h("div", { class: "xp" });
   const ask = h("form", { class: "ask", hidden: true }, h("input", { placeholder: "Pergunte ao Maestro…", maxlength: 500 }), h("button", { class: "btn primary" }, "→"));
   // celular: botão flutuante leve (sem WebGL) no lugar do personagem 3D
-  const fab = h("button", { class: "maestro-fab", "aria-label": "Perguntar ao Maestro", onclick: () => {
-    ask.hidden = !ask.hidden; if (!ask.hidden) (ask.querySelector("input") as HTMLInputElement).focus();
-  } }, "🎼");
-  wrap.append(bubble, ask, canvasBox, fab, h("div", { class: "avatar-ctl" }, level, muteBtn));
+  // O assistente começa MINIMIZADO como ícone de ajuda (🎼 ?). Clicar no ícone desperta o Maestro.
+  let awake = false;
+  const fab = h("button", { class: "maestro-fab", "aria-label": "Ajuda — despertar o assistente Maestro", title: "Ajuda: despertar o Maestro" },
+    h("span", {}, "🎼"), h("b", { class: "fab-q", "aria-hidden": "true" }, "?"));
+  const minBtn = h("button", { class: "ic-btn", title: "Minimizar o Maestro", "aria-label": "Minimizar o Maestro" }, "–");
+  wrap.append(bubble, ask, canvasBox, fab, h("div", { class: "avatar-ctl" }, level, muteBtn, minBtn));
+  wrap.classList.add("asleep");
+  const wake = () => {
+    awake = true; wrap.classList.remove("asleep");
+    ask.hidden = false; (ask.querySelector("input") as HTMLInputElement).focus();
+    say(document.body.classList.contains("mobile") ? "Olá! Sou o Maestro 🎼 — pergunte o que quiser." : "Olá! Sou o Maestro. Pergunte qualquer coisa sobre a partitura ou o editor. " + TIPS[0], 7000);
+  };
+  const sleep = () => { awake = false; wrap.classList.add("asleep"); ask.hidden = true; bubble.hidden = true; speechSynthesis?.cancel(); };
+  fab.addEventListener("click", () => {
+    if (document.body.classList.contains("mobile") && awake) { ask.hidden = !ask.hidden; return; }
+    awake ? sleep() : wake();
+  });
+  minBtn.addEventListener("click", sleep);
+  addEventListener("maestro:wake", wake);
   document.body.append(wrap);
   let muted = localStorage.getItem("maestro.muted") === "1";
 
@@ -119,12 +134,12 @@ export function mountAvatar() {
   // gamificação: reage a conquistas no editor
   let lastCount = 0;
   store.on((r) => {
+    if (!awake) { if (r === "harmonize") gainXp(10); return; }
     if (r === "harmonize") { say("Bravo! 👏 Harmonia nova. Ouça e ajuste as vozes arrastando as notas.", 6000); gainXp(10); }
     if (r === "add") { const c = store.score.layers.reduce((a, l) => a + l.notes.length, 0); if (Math.floor(c / 10) > Math.floor(lastCount / 10)) { say(`${c} notas! Sua melodia está tomando forma. 🎶`, 4000); gainXp(3); } lastCount = c; }
     if (r === "merge") { say("Transcrição pronta! Confira cada camada no Gestor de Camadas.", 6000); gainXp(8); }
   });
   const mobile = () => document.body.classList.contains("mobile");
-  setTimeout(() => say(mobile() ? "Olá! Sou o Maestro 🎼 — toque em mim para tirar dúvidas." : "Olá! Eu sou o Maestro. Arraste-me pela tela, ou clique para tirar dúvidas. " + TIPS[0], mobile() ? 4000 : 9000), 1200);
-  setInterval(() => { if (bubble.hidden && !muted && !mobile()) say("Dica: " + TIPS[Math.floor(Math.random() * TIPS.length)], 8000); }, 120000);
+  setInterval(() => { if (awake && bubble.hidden && !muted && !mobile()) say("Dica: " + TIPS[Math.floor(Math.random() * TIPS.length)], 8000); }, 120000);
   bubble.addEventListener("click", () => (bubble.hidden = true)); // toque fecha o balão
 }

@@ -1,12 +1,13 @@
 // Editor de partitura para piano (sistema Sol/Fá) com drag & drop profissional e camadas.
 // Híbrido didático: notação tradicional + barra de duração colorida por camada (mostra a duração real).
 import { store, newLayer } from "../core/store";
-import { Note, Score, uid, beatsPerMeasure, ChordEv } from "../core/types";
+import { Note, Score, uid, beatsPerMeasure, ChordEv, staves, Clef } from "../core/types";
 import { h, toast, busy, tip } from "../core/ui";
 import { SOLFEGE, NAMES, parseChord, voiceChords, extractMelody, chordPcs, symbolOf, KEY_NAMES } from "../core/theory";
 import * as audio from "../core/audio";
 import { currentUser, runJob, upload } from "../core/api";
 import { t } from "../core/i18n";
+import { prefs } from "../core/prefs";
 import type { Win } from "../core/wm";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -33,8 +34,10 @@ function stepToPitch(step: number, fifths: number) {
   const letter = ((step % 7) + 7) % 7, oct = Math.floor(step / 7);
   return (oct + 1) * 12 + LETTER_PC[letter] + keyAcc(fifths)[letter];
 }
-const TREBLE_TOP = 38; // F5
-const BASS_TOP = 26;   // A3
+// passo diatônico da linha superior de cada clave e glifo
+const CLEF_TOP: Record<Clef, number> = { G: 38, F: 26, C: 32 };
+const CLEF_GLYPH: Record<Clef, string> = { G: "𝄞", F: "𝄢", C: "𝄡" };
+const CLEF_SHIFT: Record<Clef, number> = { G: 0, F: -14, C: -7 }; // deslocamento da armadura vs. clave de Sol
 
 function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, any> = {}, text?: string) {
   const el = document.createElementNS(SVGNS, tag);
@@ -105,7 +108,8 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const aiBox = h("div", { class: "seg" }, harmBtn, harmAllBtn, styleSel,
     tip(h("button", { class: "btn", onclick: extractMel }, "Melodia ⇠ harmonia"), "Extrai a voz principal (mais aguda) das camadas de harmonia"),
     tip(h("button", { class: "btn", onclick: transcribeChords }, "Cifrar"), "Reconhece os acordes a partir das notas e escreve a cifra"),
-    tip(h("button", { class: "btn rec", onclick: (e: Event) => recordSection(e.currentTarget as HTMLButtonElement) }, "● " + t("record") + " trecho"), "Grava os compassos selecionados (ou faltantes) com contagem e metrônomo"));
+    tip(h("button", { class: "btn rec", onclick: (e: Event) => recordSection(e.currentTarget as HTMLButtonElement) }, "● " + t("record") + " trecho"), "Grava os compassos selecionados (ou os que faltam) com contagem e metrônomo — vira uma camada nova"),
+    tip(h("button", { class: "btn rec", onclick: (e: Event) => recordFree(e.currentTarget as HTMLButtonElement) }, "● Nova voz"), "Grava livremente sobre os compassos existentes (ouvindo a partitura) até você parar — a gravação vira uma nova voz/camada"));
   const zoomIn = h("input", { type: "range", min: 0.6, max: 2, step: 0.1, value: zoom, "aria-label": "Zoom", oninput: (e: Event) => { zoom = +(e.target as HTMLInputElement).value; render(); } });
   const metaBox = h("div", { class: "seg" },
     h("button", { class: "btn ghost", title: "Desfazer (⌘Z)", onclick: () => store.undoOp() }, "↶"),
@@ -120,7 +124,29 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const tsSel = h("select", { "aria-label": "Fórmula de compasso", onchange: (e: Event) => store.mutate((s) => (s.timeSig = (e.target as HTMLSelectElement).value.split("/").map(Number) as [number, number]), "ts") },
     ...["2/4", "3/4", "4/4", "6/8", "5/4", "7/8"].map((v) => h("option", { value: v, selected: v === store.score.timeSig.join("/") }, v)));
   const addMeasure = h("button", { class: "btn ghost", onclick: () => store.mutate((s) => { s.measures++; }, "measures") }, "+ compasso");
-  const header = h("div", { class: "score-head" }, titleIn, h("div", { class: "seg" }, keySel, tsSel, addMeasure));
+  // Pautas: piano completo, ocultar mão esquerda (só superior) ou só inferior; clave de cada pauta
+  const stavesSel = h("select", { "aria-label": "Pautas visíveis", title: "Pautas visíveis", onchange: (e: Event) => {
+    const v = (e.target as HTMLSelectElement).value;
+    store.mutate((x) => { const st = staves(x); st.upper.visible = v !== "lower"; st.lower.visible = v !== "upper"; x.staves = st; }, "staves");
+  } }, h("option", { value: "both" }, "𝄞+𝄢 Piano"), h("option", { value: "upper" }, "Ocultar mão esquerda"), h("option", { value: "lower" }, "Só pauta inferior")) as HTMLSelectElement;
+  const clefSel = (which: "upper" | "lower") => h("select", { "aria-label": which === "upper" ? "Clave da pauta superior" : "Clave da pauta inferior",
+    title: which === "upper" ? "Clave da pauta superior" : "Clave da pauta inferior",
+    onchange: (e: Event) => store.mutate((x) => { const st = staves(x); st[which].clef = (e.target as HTMLSelectElement).value as Clef; x.staves = st; }, "staves") },
+    h("option", { value: "G" }, "𝄞 Sol"), h("option", { value: "F" }, "𝄢 Fá"), h("option", { value: "C" }, "𝄡 Dó")) as HTMLSelectElement;
+  const upperClef = clefSel("upper"), lowerClef = clefSel("lower");
+  const syncStaffCtl = () => {
+    const st = staves(store.score);
+    stavesSel.value = st.upper.visible && st.lower.visible ? "both" : st.upper.visible ? "upper" : "lower";
+    upperClef.value = st.upper.clef; lowerClef.value = st.lower.clef;
+    upperClef.hidden = !st.upper.visible; lowerClef.hidden = !st.lower.visible;
+  };
+  const scratch = tip(h("button", { class: "btn ghost", onclick: () => {
+    if (!confirm("Começar do zero? A partitura atual será substituída por uma vazia (o que já foi salvo na Biblioteca continua lá; ⌘Z não desfaz).")) return;
+    store.startFromScratch();
+    toast("Partitura vazia pronta — escolha a ferramenta ✎ Nota ou grave um trecho", "ok");
+  } }, "⟲ Do zero"), "Recomeçar com uma partitura vazia");
+  const header = h("div", { class: "score-head" }, titleIn, h("div", { class: "seg" }, keySel, tsSel, stavesSel, upperClef, lowerClef, addMeasure, scratch));
+  syncStaffCtl();
 
   const status = h("div", { class: "statusbar", "data-noi18n": "" });
   const canvas = h("div", { class: "score-canvas", tabindex: "0" });
@@ -176,11 +202,14 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const keyW = Math.abs(s.keySig) * 9;
     const firstLeft = 70 + keyW + 26, otherLeft = 62 + keyW;
     const perSys = Math.max(1, Math.floor((width - firstLeft) / mW));
-    const SYS_H = 300;
+    const st = staves(s);
+    const both = st.upper.visible && st.lower.visible;
+    const SYS_H = both ? 300 : 200;
     systems = [];
     for (let m = 0, i = 0; m < s.measures; m += perSys, i++) {
       const y = 10 + i * SYS_H;
-      systems.push({ index: i, y, firstMeasure: m, nMeasures: Math.min(perSys, s.measures - m), left: i === 0 ? firstLeft : otherLeft, trebleY: y + 92, bassY: y + 92 + 40 + 78 });
+      systems.push({ index: i, y, firstMeasure: m, nMeasures: Math.min(perSys, s.measures - m), left: i === 0 ? firstLeft : otherLeft,
+        trebleY: y + 92, bassY: both ? y + 92 + 40 + 78 : y + 92 });
     }
     paper.setAttribute("width", String(width));
     paper.setAttribute("height", String(systems.length * SYS_H + 20));
@@ -232,15 +261,18 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
         g.append(ag);
       }
     }
-    drawStaff(g, sys.trebleY, x0, x1);
-    drawStaff(g, sys.bassY, x0, x1);
-    // chave do piano e barras
-    g.append(svg("path", { d: `M${x0 - 2} ${sys.trebleY} q-10 ${(sys.bassY + 40 - sys.trebleY) / 4} 0 ${(sys.bassY + 40 - sys.trebleY) / 2} q-10 ${(sys.bassY + 40 - sys.trebleY) / 4} 0 ${(sys.bassY + 40 - sys.trebleY) / 2}`, class: "brace" }));
-    g.append(svg("line", { x1: x0, x2: x0, y1: sys.trebleY, y2: sys.bassY + 40, class: "barline" }));
+    const st = staves(s);
+    const both = st.upper.visible && st.lower.visible;
+    const yTop = sys.trebleY, yBot = (both ? sys.bassY : sys.trebleY) + 40;
+    if (st.upper.visible) drawStaff(g, sys.trebleY, x0, x1);
+    if (st.lower.visible) drawStaff(g, sys.bassY, x0, x1);
+    // chave do piano (só com as duas pautas) e barras
+    if (both) g.append(svg("path", { d: `M${x0 - 2} ${sys.trebleY} q-10 ${(sys.bassY + 40 - sys.trebleY) / 4} 0 ${(sys.bassY + 40 - sys.trebleY) / 2} q-10 ${(sys.bassY + 40 - sys.trebleY) / 4} 0 ${(sys.bassY + 40 - sys.trebleY) / 2}`, class: "brace" }));
+    g.append(svg("line", { x1: x0, x2: x0, y1: yTop, y2: yBot, class: "barline" }));
     for (let k = 0; k <= sys.nMeasures; k++) {
       const bx = sys.left + k * mW;
       const last = sys.firstMeasure + k === s.measures;
-      g.append(svg("line", { x1: bx, x2: bx, y1: sys.trebleY, y2: sys.bassY + 40, class: last ? "barline final" : "barline" }));
+      g.append(svg("line", { x1: bx, x2: bx, y1: yTop, y2: yBot, class: last ? "barline final" : "barline" }));
     }
     // "+" discreto nas barras: insere compasso entre os compassos e ao final
     for (let k = sys.index === 0 ? 0 : 1; k <= sys.nMeasures; k++) {
@@ -253,21 +285,23 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       g.append(pg);
     }
     // claves, armadura, fórmula
-    g.append(svg("text", { x: 14, y: sys.trebleY + 31, class: "clef" }, "𝄞"));
-    g.append(svg("text", { x: 14, y: sys.bassY + 21, class: "clef bass" }, "𝄢"));
-    const acc = keyAcc(s.keySig);
+    const visibleStaves: [number, Clef][] = [];
+    if (st.upper.visible) visibleStaves.push([sys.trebleY, st.upper.clef]);
+    if (st.lower.visible) visibleStaves.push([sys.bassY, st.lower.clef]);
+    for (const [sy, clef] of visibleStaves) {
+      const cy = clef === "G" ? sy + 31 : clef === "F" ? sy + 21 : sy + 30;
+      g.append(svg("text", { x: 14, y: cy, class: "clef clef-" + clef + (clef === "F" ? " bass" : "") }, CLEF_GLYPH[clef]));
+    }
     const order = s.keySig >= 0 ? SHARP_LETTERS : FLAT_LETTERS;
-    order.slice(0, Math.abs(s.keySig)).forEach((letter, i) => {
+    order.slice(0, Math.abs(s.keySig)).forEach((_letter, i) => {
       const sym = s.keySig > 0 ? "♯" : "♭";
       const tStep = s.keySig > 0 ? [38, 35, 39, 36, 33, 37, 34][i] : [34, 37, 33, 36, 32, 35, 31][i];
-      const bStep = tStep - 14;
-      g.append(svg("text", { x: 50 + i * 9, y: sys.trebleY + (TREBLE_TOP - tStep) * LS / 2 + 4, class: "acc" }, sym));
-      g.append(svg("text", { x: 50 + i * 9, y: sys.bassY + (BASS_TOP - bStep) * LS / 2 + 4, class: "acc" }, sym));
-      void acc; void letter;
+      for (const [sy, clef] of visibleStaves)
+        g.append(svg("text", { x: 50 + i * 9, y: sy + (CLEF_TOP[clef] - (tStep + CLEF_SHIFT[clef])) * LS / 2 + 4, class: "acc" }, sym));
     });
     if (sys.index === 0) {
       const tx = 56 + Math.abs(s.keySig) * 9;
-      for (const sy of [sys.trebleY, sys.bassY]) {
+      for (const [sy] of visibleStaves) {
         g.append(svg("text", { x: tx, y: sy + 18, class: "timesig" }, String(s.timeSig[0])));
         g.append(svg("text", { x: tx, y: sy + 38, class: "timesig" }, String(s.timeSig[1])));
       }
@@ -285,8 +319,10 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
         }
         continue;
       }
+      const cfgL = l.staff === "bass" ? st.lower : st.upper;
+      if (!cfgL.visible) continue; // pauta oculta (ex.: mão esquerda escondida)
       const staffY = l.staff === "bass" ? sys.bassY : sys.trebleY;
-      const top = l.staff === "bass" ? BASS_TOP : TREBLE_TOP;
+      const top = CLEF_TOP[cfgL.clef];
       for (const n of l.notes) {
         if (n.start >= toBeat || n.start < fromBeat) continue;
         drawNote(lg, n, sys, staffY, top, bpm, mW, s.keySig, l.staff, l.color, l.id, l.name);
@@ -317,7 +353,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const hollow = base >= 2;
     ng.append(svg("ellipse", { cx: x + 1, cy: y, rx: 6.2, ry: 4.4, transform: `rotate(-20 ${x + 1} ${y})`, class: "head" + (hollow ? " hollow" : ""), filter: "url(#nshadow)" }));
     if (base < 4) {
-      const up = staff === "bass" ? step < 22 : step < 34;
+      const up = step < top - 4; // abaixo da linha central: haste para cima
       const sx = up ? x + 6.6 : x - 4.6;
       const y2 = up ? y - 32 : y + 32;
       ng.append(svg("line", { x1: sx, x2: sx, y1: y, y2, class: "stem" }));
@@ -355,9 +391,10 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const measure = Math.max(0, Math.min(s.measures - 1, sys.firstMeasure + Math.max(0, Math.min(sys.nMeasures - 1, k))));
     const inBeat = Math.max(0, Math.min(bpm - grid, (px - sys.left - Math.max(0, k) * mW - 10) / ppb));
     const beat = measure * bpm + Math.round(inBeat / grid) * grid;
+    const st = staves(s);
     const mid = (sys.trebleY + 40 + sys.bassY) / 2;
-    const staff: "treble" | "bass" = py < mid ? "treble" : "bass";
-    const step = staff === "treble" ? Math.round(TREBLE_TOP - (py - sys.trebleY) / (LS / 2)) : Math.round(BASS_TOP - (py - sys.bassY) / (LS / 2));
+    const staff: "treble" | "bass" = st.upper.visible && st.lower.visible ? (py < mid ? "treble" : "bass") : st.upper.visible ? "treble" : "bass";
+    const step = staff === "treble" ? Math.round(CLEF_TOP[st.upper.clef] - (py - sys.trebleY) / (LS / 2)) : Math.round(CLEF_TOP[st.lower.clef] - (py - sys.bassY) / (LS / 2));
     return { px, py, sys, measure, beat, staff, step, pitch: stepToPitch(step, s.keySig) };
   }
 
@@ -712,15 +749,68 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     } catch (e: any) { busy(btn, false); toast("Microfone indisponível: " + e.message, "error"); }
   }
 
+  /** Gravação livre: toca a partitura como acompanhamento e grava até o usuário parar (nova voz). */
+  let freeRec: null | { stop: () => Promise<void> } = null;
+  async function recordFree(btn: HTMLButtonElement) {
+    if (freeRec) { await freeRec.stop(); return; }
+    const s = store.score; const bpm = beatsPerMeasure(s); const spb = 60 / s.tempo;
+    const sel = [...store.selectedMeasures].sort((a, b) => a - b);
+    const from = sel[0] ?? 0;
+    const label = btn.textContent || "";
+    try {
+      busy(btn, true, "");
+      const rec = await audio.record({ countInBeats: bpm, spb, onCount: (n) => (btn.innerHTML = `<b>${n}</b>`) });
+      btn.disabled = false; btn.classList.add("recording"); btn.textContent = "■ Parar gravação";
+      const t0 = performance.now();
+      audio.play(s, { fromBeat: from * bpm, metronome: true, onBeat: (b) => { playhead = b; drawPlayhead(); } });
+      freeRec = {
+        stop: async () => {
+          freeRec = null;
+          const secs = (performance.now() - t0) / 1000;
+          const blob = await rec.stop();
+          audio.stop(); playhead = -1; drawPlayhead();
+          btn.classList.remove("recording"); btn.textContent = label;
+          const nMeas = Math.max(1, Math.ceil(secs / spb / bpm));
+          const measures = Array.from({ length: nMeas }, (_, i) => from + i);
+          const layer = { ...newLayer("recording", `Voz gravada c.${from + 1}–${from + nMeas}`), audioUrl: URL.createObjectURL(blob), audioOffset: from * bpm * spb, measures };
+          store.mutate((sc) => { sc.layers.push(layer); sc.measures = Math.max(sc.measures, from + nMeas); store.selectedLayer = layer.id; }, "record");
+          toast(`Nova voz gravada (${nMeas} compasso${nMeas > 1 ? "s" : ""}) numa camada própria`, "ok", 5000);
+          if (currentUser) {
+            try {
+              const up = await upload("recording", blob, "voz.webm");
+              store.mutate(() => { const l = store.score.layers.find((x) => x.id === layer.id); if (l) l.audio = up.path; }, "upload");
+              toast("Transcrevendo a voz gravada em notas…", "info");
+              const r = await runJob("transcribe_audio", { asset: up.path, mode: prefs.captureMode === "both" ? "both" : "melody", separate: false, lyrics: false, tempo: s.tempo, timeSig: s.timeSig });
+              const off = from * bpm;
+              store.mutate((sc) => {
+                for (const nl of r.layers || []) {
+                  const v = newLayer(nl.staff === "bass" ? "harmony" : "voice", `${nl.staff === "bass" ? "Harmonia" : "Voz"} (notas) c.${from + 1}–${from + nMeas}`, nl.staff === "bass" ? "bass" : "treble");
+                  v.notes = (nl.notes || []).map((n: Note) => ({ ...n, id: uid(), start: n.start + off }));
+                  v.group = layer.group;
+                  if (v.notes.length) sc.layers.push(v);
+                }
+              }, "merge");
+              toast("Voz transcrita como camada de notas — confira e ajuste no editor", "ok", 5000);
+            } catch (e: any) { toast("Gravação salva; transcrição indisponível: " + e.message, "warn", 6000); }
+          }
+        },
+      };
+    } catch (e: any) { busy(btn, false); freeRec = null; toast("Microfone indisponível: " + e.message, "error"); }
+  }
+
   // Ações disparadas pelos painéis laterais (Propriedades)
   const onAction = (e: Event) => {
     const a = (e as CustomEvent).detail;
     if (a === "harmonize") harmonize(harmBtn as HTMLButtonElement, false);
     if (a === "play-selection") { if (audio.isPlaying()) togglePlay(); togglePlay(); }
+    if (a === "record-free") recordFree(toolbar.querySelectorAll<HTMLButtonElement>(".btn.rec")[1]);
+    if (a === "record-section") recordSection(toolbar.querySelectorAll<HTMLButtonElement>(".btn.rec")[0]);
+    if (a === "tool-pencil") setTool("pencil");
   };
   addEventListener("harmonia:action", onAction);
   const off = store.on((reason) => {
     if (reason === "autosave") return;
+    if (["load", "merge", "staves", "undo", "redo"].includes(reason)) syncStaffCtl();
     if (reason === "load" || reason === "merge" || reason === "tempo" || reason === "key" || reason === "ts") {
       titleIn.value = store.score.title; tempoIn.value = String(store.score.tempo);
       keySel.value = String(store.score.keySig); tsSel.value = store.score.timeSig.join("/");

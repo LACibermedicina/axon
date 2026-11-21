@@ -83,12 +83,18 @@ own_ports() {
   fi
 }
 
+# A porta pertence ao próprio harmonIA se o /api/health dela responde como "harmonia"
+# (prova definitiva, independente de permissão no Docker).
+is_harmonia_http() {
+  curl -fsS -m 3 "http://127.0.0.1:$1/api/health" 2>/dev/null | grep -q '"project":"harmonia"'
+}
+
 # Garante HTTP_PORT, TURN_PORT e faixa de relay no .env: reaproveita se continuar livre
 # (ou se for do próprio harmonIA); senão escolhe nova porta livre >= 20000.
 ensure_ports() {
   local f="$1"; ENV_FILE="$f"
   local mine; mine=" $(own_ports | tr '\n' ' ') "
-  ok_port() { [[ -n "$1" && "$1" -ge 1024 ]] && { [[ "$mine" == *" $1 "* ]] || port_is_free "$1"; }; }
+  ok_port() { [[ -n "$1" && "$1" -ge 1024 ]] && { [[ "$mine" == *" $1 "* ]] || port_is_free "$1" || is_harmonia_http "$1"; }; }
 
   local http; http="$(env_get "$f" HTTP_PORT)"
   ok_port "$http" || http="$(find_free_port 20080)" || { echo "Sem porta livre para HTTP"; return 1; }

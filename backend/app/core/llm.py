@@ -195,9 +195,10 @@ async def complete_ex(system: str, user: str, max_tokens: int = 2000, timeout: f
                 p.failures, p.last_ok, p.last_error, p.paused_until = 0, time.time(), "", 0.0
                 return text, p.name
             except Exception as e:  # noqa: BLE001
-                code = getattr(getattr(e, "response", None), "status_code", None)
+                resp = getattr(e, "response", None)
+                code = getattr(resp, "status_code", None)
                 p.failures += 1
-                p.last_error = f"HTTP {code}" if code else type(e).__name__
+                p.last_error = (f"HTTP {code}" + (f" — {provider_message(resp)[:90]}" if provider_message(resp) else "")) if code else type(e).__name__
                 p.paused_until = time.time() + cooldown * min(p.failures, 10)
                 errors.append(f"{p.name}: {p.last_error}")
                 log.warning("IA %s falhou (%s) — tentando o próximo provedor", p.name, p.last_error)
@@ -219,10 +220,26 @@ def status() -> list[dict]:
     return out
 
 
+def provider_message(resp) -> str:
+    """Trecho da mensagem de erro do provedor (ex.: 'credit balance is too low'), sem expor chaves."""
+    if resp is None:
+        return ""
+    try:
+        j = resp.json()
+        err = j.get("error", j) if isinstance(j, dict) else j
+        msg = (err.get("message") if isinstance(err, dict) else str(err)) or ""
+    except Exception:  # noqa: BLE001
+        msg = (getattr(resp, "text", "") or "")[:300]
+    import re as _re
+    msg = _re.sub(r"(sk|gsk|AIza|ghp|github_pat|sk-or|sk-ant)[-_A-Za-z0-9]{6,}", "[chave oculta]", str(msg))
+    return msg.strip()[:240]
+
+
 ERROR_HINTS = {
-    400: "requisição recusada (modelo ou parâmetros inválidos)", 401: "chave inválida ou expirada",
+    402: "sem créditos/saldo na conta do provedor (ou modelo pago)",
+    400: "requisição recusada (saldo de créditos insuficiente, modelo ou parâmetros inválidos)", 401: "chave inválida ou expirada",
     403: "sem permissão para este modelo/conta", 404: "modelo ou endpoint não encontrado",
-    408: "tempo esgotado no provedor", 429: "limite de uso atingido (cota grátis ou por minuto)",
+    408: "tempo esgotado no provedor", 429: "limite de uso ou cota esgotada (no OpenAI: conta sem créditos/billing)",
     500: "erro interno do provedor", 502: "provedor indisponível", 503: "provedor sobrecarregado", 504: "provedor não respondeu a tempo",
 }
 
@@ -246,10 +263,11 @@ async def diagnose(names: list[str] | None = None, timeout: float = 20) -> list[
             p.failures, p.paused_until, p.last_error, p.last_ok = 0, 0.0, "", time.time()
             return base | {"ok": True, "state": "ok", "ms": ms, "reply": text.strip()[:40]}
         except Exception as e:  # noqa: BLE001
-            code = getattr(getattr(e, "response", None), "status_code", None)
+            resp = getattr(e, "response", None)
+            code = getattr(resp, "status_code", None)
             detail = ERROR_HINTS.get(code, "") if code else ("tempo esgotado" if "Timeout" in type(e).__name__ else "falha de rede/conexão")
             return base | {"ok": False, "state": "erro", "ms": int((time.time() - t0) * 1000),
-                           "code": code, "detail": detail or f"HTTP {code}"}
+                           "code": code, "detail": detail or f"HTTP {code}", "provider_message": provider_message(resp)}
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         results = list(await asyncio.gather(*(one(p, client) for p in targets)))

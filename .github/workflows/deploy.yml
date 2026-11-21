@@ -30,12 +30,12 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           pip install -r requirements-core.txt "numpy>=1.26,<2.3" pytest
-          pytest -q tests
+          python -m pytest -q tests
       - name: Testes da API (FastAPI + SQLite + fakeredis)
         working-directory: backend
         run: |
           pip install -r requirements.txt fakeredis pytest
-          pytest -q tests
+          python -m pytest -q tests
 
       - uses: actions/setup-node@v4
         with:

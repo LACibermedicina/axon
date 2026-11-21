@@ -1,7 +1,7 @@
 // Gestor de camadas: visibilidade, mudo, solo, bloqueio, cor, volume, pauta, reordenar (drag & drop),
 // mesclar, duplicar, transpor, transcrever gravações e alinhar letra.
 import { store, newLayer } from "../core/store";
-import { Layer, LayerKind } from "../core/types";
+import { Layer, LayerKind, LayerGroup, uid } from "../core/types";
 import { h, toast, tip } from "../core/ui";
 import { currentUser, runJob, requireLogin } from "../core/api";
 import { extractMelody } from "../core/theory";
@@ -15,6 +15,7 @@ export function mountLayers(body: HTMLElement) {
   const toolbar = h("div", { class: "toolbar" },
     addSel,
     h("button", { class: "btn primary", onclick: () => store.mutate((s) => { const k = addSel.value as LayerKind; const l = newLayer(k, KIND_LABEL[k], k === "harmony" || k === "bass" ? "bass" : "treble"); s.layers.push(l); store.selectedLayer = l.id; }, "layer") }, "+ Camada"),
+    tip(h("button", { class: "btn", onclick: newGroup }, "+ Grupo"), "Cria um grupo e coloca nele a camada ativa. Arraste camadas sobre o título do grupo para agrupá-las."),
     tip(h("button", { class: "btn", onclick: merge }, "Mesclar visíveis"), "Junta as camadas visíveis desbloqueadas numa só"),
     tip(h("button", { class: "btn", onclick: lyricsDialog }, "Letra → notas"), "Distribui a letra (silabada automaticamente) nas notas da camada ativa"));
   const help = h("p", { class: "hint" }, "Arraste ☰ para reordenar (a ordem define a prioridade na mixagem e na exportação). Clique numa camada para torná-la ativa no editor.");
@@ -60,6 +61,8 @@ export function mountLayers(body: HTMLElement) {
       h("option", { value: "melody" }, "Extrair melodia desta camada"),
       l.kind === "recording" ? h("option", { value: "transcribe" }, "Transcrever gravação → notas") : null,
       h("option", { value: "clear-lyrics" }, "Limpar letra"),
+      ...(store.score.layerGroups || []).filter((g) => g.id !== l.group).map((g) => h("option", { value: "group:" + g.id }, "Mover para grupo: " + g.name)),
+      l.group ? h("option", { value: "ungroup" }, "Tirar do grupo") : null,
       h("option", { value: "delete" }, "Excluir camada"));
     sel.addEventListener("change", async () => {
       const v = sel.value; sel.value = "";
@@ -70,6 +73,8 @@ export function mountLayers(body: HTMLElement) {
       if (v === "melody") store.mutate((s) => { const m = newLayer("melody", "Melodia de " + l.name); m.notes = extractMelody(l.notes, 0); s.layers.push(m); }, "layer");
       if (v === "clear-lyrics") store.mutate(() => l.notes.forEach((n) => (n.lyric = null)), "layer");
       if (v === "delete" && confirmDelete(l)) store.mutate((s) => (s.layers = s.layers.filter((x) => x.id !== l.id)), "layer");
+      if (v.startsWith("group:")) store.mutate(() => (l.group = v.slice(6)), "layer");
+      if (v === "ungroup") store.mutate(() => (l.group = undefined), "layer");
       if (v === "transcribe") await transcribeRecording(l);
     });
     return sel;
@@ -131,7 +136,56 @@ export function mountLayers(body: HTMLElement) {
     body.append(dlg); ta.focus();
   }
 
-  const render = () => list.replaceChildren(...store.score.layers.map(row), ...(store.score.layers.length ? [] : [h("li", { class: "empty" }, "Nenhuma camada. Importe áudio, foto ou cifra — ou crie uma camada.")]));
+  // ------------------------------------------------------------ grupos
+  function newGroup() {
+    const name = prompt("Nome do grupo (ex.: Mão direita, Acompanhamento, Vozes)");
+    if (!name?.trim()) return;
+    store.mutate((s) => {
+      const g: LayerGroup = { id: uid(), name: name.trim(), color: "#7c5cff" };
+      s.layerGroups = [...(s.layerGroups || []), g];
+      const act = s.layers.find((x) => x.id === store.selectedLayer);
+      if (act) act.group = g.id;
+    }, "layer");
+  }
+
+  function groupRow(g: LayerGroup, members: Layer[]) {
+    const all = (k: "visible" | "muted" | "solo" | "locked") => members.length > 0 && members.every((m) => m[k]);
+    const toggle = (k: "visible" | "muted" | "solo" | "locked", on: string, off: string, label: string) =>
+      h("button", { class: "ic-btn" + (all(k) ? " on" : ""), title: label + " (grupo inteiro)", "aria-pressed": String(all(k)),
+        onclick: (e: Event) => { e.stopPropagation(); const v = !all(k); store.mutate(() => members.forEach((m) => ((m as any)[k] = v)), "layer"); } }, all(k) ? on : off);
+    const li = h("li", { class: "group-row" + (g.collapsed ? " collapsed" : ""), "data-group": g.id },
+      h("button", { class: "ic-btn ghost", "aria-label": g.collapsed ? "Expandir grupo" : "Recolher grupo", onclick: () => store.mutate(() => (g.collapsed = !g.collapsed), "layer") }, g.collapsed ? "▸" : "▾"),
+      h("span", { class: "grp-ic", "aria-hidden": "true" }, "🗂"),
+      h("input", { class: "grp-name", value: g.name, "aria-label": "Nome do grupo", onchange: (e: Event) => store.mutate(() => (g.name = (e.target as HTMLInputElement).value), "layer") }),
+      h("small", {}, `${members.length} camada(s)`),
+      toggle("visible", "👁", "◌", "Visível"), toggle("muted", "🔇", "🔈", "Mudo"), toggle("solo", "S", "S", "Solo"), toggle("locked", "🔒", "🔓", "Bloquear"),
+      h("button", { class: "ic-btn", title: "Desfazer grupo (as camadas continuam)", onclick: () => store.mutate((s) => {
+        s.layers.forEach((x) => { if (x.group === g.id) x.group = undefined; });
+        s.layerGroups = (s.layerGroups || []).filter((x) => x.id !== g.id);
+      }, "layer") }, "✕"));
+    // soltar uma camada sobre o título do grupo = agrupar
+    li.addEventListener("dragover", (e) => { e.preventDefault(); li.classList.add("over"); });
+    li.addEventListener("dragleave", () => li.classList.remove("over"));
+    li.addEventListener("drop", (e) => {
+      e.preventDefault(); li.classList.remove("over");
+      if (!dragId) return;
+      store.mutate((s) => { const x = s.layers.find((y) => y.id === dragId); if (x) x.group = g.id; }, "layer");
+    });
+    return li;
+  }
+
+  const render = () => {
+    const s = store.score;
+    const groups = (s.layerGroups || []).filter((g) => g);
+    const items: HTMLElement[] = [];
+    for (const g of groups) {
+      const members = s.layers.filter((l) => l.group === g.id);
+      items.push(groupRow(g, members));
+      if (!g.collapsed) members.forEach((m) => { const r = row(m); r.classList.add("in-group"); items.push(r); });
+    }
+    s.layers.filter((l) => !l.group || !groups.some((g) => g.id === l.group)).forEach((l) => items.push(row(l)));
+    list.replaceChildren(...items, ...(s.layers.length ? [] : [h("li", { class: "empty" }, "Nenhuma camada. Importe áudio, foto ou cifra — ou crie uma camada.")]));
+  };
   const off = store.on((r) => r !== "autosave" && render());
   render();
   return () => off();

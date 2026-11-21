@@ -41,6 +41,15 @@ export function demoScore(): Score {
   };
 }
 
+/** Partitura vazia para começar do zero: piano (Sol + Fá) com uma camada em cada pauta. */
+export function emptyScore(title = "Nova composição", opts: { keySig?: number; timeSig?: [number, number]; tempo?: number; measures?: number } = {}): Score {
+  const mel = newLayer("melody", "Melodia (mão direita)", "treble");
+  const lh = newLayer("harmony", "Mão esquerda", "bass");
+  return { title, tempo: opts.tempo ?? 96, timeSig: opts.timeSig ?? [4, 4], keySig: opts.keySig ?? 0, measures: opts.measures ?? 8,
+    layers: [mel, lh], chords: Array.from({ length: opts.measures ?? 8 }, () => []), annotations: [],
+    staves: { upper: { clef: "G", visible: true }, lower: { clef: "F", visible: true } }, layerGroups: [] };
+}
+
 class Store {
   score: Score = demoScore();
   compositionId: number | null = null;
@@ -67,6 +76,11 @@ class Store {
   }
   undoOp() { const s = this.undo.pop(); if (!s) return; this.redo.push(JSON.stringify(this.score)); this.score = JSON.parse(s); this.emit("undo"); }
   redoOp() { const s = this.redo.pop(); if (!s) return; this.undo.push(JSON.stringify(this.score)); this.score = JSON.parse(s); this.emit("redo"); }
+
+  /** Recomeça do zero (partitura vazia, sem vínculo com a composição salva). */
+  startFromScratch(title?: string, opts?: Parameters<typeof emptyScore>[1]) {
+    this.load(emptyScore(title, opts), null, 1);
+  }
 
   load(score: Score, id: number | null = null, version = 1) {
     this.score = score; this.compositionId = id; this.version = version;

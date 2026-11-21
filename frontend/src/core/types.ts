@@ -28,6 +28,7 @@ export interface Layer {
   audioUrl?: string; // blob local antes do upload
   audioOffset?: number; // segundos
   measures?: number[]; // trecho que a gravação cobre
+  group?: string;      // id do grupo de camadas
 }
 
 export interface ChordEv {
@@ -49,6 +50,9 @@ export interface Annotation {
   layerId?: string;
 }
 
+export type Clef = "G" | "F" | "C";
+export interface StaffCfg { clef: Clef; visible: boolean; }
+
 export interface Score {
   title: string;
   tempo: number;
@@ -58,6 +62,16 @@ export interface Score {
   layers: Layer[];
   chords: ChordEv[][];
   annotations: Annotation[];
+  staves?: { upper: StaffCfg; lower: StaffCfg }; // pauta superior (camadas "treble") e inferior ("bass")
+  layerGroups?: LayerGroup[];
+}
+
+export interface LayerGroup { id: string; name: string; collapsed?: boolean; color?: string; }
+
+export function staves(s: Score) {
+  const st = s.staves || { upper: { clef: "G", visible: true }, lower: { clef: "F", visible: true } };
+  if (!st.upper.visible && !st.lower.visible) st.upper.visible = true;
+  return st as { upper: StaffCfg; lower: StaffCfg };
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 12);

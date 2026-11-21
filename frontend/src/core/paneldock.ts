@@ -5,7 +5,11 @@
 //  • dock recolhível em faixa de ícones (como o menu lateral esquerdo); layout salvo por navegador.
 import { h } from "./ui";
 
-export interface PanelDef { id: string; title: string; icon: string; mount: (body: HTMLElement) => void | (() => void); minH?: number; }
+export interface PanelDef {
+  id: string; title: string; icon: string; mount: (body: HTMLElement) => void | (() => void); minH?: number;
+  /** estado inicial (antes de o usuário mexer): acoplado, flutuante discreto ou fechado */
+  defaultMode?: Mode; defaultRect?: { x: number; y: number; w: number; h: number }; discreet?: boolean; defaultCollapsed?: boolean;
+}
 type Mode = "docked" | "floating" | "hidden";
 interface PState { mode: Mode; collapsed: boolean; x: number; y: number; w: number; h: number; }
 interface Layout { order: string[]; panels: Record<string, PState>; dockCollapsed: boolean; }
@@ -41,7 +45,8 @@ export class PanelDock {
 
   register(defs: PanelDef[]) {
     for (const d of defs) {
-      const st: PState = this.layout.panels[d.id] || { mode: "docked", collapsed: false, x: innerWidth - 700, y: 120, w: 300, h: 380 };
+      const r0 = d.defaultRect || { x: innerWidth - 700, y: 120, w: 300, h: 380 };
+      const st: PState = this.layout.panels[d.id] || { mode: d.defaultMode || "docked", collapsed: !!d.defaultCollapsed, ...r0 };
       this.layout.panels[d.id] = st;
       if (!this.layout.order.includes(d.id)) this.layout.order.push(d.id);
       const body = h("div", { class: "panel-body" });
@@ -51,7 +56,7 @@ export class PanelDock {
         h("span", { class: "grip", "aria-hidden": "true" }, "⋮⋮"), h("span", { class: "p-ic", html: d.icon }), h("b", { "data-i18n": d.id }, d.title),
         h("span", { class: "spacer" }), btnCol, btnDock,
         h("button", { class: "p-btn", title: "Fechar painel", onclick: () => { st.mode = "hidden"; this.apply(); } }, "✕"));
-      const el = h("section", { class: "panel", "data-panel": d.id, role: "region", "aria-label": d.title }, head, body);
+      const el = h("section", { class: "panel" + (d.discreet ? " discreet" : ""), "data-panel": d.id, role: "region", "aria-label": d.title }, head, body);
       head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) this.toggleFloat(d.id); });
       head.addEventListener("pointerdown", (e) => this.startDrag(e, d.id));
       el.addEventListener("pointerdown", () => { if (st.mode === "floating") el.style.zIndex = String(++this.topZ); });

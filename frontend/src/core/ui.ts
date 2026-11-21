@@ -1,4 +1,5 @@
 // Utilitários de DOM e notificações.
+import { notify } from "./notify";
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, any> = {}, ...children: (Node | string | null | undefined | false)[]): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -17,6 +18,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<s
 }
 
 export function toast(msg: string, kind: "info" | "ok" | "warn" | "error" = "info", ms = 3800) {
+  if (ms >= 3000 || kind !== "info") notify(msg, { kind }); // mensagens relevantes ficam na central
   let box = document.getElementById("toasts");
   if (!box) { box = h("div", { id: "toasts" }); document.body.append(box); }
   const t = h("div", { class: `toast ${kind}`, role: "status" }, msg);

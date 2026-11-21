@@ -77,3 +77,18 @@ def set_role(uid: int, body: RoleIn, user: User = Depends(current_user), db: Ses
     db.add(AuditLog(user_id=user.id, action="set_role", detail={"target": uid, "role": body.role.value}))
     db.commit()
     return {"ok": True}
+
+
+@router.post("/guest")
+def guest(db: Session = Depends(get_db)):
+    """Entrar como visitante, sem senha e sem dados pessoais (LGPD: nada a consentir).
+    A conta de visitante pode ser convertida depois criando uma conta normal."""
+    import secrets
+    tag = secrets.token_hex(4)
+    pseudo = f"visitante-{tag}@guest.local"
+    u = User(email_idx=email_index(pseudo), email_enc=encrypt(pseudo), name_enc=encrypt(f"Visitante {tag[:4].upper()}"),
+             password_hash="!", role=Role.guest.value, consent_at=datetime.now(timezone.utc), consent_version="guest", workspace={})
+    db.add(u); db.flush()
+    db.add(AuditLog(user_id=u.id, action="guest_session"))
+    db.commit()
+    return {"token": create_token(u.id, u.role), "user": user_out(u) | {"guest": True}}

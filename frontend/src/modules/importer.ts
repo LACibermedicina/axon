@@ -5,6 +5,7 @@ import { runJob, upload, requireLogin, currentUser } from "../core/api";
 import * as audio from "../core/audio";
 import { parseCifraBars, voiceChords } from "../core/theory";
 import { beatsPerMeasure } from "../core/types";
+import { prefs } from "../core/prefs";
 
 export function mountImporter(body: HTMLElement) {
   body.classList.add("importer");
@@ -20,7 +21,15 @@ export function mountImporter(body: HTMLElement) {
     tabs.append(h("button", { role: "tab", "data-tab": id, onclick: () => show(id) }, label));
     const p = mk(); p.classList.add("pane"); p.dataset.pane = id; panes.append(p);
   }
-  show("audio");
+  show(prefs.importTab || "audio");
+  // pré-seleção vinda do passo a passo (aba e o que capturar)
+  const applyPreset = (tab: string, mode: string) => {
+    show(tab);
+    panes.querySelectorAll<HTMLSelectElement>("[data-pane=audio] select").forEach((sel, i) => { if (i === 0) sel.value = mode === "melody" ? "melody" : "both"; });
+  };
+  applyPreset(prefs.importTab || "audio", prefs.captureMode);
+  const onPreset = (e: Event) => { const d = (e as CustomEvent).detail; applyPreset(d.tab, d.mode); };
+  addEventListener("import:preset", onPreset);
   // Servidor em modo leve: avisa antes do envio (transcrição de áudio/foto exige IA completa)
   fetch("/api/health").then((r) => r.json()).then((hc) => {
     if (hc.ai_full) return;
@@ -195,6 +204,7 @@ function imagePane() {
       const up = await upload("image", blob, "partitura.png");
       busy(go, true, "Lendo a partitura…");
       const r = await runJob("transcribe_image", { asset: up.path }, (s) => busy(go, true, s === "running" ? "Reconhecendo símbolos…" : "Na fila…"));
+      if (prefs.captureMode === "melody") { r.layers = (r.layers || []).filter((l: any) => l.staff !== "bass"); r.chords = []; }
       deliver(r, "Leitura da partitura");
     } catch (e: any) { toast(e.message, "error"); }
     finally { busy(go, false); }

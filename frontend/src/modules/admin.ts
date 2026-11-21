@@ -48,7 +48,8 @@ export function mountAdmin(body: HTMLElement) {
             h("tbody", {}, ...d.results.map((x: any) => h("tr", { class: x.state === "sem_chave" ? "muted" : "" },
               h("td", {}, x.ok ? "✅" : x.state === "sem_chave" ? "⚪" : "❌"), h("td", {}, h("b", {}, x.label)), h("td", {}, SRC[x.keySource] ?? x.keySource),
               h("td", { class: "mono" }, x.model), h("td", {}, x.ms != null ? `${x.ms} ms` : "—"),
-              h("td", {}, x.ok ? (x.reply ? `respondeu “${x.reply}”` : x.detail || "ok") : `${x.code ? "HTTP " + x.code + " — " : ""}${x.detail}`))))));
+              h("td", {}, x.ok ? (x.reply ? `respondeu “${x.reply}”` : x.detail || "ok") : `${x.code ? "HTTP " + x.code + " — " : ""}${x.detail}`,
+                x.provider_message ? h("div", { class: "mono hint" }, "Provedor: " + x.provider_message) : ""))))));
       } catch (e: any) { diagBox.replaceChildren(h("p", {}, "❌ " + e.message)); }
       finally { diagBtn.disabled = false; }
     } }, "🩺 Rodar diagnóstico") as HTMLButtonElement;

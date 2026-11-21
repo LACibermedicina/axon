@@ -1,5 +1,6 @@
 // Cliente da API harmonIA com token JWT e polling de jobs assíncronos.
 import { toast } from "./ui";
+import { notify } from "./notify";
 
 let token = localStorage.getItem("harmonia.token") || "";
 export let currentUser: any = null;
@@ -40,6 +41,8 @@ export async function restoreSession() {
   catch { return null; }
 }
 
+const JOB_LABEL: Record<string, string> = { transcribe_audio: "Transcrição de áudio", transcribe_image: "Leitura da partitura", export: "Exportação" };
+
 /** Executa job de IA. Jobs leves voltam na hora; pesados são acompanhados por polling. */
 export async function runJob(type: string, payload: any, onProgress?: (s: string) => void): Promise<any> {
   const j = await api("/api/jobs", { method: "POST", json: { type, payload } });
@@ -48,8 +51,8 @@ export async function runJob(type: string, payload: any, onProgress?: (s: string
     await new Promise((r) => setTimeout(r, 1500));
     const s = await api(`/api/jobs/${j.id}`);
     onProgress?.(s.status);
-    if (s.status === "done") return s.result;
-    if (s.status === "error") throw new Error(s.error || "Falha no processamento");
+    if (s.status === "done") { notify(JOB_LABEL[type] ? `${JOB_LABEL[type]} concluída` : "Processamento concluído", { kind: "ok" }); return s.result; }
+    if (s.status === "error") { notify(`${JOB_LABEL[type] || "Processamento"} falhou`, { kind: "error", body: s.error }); throw new Error(s.error || "Falha no processamento"); }
   }
   throw new Error("Tempo esgotado");
 }

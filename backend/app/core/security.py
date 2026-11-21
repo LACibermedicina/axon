@@ -23,6 +23,7 @@ class Role(str, Enum):
     composer = "composer"    # cria/edita composições próprias, publica
     student = "student"      # cria/edita, não publica na biblioteca principal
     viewer = "viewer"        # só leitura/escuta
+    guest = "guest"          # visitante sem senha: compõe e usa IA; não publica nem conversa
 
 
 ROLE_PERMS: dict[Role, set[str]] = {
@@ -30,6 +31,7 @@ ROLE_PERMS: dict[Role, set[str]] = {
     Role.composer: {"compose", "publish", "ai", "export", "chat", "library"},
     Role.student: {"compose", "ai", "export", "chat", "library"},
     Role.viewer: {"library", "chat"},
+    Role.guest: {"compose", "ai", "export", "library"},
 }
 
 

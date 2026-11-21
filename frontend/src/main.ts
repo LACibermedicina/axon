@@ -14,15 +14,17 @@ import { mountMixer } from "./modules/mixer";
 import { mountLibrary } from "./modules/library";
 import { mountGraph } from "./modules/graph";
 import { mountAgenda } from "./modules/agenda";
-import { mountCommunity } from "./modules/community";
+import { mountCommunity, mountCommunityPanel } from "./modules/community";
 import { mountAccount } from "./modules/account";
 import { mountAvatar } from "./modules/avatar";
 import { mountAdmin } from "./modules/admin";
+import { showLogin, showWizard, needsOnboarding } from "./modules/welcome";
+import { notifications, unread, markAllRead, clearNotifications, onNotify } from "./core/notify";
 import { PanelDock } from "./core/paneldock";
 import { mountProperties, mountAnnotations } from "./modules/inspector";
 import * as audio from "./core/audio";
 
-const VERSION = "0.1.9-alpha";
+const VERSION = "0.2.0-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1060, innerWidth - 206 - 312 - 24)), height: 640, x: 206, y: 46, mount: mountScoreEditor },
@@ -47,8 +49,11 @@ const visible = () => ORDER.filter(allowed);
 const PANEL_IDS = new Set(["props", "layers", "notes"]);
 let panels: PanelDock;
 const PANEL_ICONS: Record<string, string> = { props: ICONS.props, layers: ICONS.layers, notes: ICONS.notes };
+// No desktop, Mesa de Edição e Comunidade vivem no grupo de painéis laterais (acopláveis/flutuantes)
+const DESKTOP_PANEL_ROUTE: Record<string, string> = { mixer: "mix", community: "chat" };
 const open = (id: string) => {
   if (PANEL_IDS.has(id)) { panels?.reveal(id); return; }
+  if (!isMobile() && DESKTOP_PANEL_ROUTE[id] && panels) { panels.reveal(DESKTOP_PANEL_ROUTE[id]); return; }
   if (!APPS[id]) return;
   if (!allowed(id)) { toast("Acesso restrito ao administrador", "warn"); return; }
   return openApp(APPS[id]);
@@ -81,9 +86,36 @@ function menubar() {
       ["Importar áudio / foto / cifra…", () => open("import")], ["Biblioteca", () => open("library")], ["Exportar…", () => open("mixer")]]),
     menu("Editar", [["Desfazer ⌘Z", () => store.undoOp()], ["Refazer ⇧⌘Z", () => store.redoOp()], ["Selecionar todos os compassos", () => { store.selectedMeasures = new Set([...Array(store.score.measures).keys()]); store.emit("selection"); }]]),
     menuDyn("Janelas", () => visible().map((id) => [(PANEL_IDS.has(id) ? "▸ Painel: " : "") + titleOf(id), () => open(id)] as [string, () => void])),
-    menu("Ajuda", [["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
+    menu("Ajuda", [["Passo a passo inicial", () => showWizard(open)], ["Despertar o Maestro (assistente)", () => dispatchEvent(new CustomEvent("maestro:wake"))], ["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
       ["Texto maior (liga/desliga)", () => toggleLargeText()], ["Alto contraste (liga/desliga)", () => toggleContrast()], ["Sobre / versão", about]]),
-    h("span", { class: "spacer" }), clock, userBtn);
+    h("span", { class: "spacer" }), notifBell(), clock, userBtn);
+}
+
+/** Área de notificações: sino com contador e lista (transcrições, exportações, atualizações, avisos). */
+function notifBell() {
+  const badge = h("b", { class: "bell-badge", hidden: true });
+  const panel = h("div", { class: "notif-panel", role: "dialog", "aria-label": "Notificações", hidden: true });
+  const btn = h("button", { class: "bell", "aria-label": "Notificações", "aria-haspopup": "dialog" }, h("span", { "aria-hidden": "true" }, "🔔"), badge);
+  const icon: Record<string, string> = { ok: "✅", warn: "⚠️", error: "❌", info: "ℹ️" };
+  const draw = () => {
+    const n = unread();
+    badge.hidden = !n; badge.textContent = n > 9 ? "9+" : String(n);
+    btn.setAttribute("aria-label", n ? `Notificações: ${n} não lidas` : "Notificações");
+    const list = notifications();
+    panel.replaceChildren(
+      h("div", { class: "notif-head" }, h("b", {}, "Notificações"),
+        h("button", { class: "btn ghost", onclick: () => markAllRead() }, "Marcar como lidas"),
+        h("button", { class: "btn ghost", onclick: () => clearNotifications() }, "Limpar")),
+      list.length ? h("ul", { class: "notif-list" }, ...list.slice(0, 40).map((x) => h("li", { class: x.read ? "" : "unread" },
+        h("span", { "aria-hidden": "true" }, icon[x.kind]), h("div", {}, h("p", {}, x.title), x.body ? h("small", {}, x.body) : "",
+          h("time", {}, new Date(x.at).toLocaleString(undefined, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))))))
+        : h("p", { class: "hint" }, "Nada por aqui ainda."));
+  };
+  btn.addEventListener("click", (e) => { e.stopPropagation(); panel.hidden = !panel.hidden; if (!panel.hidden) { draw(); setTimeout(markAllRead, 1500); } });
+  panel.addEventListener("click", (e) => e.stopPropagation());
+  addEventListener("click", () => (panel.hidden = true));
+  onNotify(draw); draw();
+  return h("div", { class: "bell-wrap" }, btn, panel);
 }
 
 function langbar() {
@@ -202,7 +234,7 @@ function mobileShell() {
     ...(allowed("admin") ? [tile("admin", "Usuários, IA, sistema")] : []), tile("account", currentUser ? "Perfil e privacidade" : "Entrar"));
   addEventListener("auth", drawTiles); drawTiles();
   const home = h("main", { class: "m-home", id: "m-home", "aria-label": "Início" },
-    h("div", { class: "m-brand" }, h("b", {}, "harmon"), h("i", {}, "IA")), greet, tiles);
+    h("div", { class: "m-home-top" }, h("div", { class: "m-brand" }, h("b", {}, "harmon"), h("i", {}, "IA")), notifBell()), greet, tiles);
 
   const more = h("div", { class: "m-sheet", role: "dialog", "aria-modal": "true", "aria-label": "Mais opções", hidden: true });
   const closeMore = () => { more.hidden = true; };
@@ -218,6 +250,7 @@ function mobileShell() {
       h("button", { "aria-pressed": String(document.body.classList.contains("large-text")), onclick: () => { toggleLargeText(); drawMore(); } }, "🔠 Texto maior", h("small", {}, document.body.classList.contains("large-text") ? "ligado" : "desligado")),
       h("button", { "aria-pressed": String(document.body.classList.contains("high-contrast")), onclick: () => { toggleContrast(); drawMore(); } }, "◐ Alto contraste", h("small", {}, document.body.classList.contains("high-contrast") ? "ligado" : "desligado")),
       h("button", { onclick: () => { closeMore(); setPreference("desktop"); toast("Versão desktop ativada. Para voltar: Ajuda → Versão para celular", "info", 5000); } }, "🖥 Usar versão desktop", h("small", {}, preference() === "auto" ? "detecção automática" : "escolha fixa")),
+      h("button", { onclick: () => { closeMore(); showWizard(open); } }, "🧭 Passo a passo inicial"),
       h("button", { onclick: () => { closeMore(); shortcuts(); } }, "⌨️ Atalhos e ajuda")));
 
   const tab = (id: string, label: string, icon: string, fn: () => void) => h("button", { class: "m-tab", "data-tab": id, "aria-label": label, onclick: fn },
@@ -254,6 +287,10 @@ async function boot() {
     { id: "props", title: t("props"), icon: ICONS.props, mount: mountProperties },
     { id: "layers", title: t("layers"), icon: ICONS.layers, mount: mountLayers },
     { id: "notes", title: t("notes"), icon: ICONS.notes, mount: mountAnnotations },
+    { id: "mix", title: t("mixer"), icon: ICONS.mixer, mount: mountMixer },
+    // quadro discreto e móvel no fundo da área de trabalho; pode ser fechado ou acoplado ao menu lateral
+    { id: "chat", title: t("community"), icon: ICONS.community, mount: mountCommunityPanel, defaultMode: "floating", discreet: true, defaultCollapsed: true,
+      defaultRect: { x: 214, y: Math.max(120, innerHeight - 150), w: 300, h: 320 } },
   ]);
   app.append(...mobileShell());
   watchI18n(winLayer);
@@ -269,9 +306,16 @@ async function boot() {
   document.addEventListener("visibilitychange", () => document.hidden && audio.stop());
   watchForUpdates();
   await restoreSession();
-  if (!(await publicRoutes()) && !isMobile()) {
-    open("compose"); // no celular começa na tela Início (lançador)
+  // Fluxo de entrada: link público → abre direto; sem sessão → tela de login/visitante;
+  // usuário novo → passo a passo; senão → estação completa (desktop) ou Início (celular).
+  const start = () => {
+    if (needsOnboarding()) { showWizard(open); return; }
+    if (!isMobile()) open("compose");
+  };
+  if (!(await publicRoutes())) {
+    if (!currentUser) showLogin(start); else start();
   }
+  addEventListener("auth", (e: any) => { if (!e.detail) showLogin(start); });
   if (lang !== "pt") setLang(lang);
 }
 boot();
