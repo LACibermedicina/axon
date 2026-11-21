@@ -14,8 +14,12 @@ def keys(monkeypatch):
     for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("AI_PROVIDERS", "anthropic,openai,gemini,openrouter")
+    monkeypatch.setattr(llm, "refresh_from_db", lambda force=False: None)  # isola do banco de teste
+    for name in list(llm.PROVIDERS):
+        if name not in llm.BUILTIN:
+            llm.PROVIDERS.pop(name)
     for p in llm.PROVIDERS.values():
-        p.failures, p.paused_until, p.last_error = 0, 0.0, ""
+        p.failures, p.paused_until, p.last_error, p.db_key, p.db_model = 0, 0.0, "", "", ""
 
 
 def run(c):

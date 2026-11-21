@@ -87,3 +87,21 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(60))
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AICredential(Base):
+    """Credenciais de IA cadastradas pelo painel de Administração (chave cifrada com AES-256-GCM).
+    Sobrepõem as do .env para o mesmo provedor; provedores 'custom' são endpoints compatíveis com OpenAI."""
+    __tablename__ = "ai_credentials"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(40), unique=True, index=True)   # groq, gemini… ou slug próprio
+    label: Mapped[str] = mapped_column(String(80), default="")
+    kind: Mapped[str] = mapped_column(String(12), default="openai")          # anthropic | openai | gemini
+    url: Mapped[str] = mapped_column(String(300), default="")
+    model: Mapped[str] = mapped_column(String(120), default="")
+    key_enc: Mapped[str] = mapped_column(Text)
+    key_hint: Mapped[str] = mapped_column(String(12), default="")           # últimos 4 caracteres
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    free: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_by: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)

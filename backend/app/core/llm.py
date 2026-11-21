@@ -35,6 +35,10 @@ class Provider:
     kind: str                          # anthropic | openai | gemini
     url: str = ""
     free: bool = False
+    db_key: str = ""                   # cadastrada no painel (sobrepõe o .env)
+    db_model: str = ""
+    source: str = "env"
+    custom: bool = False
     failures: int = 0
     paused_until: float = 0.0
     last_error: str = ""
@@ -43,6 +47,8 @@ class Provider:
 
     @property
     def key(self) -> str:
+        if self.db_key:
+            return self.db_key
         for k in self.key_envs:
             v = os.getenv(k, "").strip().strip('"').strip("'")
             if v:
@@ -51,7 +57,13 @@ class Provider:
 
     @property
     def model(self) -> str:
-        return os.getenv(self.model_env, "").strip() or self.default_model
+        return self.db_model or os.getenv(self.model_env, "").strip() or self.default_model
+
+    @property
+    def key_source(self) -> str:
+        if self.db_key:
+            return "painel"
+        return "env" if any(os.getenv(k, "").strip() for k in self.key_envs) else ""
 
 
 PROVIDERS: dict[str, Provider] = {p.name: p for p in [
@@ -73,13 +85,57 @@ PROVIDERS: dict[str, Provider] = {p.name: p for p in [
 ]}
 
 
+BUILTIN = set(PROVIDERS)
+_loaded_at = 0.0
+
+
+def refresh_from_db(force: bool = False) -> None:
+    """Carrega credenciais cadastradas no painel (cache de 30 s; cada worker do uvicorn recarrega sozinho)."""
+    global _loaded_at
+    if not force and time.time() - _loaded_at < 30:
+        return
+    _loaded_at = time.time()
+    try:
+        from sqlalchemy import select
+
+        from ..models import AICredential
+        from .db import SessionLocal
+        from .security import decrypt
+        with SessionLocal() as db:
+            rows = list(db.scalars(select(AICredential)))
+    except Exception as e:  # noqa: BLE001 — banco fora: segue só com o .env
+        log.warning("credenciais do painel indisponíveis: %s", type(e).__name__)
+        return
+    seen = set()
+    for r in rows:
+        seen.add(r.name)
+        try:
+            key = decrypt(r.key_enc) if r.enabled else ""
+        except Exception:  # noqa: BLE001
+            key = ""
+        p = PROVIDERS.get(r.name)
+        if p is None:
+            p = PROVIDERS[r.name] = Provider(r.name, r.label or r.name, (), "", r.model or "", r.kind, r.url, free=r.free, custom=True)
+        p.db_key, p.db_model, p.source = key, r.model or "", "painel"
+        if p.custom:
+            p.kind, p.url, p.label, p.default_model, p.free = r.kind, r.url, r.label or r.name, r.model or p.default_model, r.free
+    for name in list(PROVIDERS):
+        if name not in seen:
+            if name in BUILTIN:
+                PROVIDERS[name].db_key = PROVIDERS[name].db_model = ""
+            else:
+                PROVIDERS.pop(name)
+
+
 def order() -> list[str]:
     listed = [p.strip() for p in (os.getenv("AI_PROVIDERS") or DEFAULT_ORDER).split(",") if p.strip() in PROVIDERS]
     rest = [n for n in DEFAULT_ORDER.split(",") if n not in listed]
-    return listed + rest
+    custom = [n for n in PROVIDERS if n not in listed and n not in rest]
+    return listed + rest + custom
 
 
 def chain() -> list[Provider]:
+    refresh_from_db()
     return [PROVIDERS[n] for n in order() if PROVIDERS[n].key]
 
 
@@ -149,14 +205,63 @@ async def complete_ex(system: str, user: str, max_tokens: int = 2000, timeout: f
 
 
 def status() -> list[dict]:
+    refresh_from_db()
     now = time.time()
     out = []
     for i, n in enumerate(order()):
         p = PROVIDERS[n]
-        out.append({"name": n, "label": p.label, "free": p.free, "configured": bool(p.key), "model": p.model,
+        k = p.key
+        out.append({"name": n, "label": p.label, "free": p.free, "configured": bool(k), "model": p.model,
+                    "keySource": p.key_source, "keyHint": ("••••" + k[-4:]) if len(k) > 8 else ("••••" if k else ""),
+                    "custom": p.custom, "kind": p.kind, "url": p.url if p.custom else "",
                     "position": i + 1, "paused": p.paused_until > now, "failures": p.failures,
                     "lastError": p.last_error, "lastOk": p.last_ok or None, "calls": p.calls})
     return out
+
+
+ERROR_HINTS = {
+    400: "requisição recusada (modelo ou parâmetros inválidos)", 401: "chave inválida ou expirada",
+    403: "sem permissão para este modelo/conta", 404: "modelo ou endpoint não encontrado",
+    408: "tempo esgotado no provedor", 429: "limite de uso atingido (cota grátis ou por minuto)",
+    500: "erro interno do provedor", 502: "provedor indisponível", 503: "provedor sobrecarregado", 504: "provedor não respondeu a tempo",
+}
+
+
+async def diagnose(names: list[str] | None = None, timeout: float = 20) -> list[dict]:
+    """Testa cada provedor isoladamente (em paralelo), sem afetar o circuit breaker."""
+    import asyncio
+    refresh_from_db(force=True)
+    targets = [PROVIDERS[n] for n in order() if (names is None or n in names)]
+
+    async def one(p: Provider, client: httpx.AsyncClient) -> dict:
+        base = {"name": p.name, "label": p.label, "model": p.model, "free": p.free, "keySource": p.key_source}
+        if not p.key:
+            return base | {"ok": False, "state": "sem_chave", "detail": "sem chave cadastrada"}
+        t0 = time.time()
+        try:
+            text = await _call(p, client, "Você é um teste de conectividade. Responda apenas: ok", "teste", 16)
+            ms = int((time.time() - t0) * 1000)
+            if not text.strip():
+                return base | {"ok": False, "state": "erro", "ms": ms, "detail": "resposta vazia"}
+            p.failures, p.paused_until, p.last_error, p.last_ok = 0, 0.0, "", time.time()
+            return base | {"ok": True, "state": "ok", "ms": ms, "reply": text.strip()[:40]}
+        except Exception as e:  # noqa: BLE001
+            code = getattr(getattr(e, "response", None), "status_code", None)
+            detail = ERROR_HINTS.get(code, "") if code else ("tempo esgotado" if "Timeout" in type(e).__name__ else "falha de rede/conexão")
+            return base | {"ok": False, "state": "erro", "ms": int((time.time() - t0) * 1000),
+                           "code": code, "detail": detail or f"HTTP {code}"}
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        results = list(await asyncio.gather(*(one(p, client) for p in targets)))
+    # fallbacks gratuitos sem chave
+    t0 = time.time()
+    mm = await free_translate(["Tocar"], "en")
+    results.append({"name": "mymemory", "label": "MyMemory (tradução grátis, sem chave)", "free": True, "keySource": "—",
+                    "model": "—", "ok": bool(mm), "state": "ok" if mm else "erro", "ms": int((time.time() - t0) * 1000),
+                    "detail": "" if mm else "indisponível ou cota diária esgotada"})
+    results.append({"name": "offline", "label": "Maestro offline (local)", "free": True, "keySource": "—", "model": "—",
+                    "ok": True, "state": "ok", "ms": 0, "detail": "sempre disponível"})
+    return results
 
 
 # ------------------------------------------------------- fallbacks sem chave

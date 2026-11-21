@@ -12,24 +12,91 @@ export function mountAdmin(body: HTMLElement) {
   const views: Record<string, () => Promise<HTMLElement>> = { "📊 Visão geral": overview, "👥 Usuários": users, "🌐 Moderação": moderation, "🧾 Auditoria LGPD": audit, "🔄 Atualizações": updates, "🤖 IA": aiProviders };
 
   async function aiProviders() {
-    const r = await api("/api/admin/ai");
-    const out = h("div", { class: "row" });
-    const table = (provs: any[]) => h("table", { class: "grid-table" },
-      h("thead", {}, h("tr", {}, ...["Ordem", "Provedor", "Chave", "Modelo", "Estado", "Chamadas"].map((t) => h("th", {}, t)))),
-      h("tbody", {}, ...provs.map((p: any) => h("tr", { class: p.configured ? "" : "muted" },
-        h("td", {}, String(p.position)), h("td", {}, h("b", {}, p.label || p.name), p.free ? h("small", { class: "chip" }, "grátis") : ""), h("td", {}, p.configured ? "✅ configurada" : "—"),
+    let r = await api("/api/admin/ai");
+    const KNOWN: [string, string, string][] = [
+      ["groq", "Groq (grátis)", "https://console.groq.com/keys"], ["gemini", "Google Gemini (grátis)", "https://aistudio.google.com/apikey"],
+      ["github", "GitHub Models (grátis — PAT com models:read)", "https://github.com/settings/personal-access-tokens/new"],
+      ["openrouter", "OpenRouter (modelos :free)", "https://openrouter.ai/keys"], ["cerebras", "Cerebras (grátis)", "https://cloud.cerebras.ai"],
+      ["mistral", "Mistral (plano Experiment)", "https://console.mistral.ai/api-keys"], ["anthropic", "Anthropic Claude", "https://console.anthropic.com/settings/keys"],
+      ["openai", "OpenAI", "https://platform.openai.com/api-keys"], ["__custom", "➕ Outra IA (compatível com OpenAI)", ""]];
+    const SRC: Record<string, string> = { painel: "🔐 painel", env: "📄 .env / GitHub", "": "—" };
+    const statusBox = h("div");
+    const drawStatus = () => statusBox.replaceChildren(h("table", { class: "grid-table" },
+      h("thead", {}, h("tr", {}, ...["#", "Provedor", "Chave", "Modelo", "Estado", ""].map((t) => h("th", {}, t)))),
+      h("tbody", {}, ...r.providers.map((p: any) => h("tr", { class: p.configured ? "" : "muted" },
+        h("td", {}, String(p.position)),
+        h("td", {}, h("b", {}, p.label || p.name), p.free ? h("small", { class: "chip" }, "grátis") : "", p.custom ? h("small", { class: "chip" }, "personalizada") : ""),
+        h("td", {}, p.configured ? `${SRC[p.keySource] || p.keySource} ${p.keyHint}` : "—"),
         h("td", { class: "mono" }, p.model),
-        h("td", {}, !p.configured ? "inativo" : p.paused ? `⏸ em pausa (${p.lastError})` : p.lastOk ? "✅ ok" : "pronto"),
-        h("td", {}, String(p.calls))))));
-    const box = h("div", {}, table(r.providers));
-    const btn = h("button", { class: "btn primary", onclick: async () => {
-      btn.disabled = true; out.textContent = "Testando…";
-      try { const t = await api("/api/admin/ai/test", { method: "POST" }); out.textContent = `✅ Respondeu: ${t.provider} em ${t.ms} ms`; box.replaceChildren(table(t.providers)); }
-      catch (e: any) { out.textContent = "❌ " + e.message; }
-      finally { btn.disabled = false; }
-    } }, "Testar failover") as HTMLButtonElement;
-    return h("div", {}, box, h("div", { class: "row" }, btn, out),
-      h("p", { class: "hint" }, "Se um provedor falhar (erro, limite ou lentidão), o próximo responde e o que falhou fica em pausa. Se nenhum responder, a tradução usa o MyMemory (gratuito) e o Maestro responde offline. Chaves: secrets do GitHub (SERVIDOR_ENV ou individuais, enviados à VPS pelo CI) ou sudo bash /opt/harmonia/infra/scripts/configurar-ia.sh — nunca aparecem aqui."));
+        h("td", {}, !p.configured ? "sem chave" : p.paused ? `⏸ em pausa (${p.lastError})` : p.lastOk ? "✅ ok" : "pronto"),
+        h("td", {}, p.keySource === "painel" ? h("button", { class: "btn ghost danger", title: "Remover credencial do painel", onclick: async () => {
+          if (!confirm(`Remover a credencial de ${p.label}?`)) return;
+          r = await api(`/api/admin/ai/credentials/${p.name}`, { method: "DELETE" }); drawStatus(); toast("Credencial removida", "ok");
+        } }, "🗑") : ""))))));
+    drawStatus();
+
+    // ----- diagnóstico
+    const diagBox = h("div");
+    const diagBtn = h("button", { class: "btn primary", onclick: async () => {
+      diagBtn.disabled = true; diagBox.replaceChildren(h("p", { class: "hint" }, h("span", { class: "spin" }), "Testando cada IA separadamente…"));
+      try {
+        const d = await api("/api/admin/ai/diagnose", { method: "POST" });
+        r = { providers: d.providers }; drawStatus();
+        diagBox.replaceChildren(
+          h("p", {}, h("b", {}, d.working ? `✅ ${d.working} IA(s) funcionando` : "⚠️ Nenhuma IA generativa respondeu — o app segue com tradução grátis e Maestro offline"), ` · ${d.ms} ms`),
+          h("table", { class: "grid-table" }, h("thead", {}, h("tr", {}, ...["", "IA", "Origem", "Modelo", "Tempo", "Diagnóstico"].map((t) => h("th", {}, t)))),
+            h("tbody", {}, ...d.results.map((x: any) => h("tr", { class: x.state === "sem_chave" ? "muted" : "" },
+              h("td", {}, x.ok ? "✅" : x.state === "sem_chave" ? "⚪" : "❌"), h("td", {}, h("b", {}, x.label)), h("td", {}, SRC[x.keySource] ?? x.keySource),
+              h("td", { class: "mono" }, x.model), h("td", {}, x.ms != null ? `${x.ms} ms` : "—"),
+              h("td", {}, x.ok ? (x.reply ? `respondeu “${x.reply}”` : x.detail || "ok") : `${x.code ? "HTTP " + x.code + " — " : ""}${x.detail}`))))));
+      } catch (e: any) { diagBox.replaceChildren(h("p", {}, "❌ " + e.message)); }
+      finally { diagBtn.disabled = false; }
+    } }, "🩺 Rodar diagnóstico") as HTMLButtonElement;
+
+    // ----- cadastro de credenciais
+    const sel = h("select", {}, ...KNOWN.map(([v, l]) => h("option", { value: v }, l))) as HTMLSelectElement;
+    const key = h("input", { type: "password", autocomplete: "off", placeholder: "Cole a chave de API (fica cifrada no servidor)" }) as HTMLInputElement;
+    const model = h("input", { placeholder: "Modelo (opcional — vazio usa o padrão)" }) as HTMLInputElement;
+    const cname = h("input", { placeholder: "identificador (ex.: deepseek)" }) as HTMLInputElement;
+    const clabel = h("input", { placeholder: "Nome exibido (ex.: DeepSeek)" }) as HTMLInputElement;
+    const curl = h("input", { placeholder: "https://api.exemplo.com/v1/chat/completions" }) as HTMLInputElement;
+    const ckind = h("select", {}, h("option", { value: "openai" }, "compatível com OpenAI"), h("option", { value: "anthropic" }, "API Anthropic"), h("option", { value: "gemini" }, "API Gemini")) as HTMLSelectElement;
+    const cfree = h("input", { type: "checkbox" }) as HTMLInputElement;
+    const link = h("a", { target: "_blank", rel: "noopener", class: "hint" });
+    const customBox = h("div", { class: "grid2", hidden: true }, h("label", {}, "Identificador", cname), h("label", {}, "Nome", clabel),
+      h("label", {}, "Endpoint (URL https)", curl), h("label", {}, "Formato da API", ckind), h("label", { class: "check" }, cfree, " gratuita"));
+    const result = h("div", { class: "row" });
+    const syncSel = () => {
+      const k = KNOWN.find((x) => x[0] === sel.value)!;
+      customBox.hidden = sel.value !== "__custom";
+      link.textContent = k[2] ? "Obter chave ↗" : ""; if (k[2]) link.setAttribute("href", k[2]); else link.removeAttribute("href");
+      const cur = r.providers.find((p: any) => p.name === sel.value);
+      model.placeholder = cur ? `Modelo (vazio = ${cur.model})` : "Modelo (ex.: deepseek-chat)";
+    };
+    sel.addEventListener("change", syncSel); syncSel();
+    const save = h("button", { class: "btn primary", onclick: async () => {
+      const custom = sel.value === "__custom";
+      const body: any = { name: custom ? cname.value.trim().toLowerCase() : sel.value, key: key.value.trim() || undefined, model: model.value.trim() || undefined, test: true };
+      if (custom) Object.assign(body, { label: clabel.value.trim(), url: curl.value.trim(), kind: ckind.value, free: cfree.checked });
+      save.disabled = true; result.textContent = "Salvando e testando…";
+      try {
+        const out = await api("/api/admin/ai/credentials", { method: "POST", json: body });
+        key.value = ""; r = { providers: out.providers }; drawStatus();
+        const t = out.test;
+        result.textContent = t?.ok ? `✅ Salva e funcionando (${t.ms} ms)` : `⚠️ Salva, mas o teste falhou: ${t?.code ? "HTTP " + t.code + " — " : ""}${t?.detail || "sem resposta"}`;
+      } catch (e: any) { result.textContent = "❌ " + e.message; }
+      finally { save.disabled = false; }
+    } }, "💾 Salvar e testar") as HTMLButtonElement;
+
+    return h("div", { class: "ai-admin" },
+      h("h4", {}, "Provedores (ordem de failover)"), statusBox,
+      h("h4", {}, "Diagnóstico"), h("div", { class: "row" }, diagBtn, h("span", { class: "hint" }, "Testa cada IA isoladamente e mostra qual funciona e o motivo de falha (chave inválida, limite, modelo inexistente…).")), diagBox,
+      h("h4", {}, "Registrar ou atualizar credencial"),
+      h("div", { class: "grid2" }, h("label", {}, "Provedor", sel), h("label", {}, "Modelo", model)),
+      customBox,
+      h("label", { class: "prop" }, h("span", {}, "Chave de API"), h("div", { class: "prop-ctl" }, key)), link,
+      h("div", { class: "row" }, save, result),
+      h("p", { class: "hint" }, "A chave é cifrada (AES-256-GCM) antes de ir ao banco e nunca volta para a tela — aparecem só os 4 últimos caracteres. Chave cadastrada aqui tem prioridade sobre a do .env/GitHub para o mesmo provedor. Deixe a chave em branco para trocar só o modelo."));
   }
 
   async function updates() {

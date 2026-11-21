@@ -23,7 +23,11 @@ export function mountAvatar() {
   const muteBtn = h("button", { class: "ic-btn mute", title: "Silenciar Maestro", "aria-pressed": "false" }, "🔊");
   const level = h("div", { class: "xp" });
   const ask = h("form", { class: "ask", hidden: true }, h("input", { placeholder: "Pergunte ao Maestro…", maxlength: 500 }), h("button", { class: "btn primary" }, "→"));
-  wrap.append(bubble, ask, canvasBox, h("div", { class: "avatar-ctl" }, level, muteBtn));
+  // celular: botão flutuante leve (sem WebGL) no lugar do personagem 3D
+  const fab = h("button", { class: "maestro-fab", "aria-label": "Perguntar ao Maestro", onclick: () => {
+    ask.hidden = !ask.hidden; if (!ask.hidden) (ask.querySelector("input") as HTMLInputElement).focus();
+  } }, "🎼");
+  wrap.append(bubble, ask, canvasBox, fab, h("div", { class: "avatar-ctl" }, level, muteBtn));
   document.body.append(wrap);
   let muted = localStorage.getItem("maestro.muted") === "1";
 
@@ -61,6 +65,7 @@ export function mountAvatar() {
   let mx = 0, my = 0, talking = 0, t0 = performance.now();
   addEventListener("pointermove", (e) => { const r = canvasBox.getBoundingClientRect(); mx = Math.max(-1, Math.min(1, (e.clientX - r.left - W / 2) / 400)); my = Math.max(-1, Math.min(1, (e.clientY - r.top - H / 2) / 400)); });
   const loop = () => {
+    if (!canvasBox.offsetParent || document.hidden) { requestAnimationFrame(loop); return; } // oculto (celular): não gasta bateria
     const t = (performance.now() - t0) / 1000;
     bot.position.y = Math.sin(t * 2) * 0.06; bot.rotation.y = mx * 0.5; bot.rotation.x = my * 0.25;
     eyes.forEach((e, i) => { e.position.x = (i ? 0.34 : -0.34) + mx * 0.06; e.position.y = 0.28 - my * 0.05; });
@@ -118,6 +123,8 @@ export function mountAvatar() {
     if (r === "add") { const c = store.score.layers.reduce((a, l) => a + l.notes.length, 0); if (Math.floor(c / 10) > Math.floor(lastCount / 10)) { say(`${c} notas! Sua melodia está tomando forma. 🎶`, 4000); gainXp(3); } lastCount = c; }
     if (r === "merge") { say("Transcrição pronta! Confira cada camada no Gestor de Camadas.", 6000); gainXp(8); }
   });
-  setTimeout(() => say("Olá! Eu sou o Maestro. Arraste-me pela tela, ou clique para tirar dúvidas. " + TIPS[0], 9000), 1200);
-  setInterval(() => { if (bubble.hidden && !muted) say("Dica: " + TIPS[Math.floor(Math.random() * TIPS.length)], 8000); }, 120000);
+  const mobile = () => document.body.classList.contains("mobile");
+  setTimeout(() => say(mobile() ? "Olá! Sou o Maestro 🎼 — toque em mim para tirar dúvidas." : "Olá! Eu sou o Maestro. Arraste-me pela tela, ou clique para tirar dúvidas. " + TIPS[0], mobile() ? 4000 : 9000), 1200);
+  setInterval(() => { if (bubble.hidden && !muted && !mobile()) say("Dica: " + TIPS[Math.floor(Math.random() * TIPS.length)], 8000); }, 120000);
+  bubble.addEventListener("click", () => (bubble.hidden = true)); // toque fecha o balão
 }

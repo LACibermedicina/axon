@@ -2,6 +2,40 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.9-alpha] — 2026-11-21
+
+### Adicionado — versão para celular (detecção automática)
+- `core/device.ts`: identifica celular × desktop e troca o layout sozinho, inclusive ao girar a tela ou redimensionar.
+  - Critérios: user agent móvel (Client Hints), tela estreita (≤ 820 px), ou toque como ponteiro principal em tela < 1100 px (tablet em retrato).
+  - Escolha manual: **Ajuda → Versão para celular / Detectar automaticamente** no desktop, ou **Mais → Usar versão desktop** no celular.
+- Layout celular:
+  - tela **Início** com blocos grandes;
+  - **barra inferior fixa** (Início, Compor, Importar, Painéis, Mais) com alvos de toque ≥ 48 px;
+  - janelas em tela cheia com **‹ Voltar**;
+  - Propriedades, Camadas e Anotações numa **folha inferior**;
+  - folha **Mais** com os demais apps, idioma e acessibilidade;
+  - Maestro como **botão flutuante leve**: o WebGL fica pausado quando oculto, para poupar bateria.
+- Editor no toque:
+  - a partitura rola com o dedo, e as notas, o "+" de compasso e as anotações capturam o gesto;
+  - barra de ferramentas com rolagem horizontal e transporte (Tocar) em primeiro;
+  - zoom inicial adequado.
+- **Acessibilidade** (todas as versões):
+  - link "Pular para o conteúdo" e foco visível de alto contraste;
+  - **Texto maior** e **Alto contraste** (persistidos);
+  - `aria-current` na navegação, rótulos acessíveis e `prefers-reduced-motion` respeitado.
+
+### Adicionado — Administração → 🤖 IA
+- **Registrar credenciais de outras IAs pelo painel**:
+  - provedores conhecidos (Groq, Gemini, GitHub Models, OpenRouter, Cerebras, Mistral, Anthropic, OpenAI) ou **qualquer IA compatível com OpenAI, Anthropic ou Gemini**, informando identificador, nome, URL https e modelo;
+  - a chave é cifrada com AES-256-GCM (tabela `ai_credentials`) e nunca volta para a tela (só os 4 últimos caracteres);
+  - tem prioridade sobre o `.env`/GitHub para o mesmo provedor e vale sem reiniciar (cache de 30 s por worker);
+  - salvar já testa a credencial; o botão 🗑 remove;
+  - toda alteração entra na auditoria.
+- **🩺 Rodada diagnóstica**: testa cada IA isoladamente, em paralelo, e mostra ✅/❌, origem da chave, modelo, tempo e o **motivo da falha em português** (chave inválida, limite atingido, modelo inexistente, tempo esgotado, rede). Inclui o tradutor grátis MyMemory e o Maestro offline.
+
+### Corrigido
+- O formulário do Maestro e o balão respeitam `hidden` (antes ficavam sempre visíveis).
+
 ## [0.1.8-alpha] — 2026-11-21
 
 ### Adicionado — IA gratuita de suporte e credenciais do GitHub

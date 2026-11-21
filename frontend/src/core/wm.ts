@@ -63,7 +63,7 @@ export function openApp(app: AppDef): Win {
 
   const title = h("div", { class: "win-title" }, app.title);
   const lights = h("div", { class: "lights" },
-    h("button", { class: "l close", "aria-label": "Fechar", title: "Fechar (⌘W)" }),
+    h("button", { class: "l close", "aria-label": "Fechar / voltar", title: "Fechar (⌘W)" }, h("span", { class: "back-label", "aria-hidden": "true" }, "‹ Voltar")),
     h("button", { class: "l min", "aria-label": "Minimizar", title: "Minimizar" }),
     h("button", { class: "l max", "aria-label": "Maximizar", title: "Maximizar" }));
   const bar = h("header", { class: "win-bar" }, lights, h("span", { class: "win-icon", html: app.icon }), title);
@@ -80,7 +80,13 @@ export function openApp(app: AppDef): Win {
     close: () => {
       el.classList.add("closing");
       setTimeout(() => { el.remove(); typeof cleanup === "function" && cleanup(); }, 180);
-      wins.delete(id); changed();
+      wins.delete(id);
+      // no celular as janelas ocupam a tela toda: ao voltar, a anterior assume o foco
+      if (document.body.classList.contains("mobile")) {
+        const next = [...wins.values()].filter((w) => !w.el.classList.contains("min")).sort((a, b) => +b.el.style.zIndex - +a.el.style.zIndex)[0];
+        next?.focus();
+      }
+      changed();
     },
     focus: () => {
       document.querySelectorAll(".win.focused").forEach((w) => w.classList.remove("focused"));
@@ -98,7 +104,7 @@ export function openApp(app: AppDef): Win {
 
   // arrastar pela barra
   bar.addEventListener("pointerdown", (e) => {
-    if ((e.target as HTMLElement).closest("button") || el.classList.contains("max")) return;
+    if ((e.target as HTMLElement).closest("button") || el.classList.contains("max") || document.body.classList.contains("mobile")) return;
     const sx = e.clientX - el.offsetLeft, sy = e.clientY - el.offsetTop;
     bar.setPointerCapture(e.pointerId);
     el.classList.add("dragging");
@@ -112,6 +118,7 @@ export function openApp(app: AppDef): Win {
   // redimensionar pelas bordas
   el.querySelectorAll<HTMLElement>(".rz").forEach((rz) => rz.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
+    if (document.body.classList.contains("mobile")) return;
     const d = rz.dataset.dir!;
     const r0 = el.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
     rz.setPointerCapture(e.pointerId);
@@ -133,3 +140,6 @@ export function openApp(app: AppDef): Win {
 }
 
 export function restoreWindow(w: Win) { w.el.classList.remove("min"); w.focus(); }
+
+/** Celular: minimiza todas as janelas (volta para a tela Início). */
+export function minimizeAll() { wins.forEach((w) => w.el.classList.add("min")); changed(); }

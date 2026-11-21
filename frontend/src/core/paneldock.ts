@@ -31,10 +31,12 @@ export class PanelDock {
     const head = h("div", { class: "rdock-head" },
       h("button", { class: "sb-toggle", title: "Recolher/expandir painéis", onclick: () => this.setCollapsed(!this.layout.dockCollapsed) }, "☰"),
       h("b", {}, "Painéis"),
-      h("button", { class: "ic-btn ghost", title: "Restaurar layout padrão", onclick: () => this.reset() }, "↺"));
+      h("button", { class: "ic-btn ghost", title: "Restaurar layout padrão", onclick: () => this.reset() }, "↺"),
+      h("button", { class: "sheet-close", "aria-label": "Fechar painéis", onclick: () => this.toggleSheet(false) }, "✕"));
     this.dock.append(head, this.stack, this.strip, this.guide);
     root.append(this.dock, this.floatLayer);
     addEventListener("resize", () => this.panels.forEach((p) => p.st.mode === "floating" && this.clamp(p)));
+    addEventListener("layoutchange", () => this.apply());
   }
 
   register(defs: PanelDef[]) {
@@ -63,6 +65,7 @@ export class PanelDock {
   /** Mostra e destaca o painel (acoplado ou flutuante). */
   reveal(id: string) {
     const p = this.panels.get(id); if (!p) return;
+    if (this.mobile()) this.toggleSheet(true);
     if (p.st.mode === "hidden") p.st.mode = "docked";
     p.st.collapsed = false;
     if (p.st.mode === "docked") this.layout.dockCollapsed = false;
@@ -91,17 +94,28 @@ export class PanelDock {
     this.apply();
   }
 
+  private mobile() { return document.body.classList.contains("mobile"); }
+
+  /** Celular: abre/fecha a folha inferior com os painéis. */
+  toggleSheet(open?: boolean) {
+    const on = open ?? !document.body.classList.contains("sheet-open");
+    document.body.classList.toggle("sheet-open", on);
+    dispatchEvent(new CustomEvent("sheetchange", { detail: on }));
+  }
+
   private apply() {
+    const mobile = this.mobile();
     const docked = this.layout.order.filter((id) => this.panels.get(id)?.st.mode === "docked");
     for (const id of this.layout.order) {
       const p = this.panels.get(id); if (!p) continue;
       const { el, st } = p;
       el.classList.toggle("collapsed", st.collapsed);
-      el.classList.toggle("floating", st.mode === "floating");
+      const floating = st.mode === "floating" && !mobile; // no celular tudo fica na folha inferior
+      el.classList.toggle("floating", floating);
       el.hidden = st.mode === "hidden";
       (el.querySelector(".p-btn:nth-of-type(2)") as HTMLElement).textContent = st.mode === "floating" ? "⇲" : "⇱";
       (el.querySelector(".p-btn:nth-of-type(2)") as HTMLElement).title = st.mode === "floating" ? "Reacoplar ao painel lateral" : "Destacar (janela flutuante)";
-      if (st.mode === "floating") {
+      if (floating) {
         if (el.parentElement !== this.floatLayer) this.floatLayer.append(el);
         Object.assign(el.style, { left: st.x + "px", top: st.y + "px", width: st.w + "px", height: st.collapsed ? "" : st.h + "px", zIndex: String(++this.topZ) });
         this.clamp(p);
@@ -118,7 +132,7 @@ export class PanelDock {
     }));
     const collapsed = this.layout.dockCollapsed || !docked.length;
     this.dock.classList.toggle("collapsed", collapsed);
-    document.body.style.setProperty("--rdock", (collapsed ? STRIP_W : DOCK_W) + "px");
+    document.body.style.setProperty("--rdock", mobile ? "0px" : (collapsed ? STRIP_W : DOCK_W) + "px");
     this.save();
   }
 
@@ -148,7 +162,7 @@ export class PanelDock {
   }
 
   private startDrag(e: PointerEvent, id: string) {
-    if ((e.target as HTMLElement).closest("button, input, select")) return;
+    if ((e.target as HTMLElement).closest("button, input, select") || this.mobile()) return;
     const p = this.panels.get(id)!;
     const head = e.currentTarget as HTMLElement;
     const sx = e.clientX, sy = e.clientY;

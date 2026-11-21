@@ -1,6 +1,7 @@
 // harmonIA — desktop estilo macOS: barra de menus, seletor de idiomas, menu lateral, ícones, Dock e janelas.
 import "./styles/main.css";
-import { initWM, openApp, AppDef, onWindowsChange, openWindows, restoreWindow } from "./core/wm";
+import { initWM, openApp, AppDef, onWindowsChange, openWindows, restoreWindow, minimizeAll } from "./core/wm";
+import { initDevice, isMobile, preference, setPreference, toggleLargeText, toggleContrast } from "./core/device";
 import { ICONS, installIconDefs } from "./core/icons";
 import { h, toast } from "./core/ui";
 import { LANGS, setLang, lang, t, watchI18n } from "./core/i18n";
@@ -21,7 +22,7 @@ import { PanelDock } from "./core/paneldock";
 import { mountProperties, mountAnnotations } from "./modules/inspector";
 import * as audio from "./core/audio";
 
-const VERSION = "0.1.8-alpha";
+const VERSION = "0.1.9-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1060, innerWidth - 206 - 312 - 24)), height: 640, x: 206, y: 46, mount: mountScoreEditor },
@@ -80,7 +81,8 @@ function menubar() {
       ["Importar áudio / foto / cifra…", () => open("import")], ["Biblioteca", () => open("library")], ["Exportar…", () => open("mixer")]]),
     menu("Editar", [["Desfazer ⌘Z", () => store.undoOp()], ["Refazer ⇧⌘Z", () => store.redoOp()], ["Selecionar todos os compassos", () => { store.selectedMeasures = new Set([...Array(store.score.measures).keys()]); store.emit("selection"); }]]),
     menuDyn("Janelas", () => visible().map((id) => [(PANEL_IDS.has(id) ? "▸ Painel: " : "") + titleOf(id), () => open(id)] as [string, () => void])),
-    menu("Ajuda", [["Atalhos de teclado", shortcuts], ["Sobre / versão", about]]),
+    menu("Ajuda", [["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
+      ["Texto maior (liga/desliga)", () => toggleLargeText()], ["Alto contraste (liga/desliga)", () => toggleContrast()], ["Sobre / versão", about]]),
     h("span", { class: "spacer" }), clock, userBtn);
 }
 
@@ -184,11 +186,68 @@ function watchForUpdates() {
   addEventListener("focus", check);
 }
 
+// ============================================================ versão celular
+// Início (lançador) + barra inferior fixa (polegar) + folha "Mais". Janelas abrem em tela cheia,
+// "‹ Voltar" fecha; os painéis da partitura viram folha inferior.
+function mobileShell() {
+  const greet = h("p", { class: "m-greet" });
+  const setGreet = () => (greet.textContent = currentUser ? `Olá, ${currentUser.name.split(" ")[0]}! O que vamos compor?` : "Bem-vindo ao harmonIA");
+  addEventListener("auth", setGreet); setGreet();
+  const tile = (id: string, sub: string) => h("button", { class: "m-tile", onclick: () => open(id) },
+    h("span", { class: "m-tile-ic", html: iconOf(id) }), h("b", { "data-i18n": id }, t(id)), h("small", {}, sub));
+  const tiles = h("div", { class: "m-tiles" });
+  const drawTiles = () => tiles.replaceChildren(
+    tile("compose", "Editar partitura"), tile("import", "Áudio, foto ou cifra"), tile("library", "Obras e playlists"),
+    tile("mixer", "Ouvir e exportar"), tile("agenda", "Estudos e ensaios"), tile("community", "Chat e vídeo"),
+    ...(allowed("admin") ? [tile("admin", "Usuários, IA, sistema")] : []), tile("account", currentUser ? "Perfil e privacidade" : "Entrar"));
+  addEventListener("auth", drawTiles); drawTiles();
+  const home = h("main", { class: "m-home", id: "m-home", "aria-label": "Início" },
+    h("div", { class: "m-brand" }, h("b", {}, "harmon"), h("i", {}, "IA")), greet, tiles);
+
+  const more = h("div", { class: "m-sheet", role: "dialog", "aria-modal": "true", "aria-label": "Mais opções", hidden: true });
+  const closeMore = () => { more.hidden = true; };
+  const drawMore = () => more.replaceChildren(
+    h("div", { class: "m-sheet-head" }, h("b", {}, "Mais"), h("button", { class: "sheet-close", "aria-label": "Fechar", onclick: closeMore }, "✕")),
+    h("div", { class: "m-list" }, ...visible().filter((id) => !PANEL_IDS.has(id) && !["compose", "import"].includes(id)).map((id) =>
+      h("button", { onclick: () => { closeMore(); open(id); } }, h("span", { class: "m-li-ic", html: iconOf(id) }), h("span", { "data-i18n": id }, t(id))))),
+    h("h5", {}, "Idioma"),
+    h("div", { class: "m-flags", "data-noi18n": "" }, ...LANGS.map((l) => h("button", { class: "flag" + (l.code === lang ? " on" : ""), "aria-label": l.name, "aria-pressed": String(l.code === lang),
+      onclick: async () => { closeMore(); await setLang(l.code); } }, l.flag, h("small", {}, l.name)))),
+    h("h5", {}, "Acessibilidade"),
+    h("div", { class: "m-list" },
+      h("button", { "aria-pressed": String(document.body.classList.contains("large-text")), onclick: () => { toggleLargeText(); drawMore(); } }, "🔠 Texto maior", h("small", {}, document.body.classList.contains("large-text") ? "ligado" : "desligado")),
+      h("button", { "aria-pressed": String(document.body.classList.contains("high-contrast")), onclick: () => { toggleContrast(); drawMore(); } }, "◐ Alto contraste", h("small", {}, document.body.classList.contains("high-contrast") ? "ligado" : "desligado")),
+      h("button", { onclick: () => { closeMore(); setPreference("desktop"); toast("Versão desktop ativada. Para voltar: Ajuda → Versão para celular", "info", 5000); } }, "🖥 Usar versão desktop", h("small", {}, preference() === "auto" ? "detecção automática" : "escolha fixa")),
+      h("button", { onclick: () => { closeMore(); shortcuts(); } }, "⌨️ Atalhos e ajuda")));
+
+  const tab = (id: string, label: string, icon: string, fn: () => void) => h("button", { class: "m-tab", "data-tab": id, "aria-label": label, onclick: fn },
+    h("span", { class: "m-tab-ic", "aria-hidden": "true" }, icon), h("small", {}, label));
+  const tabbar = h("nav", { class: "m-tabbar", "aria-label": "Navegação principal" },
+    tab("home", "Início", "⌂", () => { closeMore(); panels.toggleSheet(false); minimizeAll(); }),
+    tab("compose", "Compor", "♫", () => { closeMore(); panels.toggleSheet(false); open("compose"); }),
+    tab("import", "Importar", "⇪", () => { closeMore(); panels.toggleSheet(false); open("import"); }),
+    tab("panels", "Painéis", "☰", () => { closeMore(); panels.toggleSheet(); }),
+    tab("more", "Mais", "⋯", () => { panels.toggleSheet(false); if (more.hidden) { drawMore(); more.hidden = false; (more.querySelector("button") as HTMLElement)?.focus(); } else closeMore(); }));
+  const markTab = () => {
+    const top = openWindows().filter((w) => !w.el.classList.contains("min")).sort((a, b) => +b.el.style.zIndex - +a.el.style.zIndex)[0];
+    const cur = !more.hidden ? "more" : document.body.classList.contains("sheet-open") ? "panels" : top ? (["compose", "import"].includes(top.app.id) ? top.app.id : "") : "home";
+    tabbar.querySelectorAll<HTMLElement>(".m-tab").forEach((b) => { const on = b.dataset.tab === cur; b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "page" : "false"); });
+    document.body.classList.toggle("m-has-window", !!top);
+  };
+  onWindowsChange(markTab); addEventListener("sheetchange", markTab);
+  new MutationObserver(markTab).observe(more, { attributes: true, attributeFilter: ["hidden"] });
+  addEventListener("keydown", (e) => { if (e.key === "Escape") { closeMore(); panels?.toggleSheet(false); } });
+  setTimeout(markTab, 0);
+  return [home, more, tabbar];
+}
+
 async function boot() {
   installIconDefs();
+  initDevice();
   const app = document.getElementById("app")!;
-  const winLayer = h("div", { class: "win-layer" });
-  app.append(menubar(), langbar(), sidebar(), desktopIcons(), winLayer, dock());
+  const winLayer = h("div", { class: "win-layer", id: "main-content" });
+  const skip = h("a", { class: "skip-link", href: "#main-content" }, "Pular para o conteúdo");
+  app.append(skip, menubar(), langbar(), sidebar(), desktopIcons(), winLayer, dock());
   initWM(winLayer);
   panels = new PanelDock(app);
   panels.register([
@@ -196,8 +255,10 @@ async function boot() {
     { id: "layers", title: t("layers"), icon: ICONS.layers, mount: mountLayers },
     { id: "notes", title: t("notes"), icon: ICONS.notes, mount: mountAnnotations },
   ]);
+  app.append(...mobileShell());
   watchI18n(winLayer);
   mountAvatar();
+  addEventListener("layoutchange", (e: any) => toast(e.detail === "mobile" ? "📱 Layout para celular ativado" : "🖥 Layout desktop ativado", "info", 2200));
   addEventListener("open-app", (e: any) => open(e.detail));
   // autosave remoto da composição aberta
   store.on(async (r) => {
@@ -208,8 +269,8 @@ async function boot() {
   document.addEventListener("visibilitychange", () => document.hidden && audio.stop());
   watchForUpdates();
   await restoreSession();
-  if (!(await publicRoutes())) {
-    open("compose");
+  if (!(await publicRoutes()) && !isMobile()) {
+    open("compose"); // no celular começa na tela Início (lançador)
   }
   if (lang !== "pt") setLang(lang);
 }

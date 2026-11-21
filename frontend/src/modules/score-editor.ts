@@ -127,6 +127,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const paper = svg("svg", { class: "score-svg" });
   canvas.append(paper);
   const legend = h("div", { class: "score-legend", "data-noi18n": "" });
+  if (document.body.classList.contains("mobile")) { zoom = 0.9; }
   body.append(header, toolbar, legend, canvas, status);
 
   function renderLegend() {

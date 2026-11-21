@@ -78,3 +78,39 @@ def test_admin_only():
     sysr = c.get("/api/admin/system", headers=ha)
     assert sysr.status_code == 200 and "autoupdate" in sysr.json()
     assert c.get("/api/admin/system", headers=h).status_code == 403
+
+
+def test_admin_ai_credentials_and_diagnose(monkeypatch):
+    from app.core import llm
+    r = c.post("/api/auth/login", json={"email": "admin@m3d.pro", "password": "admin-segredo-1"}).json()
+    ha = {"Authorization": "Bearer " + r["token"]}
+    h = auth()
+    assert c.post("/api/admin/ai/credentials", json={"name": "groq", "key": "gsk_x"}, headers=h).status_code == 403
+    # provedor conhecido + outra IA compatível com OpenAI
+    s1 = c.post("/api/admin/ai/credentials", json={"name": "groq", "key": "gsk_secret_1234", "test": False}, headers=ha).json()
+    g = next(p for p in s1["providers"] if p["name"] == "groq")
+    assert g["configured"] and g["keySource"] == "painel" and g["keyHint"] == "••••1234"
+    assert "gsk_secret" not in str(s1)  # chave nunca volta na resposta
+    bad = c.post("/api/admin/ai/credentials", json={"name": "minha-ia", "key": "k", "url": "http://inseguro"}, headers=ha)
+    assert bad.status_code == 422
+    s2 = c.post("/api/admin/ai/credentials", json={"name": "minha-ia", "key": "k-abcdefgh9999", "label": "Minha IA",
+                                                   "url": "https://api.exemplo.com/v1/chat/completions", "model": "m1", "free": True, "test": False}, headers=ha).json()
+    assert any(p["name"] == "minha-ia" and p["custom"] and p["model"] == "m1" for p in s2["providers"])
+
+    async def fake(p, client, system, user, mt):
+        if p.name == "groq":
+            return "ok"
+        import httpx
+        raise httpx.HTTPStatusError("x", request=httpx.Request("POST", "https://x"), response=httpx.Response(401))
+
+    async def fake_tr(texts, target, source="pt"):
+        return {t: t for t in texts}
+
+    monkeypatch.setattr(llm, "_call", fake)
+    monkeypatch.setattr(llm, "free_translate", fake_tr)
+    d = c.post("/api/admin/ai/diagnose", headers=ha).json()
+    res = {x["name"]: x for x in d["results"]}
+    assert res["groq"]["ok"] and res["minha-ia"]["state"] == "erro" and "chave inválida" in res["minha-ia"]["detail"]
+    assert res["offline"]["ok"] and res["mymemory"]["ok"] and d["working"] >= 1
+    assert c.delete("/api/admin/ai/credentials/minha-ia", headers=ha).status_code == 200
+    assert not any(p["name"] == "minha-ia" for p in c.get("/api/admin/ai", headers=ha).json()["providers"])
