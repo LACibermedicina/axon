@@ -57,10 +57,16 @@ find_free_range() {
 # Lê variável do .env (vazio se não existir)
 env_get() { [[ -f "$1" ]] && grep -E "^$2=" "$1" | tail -1 | cut -d= -f2- || true; }
 
-# Grava/atualiza variável no .env
+# Grava/atualiza variável no .env (seguro para qualquer caractere no valor; preserva dono/permissão)
 env_set() {
-  local file="$1" key="$2" val="$3"
-  if grep -qE "^$key=" "$file" 2>/dev/null; then sed -i -E "s|^$key=.*|$key=$val|" "$file"; else echo "$key=$val" >> "$file"; fi
+  local file="$1" key="$2" val="$3" tmp
+  [[ -f "$file" ]] || : > "$file"
+  tmp="$(mktemp)"
+  K="$key" V="$val" awk 'BEGIN { done = 0 }
+    index($0, ENVIRON["K"] "=") == 1 { if (!done) print ENVIRON["K"] "=" ENVIRON["V"]; done = 1; next }
+    { print }
+    END { if (!done) print ENVIRON["K"] "=" ENVIRON["V"] }' "$file" > "$tmp"
+  cat "$tmp" > "$file"; rm -f "$tmp"
 }
 
 # Portas publicadas pelos containers do próprio harmonIA (válidas num redeploy)

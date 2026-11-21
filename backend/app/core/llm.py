@@ -1,9 +1,12 @@
 """Cliente de IA com failover entre provedores (tradução contextual e assistente Maestro).
 
-Ordem definida em AI_PROVIDERS (padrão: anthropic,openai,gemini,openrouter). Cada provedor só entra na
-cadeia se a sua chave existir no .env da VPS. Em erro de rede, timeout, 429 ou 5xx o próximo é usado;
-o provedor que falhou fica em "pausa" por AI_COOLDOWN_S segundos (circuit breaker), para não atrasar
-as próximas requisições. Erros 4xx de configuração (chave inválida) também pulam para o próximo.
+Provedores (entram na cadeia só se a chave existir no .env da VPS):
+  pagos/assinatura: anthropic, openai
+  gratuitos (free tier, sem cartão): groq, gemini, github (GitHub Models), cerebras, mistral, openrouter (openrouter/free)
+Ordem: AI_PROVIDERS (os configurados que não estiverem na lista entram no fim, para nenhuma chave ficar ociosa).
+Em erro de rede, timeout, 429, 5xx ou chave inválida, o próximo provedor responde; o que falhou fica em pausa
+crescente (circuit breaker, AI_COOLDOWN_S). Se TODOS falharem, as rotas usam fallbacks sem IA generativa
+(tradução gratuita MyMemory e respostas do Maestro offline) — as funcionalidades sempre respondem.
 
 LGPD: só textos de interface e resumos musicais são enviados — nunca nome/e-mail de usuários.
 Chaves NUNCA são logadas nem devolvidas pela API.
@@ -13,73 +16,99 @@ from __future__ import annotations
 import logging
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import httpx
 from fastapi import HTTPException
 
 log = logging.getLogger("harmonia.llm")
+DEFAULT_ORDER = "anthropic,openai,groq,gemini,github,cerebras,mistral,openrouter"
 
 
 @dataclass
 class Provider:
     name: str
-    key_env: str
+    label: str
+    key_envs: tuple[str, ...]          # aceita nomes alternativos (ex.: GOOGLE_API_KEY)
     model_env: str
     default_model: str
+    kind: str                          # anthropic | openai | gemini
+    url: str = ""
+    free: bool = False
     failures: int = 0
     paused_until: float = 0.0
     last_error: str = ""
     last_ok: float = 0.0
     calls: int = 0
-    extra: dict = field(default_factory=dict)
 
     @property
     def key(self) -> str:
-        return os.getenv(self.key_env, "").strip()
+        for k in self.key_envs:
+            v = os.getenv(k, "").strip().strip('"').strip("'")
+            if v:
+                return v
+        return ""
 
     @property
     def model(self) -> str:
         return os.getenv(self.model_env, "").strip() or self.default_model
 
 
-PROVIDERS: dict[str, Provider] = {
-    "anthropic": Provider("anthropic", "ANTHROPIC_API_KEY", "AI_MODEL", "claude-sonnet-4-5"),
-    "openai": Provider("openai", "OPENAI_API_KEY", "OPENAI_MODEL", "gpt-4o-mini"),
-    "gemini": Provider("gemini", "GEMINI_API_KEY", "GEMINI_MODEL", "gemini-2.0-flash"),
-    "openrouter": Provider("openrouter", "OPENROUTER_API_KEY", "OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct"),
-}
+PROVIDERS: dict[str, Provider] = {p.name: p for p in [
+    Provider("anthropic", "Anthropic Claude", ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"), "AI_MODEL", "claude-sonnet-4-5", "anthropic"),
+    Provider("openai", "OpenAI", ("OPENAI_API_KEY",), "OPENAI_MODEL", "gpt-4o-mini", "openai",
+             "https://api.openai.com/v1/chat/completions"),
+    Provider("groq", "Groq (gratuito)", ("GROQ_API_KEY",), "GROQ_MODEL", "llama-3.3-70b-versatile", "openai",
+             "https://api.groq.com/openai/v1/chat/completions", free=True),
+    Provider("gemini", "Google Gemini (gratuito)", ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_AI_API_KEY"), "GEMINI_MODEL",
+             "gemini-2.5-flash", "gemini", free=True),
+    Provider("github", "GitHub Models (gratuito)", ("GITHUB_MODELS_TOKEN", "GH_MODELS_TOKEN"), "GITHUB_MODELS_MODEL",
+             "openai/gpt-4.1-mini", "openai", "https://models.github.ai/inference/chat/completions", free=True),
+    Provider("cerebras", "Cerebras (gratuito)", ("CEREBRAS_API_KEY",), "CEREBRAS_MODEL", "llama3.1-8b", "openai",
+             "https://api.cerebras.ai/v1/chat/completions", free=True),
+    Provider("mistral", "Mistral (gratuito)", ("MISTRAL_API_KEY",), "MISTRAL_MODEL", "mistral-small-latest", "openai",
+             "https://api.mistral.ai/v1/chat/completions", free=True),
+    Provider("openrouter", "OpenRouter (modelos :free)", ("OPENROUTER_API_KEY",), "OPENROUTER_MODEL", "openrouter/free", "openai",
+             "https://openrouter.ai/api/v1/chat/completions", free=True),
+]}
+
+
+def order() -> list[str]:
+    listed = [p.strip() for p in (os.getenv("AI_PROVIDERS") or DEFAULT_ORDER).split(",") if p.strip() in PROVIDERS]
+    rest = [n for n in DEFAULT_ORDER.split(",") if n not in listed]
+    return listed + rest
 
 
 def chain() -> list[Provider]:
-    order = [p.strip() for p in os.getenv("AI_PROVIDERS", "anthropic,openai,gemini,openrouter").split(",") if p.strip()]
-    return [PROVIDERS[n] for n in order if n in PROVIDERS and PROVIDERS[n].key]
+    return [PROVIDERS[n] for n in order() if PROVIDERS[n].key]
 
 
 async def _call(p: Provider, client: httpx.AsyncClient, system: str, user: str, max_tokens: int) -> str:
-    if p.name == "anthropic":
+    if p.kind == "anthropic":
         r = await client.post("https://api.anthropic.com/v1/messages",
                               headers={"x-api-key": p.key, "anthropic-version": "2023-06-01"},
                               json={"model": p.model, "max_tokens": max_tokens, "system": system,
                                     "messages": [{"role": "user", "content": user}]})
         r.raise_for_status()
         return "".join(b.get("text", "") for b in r.json().get("content", []))
-    if p.name in ("openai", "openrouter"):
-        url = "https://api.openai.com/v1/chat/completions" if p.name == "openai" else "https://openrouter.ai/api/v1/chat/completions"
+    if p.kind == "openai":
         headers = {"Authorization": f"Bearer {p.key}"}
         if p.name == "openrouter":
             headers |= {"HTTP-Referer": os.getenv("PUBLIC_BASE_URL", "https://harmonia.m3d.pro"), "X-Title": "harmonIA"}
-        r = await client.post(url, headers=headers,
-                              json={"model": p.model, "max_tokens": max_tokens,
+        if p.name == "github":
+            headers |= {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+        r = await client.post(p.url, headers=headers,
+                              json={"model": p.model, "max_tokens": max_tokens, "temperature": 0.3,
                                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]})
         r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"] or ""
-    if p.name == "gemini":
+        msg = r.json()["choices"][0]["message"]
+        return msg.get("content") or ""
+    if p.kind == "gemini":
         r = await client.post(f"https://generativelanguage.googleapis.com/v1beta/models/{p.model}:generateContent",
                               headers={"x-goog-api-key": p.key},
                               json={"systemInstruction": {"parts": [{"text": system}]},
                                     "contents": [{"role": "user", "parts": [{"text": user}]}],
-                                    "generationConfig": {"maxOutputTokens": max_tokens}})
+                                    "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.3}})
         r.raise_for_status()
         cands = r.json().get("candidates") or []
         return "".join(part.get("text", "") for part in (cands[0].get("content", {}).get("parts", []) if cands else []))
@@ -94,8 +123,7 @@ async def complete_ex(system: str, user: str, max_tokens: int = 2000, timeout: f
     """Como complete(), mas devolve também o nome do provedor que respondeu."""
     providers = chain()
     if not providers:
-        raise HTTPException(503, "IA não configurada: defina ao menos uma chave (ANTHROPIC_API_KEY, OPENAI_API_KEY, "
-                                 "GEMINI_API_KEY ou OPENROUTER_API_KEY) no .env do servidor")
+        raise HTTPException(503, "Nenhum provedor de IA configurado no servidor")
     cooldown = float(os.getenv("AI_COOLDOWN_S", "60"))
     now = time.time()
     # provedores em pausa vão para o fim da fila (ainda são tentados se todos estiverem pausados)
@@ -121,9 +149,45 @@ async def complete_ex(system: str, user: str, max_tokens: int = 2000, timeout: f
 
 
 def status() -> list[dict]:
-    order = [p.strip() for p in os.getenv("AI_PROVIDERS", "anthropic,openai,gemini,openrouter").split(",") if p.strip()]
     now = time.time()
-    return [{"name": n, "configured": bool(PROVIDERS[n].key), "model": PROVIDERS[n].model, "position": i + 1,
-             "paused": PROVIDERS[n].paused_until > now, "failures": PROVIDERS[n].failures,
-             "lastError": PROVIDERS[n].last_error, "lastOk": PROVIDERS[n].last_ok or None, "calls": PROVIDERS[n].calls}
-            for i, n in enumerate(order) if n in PROVIDERS]
+    out = []
+    for i, n in enumerate(order()):
+        p = PROVIDERS[n]
+        out.append({"name": n, "label": p.label, "free": p.free, "configured": bool(p.key), "model": p.model,
+                    "position": i + 1, "paused": p.paused_until > now, "failures": p.failures,
+                    "lastError": p.last_error, "lastOk": p.last_ok or None, "calls": p.calls})
+    return out
+
+
+# ------------------------------------------------------- fallbacks sem chave
+MYMEMORY_LANG = {"zh": "zh-CN", "es": "es-ES", "en": "en-GB", "hi": "hi-IN", "pt": "pt-BR"}
+
+
+async def free_translate(texts: list[str], target: str, source: str = "pt") -> dict[str, str]:
+    """Tradução gratuita (MyMemory, sem chave). Agrupa textos curtos para economizar a cota diária."""
+    sep = "\n¶\n"
+    out: dict[str, str] = {}
+    email = os.getenv("MYMEMORY_EMAIL", "").strip()
+    batches, cur = [], []
+    for t in texts:
+        if len(sep.join(cur + [t]).encode()) > 450 and cur:
+            batches.append(cur); cur = []
+        cur.append(t)
+    if cur:
+        batches.append(cur)
+    async with httpx.AsyncClient(timeout=12) as client:
+        for b in batches:
+            params = {"q": sep.join(b), "langpair": f"{MYMEMORY_LANG.get(source, source)}|{MYMEMORY_LANG.get(target, target)}"}
+            if email:
+                params["de"] = email
+            try:
+                r = await client.get("https://api.mymemory.translated.net/get", params=params)
+                txt = r.json().get("responseData", {}).get("translatedText", "")
+            except Exception:  # noqa: BLE001
+                break
+            parts = [x.strip() for x in txt.split("¶")]
+            if len(parts) == len(b):
+                out.update({src: dst for src, dst in zip(b, parts) if dst and "MYMEMORY WARNING" not in dst})
+            elif len(b) == 1 and txt:
+                out[b[0]] = txt.strip()
+    return out

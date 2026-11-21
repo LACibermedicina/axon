@@ -17,7 +17,7 @@ export function mountAdmin(body: HTMLElement) {
     const table = (provs: any[]) => h("table", { class: "grid-table" },
       h("thead", {}, h("tr", {}, ...["Ordem", "Provedor", "Chave", "Modelo", "Estado", "Chamadas"].map((t) => h("th", {}, t)))),
       h("tbody", {}, ...provs.map((p: any) => h("tr", { class: p.configured ? "" : "muted" },
-        h("td", {}, String(p.position)), h("td", {}, h("b", {}, p.name)), h("td", {}, p.configured ? "✅ configurada" : "—"),
+        h("td", {}, String(p.position)), h("td", {}, h("b", {}, p.label || p.name), p.free ? h("small", { class: "chip" }, "grátis") : ""), h("td", {}, p.configured ? "✅ configurada" : "—"),
         h("td", { class: "mono" }, p.model),
         h("td", {}, !p.configured ? "inativo" : p.paused ? `⏸ em pausa (${p.lastError})` : p.lastOk ? "✅ ok" : "pronto"),
         h("td", {}, String(p.calls))))));
@@ -29,7 +29,7 @@ export function mountAdmin(body: HTMLElement) {
       finally { btn.disabled = false; }
     } }, "Testar failover") as HTMLButtonElement;
     return h("div", {}, box, h("div", { class: "row" }, btn, out),
-      h("p", { class: "hint" }, "Se um provedor falhar (erro, limite ou lentidão), o próximo da lista responde e o que falhou fica em pausa por alguns minutos. As chaves ficam só no .env da VPS e nunca aparecem aqui. Para gravar ou trocar: sudo bash /opt/harmonia/infra/scripts/configurar-ia.sh"));
+      h("p", { class: "hint" }, "Se um provedor falhar (erro, limite ou lentidão), o próximo responde e o que falhou fica em pausa. Se nenhum responder, a tradução usa o MyMemory (gratuito) e o Maestro responde offline. Chaves: secrets do GitHub (SERVIDOR_ENV ou individuais, enviados à VPS pelo CI) ou sudo bash /opt/harmonia/infra/scripts/configurar-ia.sh — nunca aparecem aqui."));
   }
 
   async function updates() {

@@ -1,8 +1,4 @@
 import os, sys, tempfile
-os.environ["DATABASE_URL"] = "sqlite:///" + tempfile.mktemp(suffix=".db")
-os.environ["MEDIA_ROOT"] = tempfile.mkdtemp()
-os.environ["ADMIN_EMAIL"] = "admin@m3d.pro"
-os.environ["ADMIN_PASSWORD"] = "admin-segredo-1"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "ai-worker"))
 import fakeredis
 from fastapi.testclient import TestClient

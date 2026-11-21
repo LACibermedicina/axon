@@ -2,6 +2,30 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.8-alpha] — 2026-11-21
+
+### Adicionado — IA gratuita de suporte e credenciais do GitHub
+- **Provedores gratuitos (free tier, sem cartão)** na cadeia de failover: **Groq** (Llama 3.3 70B), **Google Gemini 2.5 Flash**, **GitHub Models** (PAT com `models:read`), **Cerebras**, **Mistral** e **OpenRouter** (roteador `openrouter/free`, imune à rotação de modelos).
+  - Ordem padrão: os pagos primeiro, se houver chave, e em seguida os gratuitos.
+  - Provedores configurados que não estão em `AI_PROVIDERS` entram no fim da lista, para nenhuma chave ficar ociosa.
+  - Nomes alternativos aceitos: `GOOGLE_API_KEY`, `CLAUDE_API_KEY`, `GH_MODELS_TOKEN`.
+- **Respostas garantidas sem nenhuma IA disponível**:
+  - Tradução: cache → IA → **MyMemory** (gratuito, sem chave; textos agrupados para poupar a cota).
+  - Maestro: IA → **modo offline**, que explica as notas de qualquer cifra citada (ex.: `F#m7(b5) = F#, A, C, E`) e traz um guia do editor por assunto (harmonizar, camadas, gravar, exportar, letra, transcrição).
+- **Credenciais registradas no GitHub chegam à VPS**:
+  - novo job `sync-ai-env` no CI (a cada push, diariamente e sob demanda em *Run workflow*);
+  - lê o secret `SERVIDOR_ENV` (formato `.env`) e/ou secrets individuais;
+  - envia por SSH para `merge-env.sh`, que mescla **só chaves de IA** da lista permitida (senhas do banco, JWT e chave de criptografia nunca são alteradas);
+  - valor vazio mantém a chave já registrada na VPS; nunca imprime valores; reinicia a API só se algo mudou.
+- `configurar-ia.sh` passa a perguntar também pelos provedores gratuitos, com o link de onde obter cada chave.
+- Administração → 🤖 IA mostra o rótulo "grátis" e o modelo de cada provedor.
+
+### Corrigido
+- `env_set` seguro para qualquer caractere no valor (`|`, `&`, `/`), preservando dono e permissão do `.env`.
+- A atualização automática considera só o check `test` (`AUTOUPDATE_CI_CHECKS`). Uma falha na sincronização de credenciais não bloqueia atualizações.
+- Os testes da API usam `conftest.py`, porque o ambiente de teste precisa ser definido antes do primeiro import.
+- A tradução não cai se o Redis estiver fora (o cache é opcional).
+
 ## [0.1.7-alpha] — 2026-11-19
 
 ### Adicionado — failover entre provedores de IA

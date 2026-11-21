@@ -2,7 +2,7 @@
 
 Áudio, foto de partitura ou cifra → partitura de piano com IA. Harmonize compassos selecionados, grave trechos que faltam, edite com drag & drop em camadas, publique na biblioteca e exporte MIDI, PDF, WAV e MP3.
 
-**Versão:** `0.1.7-alpha` (ver [CHANGELOG](CHANGELOG.md))
+**Versão:** `0.1.8-alpha` (ver [CHANGELOG](CHANGELOG.md))
 
 ## Arquitetura
 
@@ -40,6 +40,15 @@ commit no GitHub (main) ──▶ CI: testes + build ──▶ VPS verifica a ca
 - Pausar: `AUTOUPDATE=0` no `.env` (ou `sudo systemctl disable --now harmonia-autoupdate.timer`).
 - Repositório privado: use `AUTOUPDATE_REPO=git@github.com:LACibermedicina/harmonia.git` e adicione a chave pública do usuário `deploy` como *Deploy key* (somente leitura).
 - O que **não** é atualizado automaticamente: o vhost do nginx, os pacotes do sistema e as unidades systemd. Para esses, rode o instalador de novo.
+
+## IA: provedores e credenciais
+
+| Onde registrar | Como chega ao app |
+|---|---|
+| GitHub → Settings → Secrets → Actions (ou Environment `production`): `SERVIDOR_ENV` com linhas `CHAVE=valor`, ou secrets individuais (`GROQ_API_KEY`, `GEMINI_API_KEY`…) | job `sync-ai-env` do CI → SSH → `merge-env.sh` (só chaves de IA) |
+| Na VPS: `sudo bash /opt/harmonia/infra/scripts/configurar-ia.sh` | grava direto no `.env` |
+
+Gratuitos: Groq, Gemini, GitHub Models, Cerebras, Mistral e OpenRouter. Sem nenhuma chave, o app continua respondendo com a tradução MyMemory e o Maestro offline.
 
 ## Regra de portas
 

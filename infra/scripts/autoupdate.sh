@@ -67,7 +67,10 @@ if [[ "$REQUIRE_CI" == "1" && $FORCE -eq 0 && "$REPO" == *github.com* ]]; then
   SLUG="$(sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##' <<<"$REPO")"
   CHECKS="$(curl -fsS -m 20 -H 'Accept: application/vnd.github+json' \
     "https://api.github.com/repos/${SLUG}/commits/${REMOTE_SHA}/check-runs" 2>/dev/null || echo '{}')"
-  TOTAL="$(jq -r '.total_count // 0' <<<"$CHECKS")"
+  # considera só os checks de qualidade (job "test"); sync de credenciais/deploy não bloqueiam a atualização
+  CI_NAMES="$(env_get .env AUTOUPDATE_CI_CHECKS)"; CI_NAMES="${CI_NAMES:-test}"
+  CHECKS="$(jq --arg names "$CI_NAMES" '{check_runs: [.check_runs[]? | select(.name as $n | ($names | split(",") | index($n)))]}' <<<"$CHECKS")"
+  TOTAL="$(jq -r '.check_runs | length' <<<"$CHECKS")"
   PENDING="$(jq -r '[.check_runs[]? | select(.status != "completed")] | length' <<<"$CHECKS")"
   FAILED="$(jq -r '[.check_runs[]? | select(.status == "completed" and (.conclusion | IN("success","skipped","neutral") | not))] | length' <<<"$CHECKS")"
   if [[ "$FAILED" -gt 0 ]]; then
