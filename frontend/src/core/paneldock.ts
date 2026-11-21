@@ -107,6 +107,10 @@ export class PanelDock {
 
   private setCollapsed(v: boolean) { this.layout.dockCollapsed = v; this.apply(); }
   /** Abre/contrai o dock (ex.: abre junto com a janela de Composição e contrai quando ela fecha). */
+  private away = false;
+  /** Modo foco: o dock sai pela lateral (fica só uma faixa translúcida; passar o mouse mostra). */
+  setAway(v: boolean) { if (this.away === v) return; this.away = v; this.apply(); }
+  isAway() { return this.away; }
   setDockOpen(open: boolean) { if (this.layout.dockCollapsed === !open) return; this.layout.dockCollapsed = !open; this.apply(); }
 
   private reset() {
@@ -162,7 +166,8 @@ export class PanelDock {
     }));
     const collapsed = this.layout.dockCollapsed || !docked.filter((id) => !this.panels.get(id)!.st.max).length;
     this.dock.classList.toggle("collapsed", collapsed);
-    document.body.style.setProperty("--rdock", mobile ? "0px" : (collapsed ? STRIP_W : DOCK_W) + "px");
+    this.dock.classList.toggle("away", this.away && !mobile);
+    document.body.style.setProperty("--rdock", mobile ? "0px" : this.away ? "16px" : (collapsed ? STRIP_W : DOCK_W) + "px");
     this.save();
   }
 

@@ -142,13 +142,13 @@ const act = (a: string) => () => dispatchEvent(new CustomEvent("harmonia:action"
 
 export const TOURS: Record<string, TourStep[]> = {
   compose: [
-    { target: ".score-editor .toolbox", title: "Seu painel de ferramentas", text: "Aqui ficam as ferramentas da composição. Arraste pela alça ⋮⋮ para mudar de lugar; « contrai para só os ícones." },
+    { target: ".score-editor .rail", title: "Sua barra de ferramentas", text: "Gravar e Importar ficam sempre no topo. Cada ícone abre um quadro com explicação. Passe o mouse para ver dicas; arraste pela alça ⋯ para mudar de lugar." },
     { target: ".score-editor [data-tool=pencil]", title: "1. Pegue o lápis", text: "Clique em ✎ Nota (ou tecle N) para escrever notas.", advanceOnClick: true },
-    { target: ".score-editor .durs", title: "2. Escolha a duração", text: "Semínima ♩ = 1 tempo, colcheia ♪ = ½… Você também pode arrastar a figura direto para a pauta." },
-    { target: ".score-editor .score-canvas", title: "3. Escreva a melodia", text: "Clique na pauta de cima para colocar notas. Arraste uma nota para mudar a altura ou o tempo; Delete apaga." },
+    { target: ".score-editor .fly .durs", before: act("group:dur"), title: "2. Escolha a duração", text: "Semínima ♩ = 1 tempo, colcheia ♪ = ½… Você também pode arrastar a figura direto para a pauta." },
+    { target: ".score-editor .score-canvas", before: act("group-close"), title: "3. Escreva a melodia", text: "Clique na pauta de cima para colocar notas. Arraste uma nota para mudar a altura ou o tempo; Delete apaga." },
     { target: ".score-editor .measure-band", title: "4. Selecione compassos", text: "Clique na faixa numerada para selecionar um compasso (Shift = intervalo)." },
-    { target: () => [...document.querySelectorAll(".score-editor .btn.accent")][0] ?? null, title: "5. Harmonize", text: "✨ Harmonizar seleção cria os acordes e a mão esquerda só nos compassos escolhidos." },
-    { target: ".desk-score .ds-play", title: "6. Ouça o resultado", text: "O pentagrama final fica no desktop: aperte ▶ para ouvir a composição inteira a qualquer momento." },
+    { target: ".score-editor .fly .btn.accent", before: act("group:harm"), title: "5. Harmonize", text: "✨ Harmonizar seleção cria os acordes e a mão esquerda só nos compassos escolhidos." },
+    { target: ".desk-score .ds-play", before: act("group-close"), title: "6. Ouça o resultado", text: "O pentagrama final fica no desktop: aperte ▶ para ouvir a composição inteira a qualquer momento." },
   ],
   record: [
     { target: ".score-editor .measure-band", title: "1. (Opcional) escolha onde gravar", text: "Selecione compassos na faixa numerada para gravar só esse trecho. Sem seleção, você grava livremente por cima da partitura, como uma nova voz." },

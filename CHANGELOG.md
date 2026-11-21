@@ -2,6 +2,23 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.4.0-alpha] — 2026-11-21
+
+### Alterado — quadro de composição mais limpo e acessível
+- **Barra lateral de ferramentas** em estilo cartoon, discreta, com ícones grandes e explicações ao passar o mouse:
+  - **● Gravar** e **⇪ Importar** sempre visíveis no topo;
+  - ferramentas de escrita (Mover, Nota, Apagar, Cifra, Letra, Nota+);
+  - grupos que abrem um **quadro explicativo** ao lado (um por vez; fecha com ✕, Esc ou clique fora):
+    **Duração**, **Ouvir** (tocar, metrônomo, loop, andamento), **Harmonia** (✨ harmonizar seleção, harmonizar tudo, estilo: acordes em bloco/arpejo/baixo de Alberti/baixo + acorde, melodia ⇠ harmonia, cifrar),
+    **Gravação** (gravar trecho, nova voz), **Pauta** (mão, instrumento, tonalidade, compasso, pautas e claves, + compasso, do zero) e **Editar** (↶ ↷ 🔍).
+  - A barra pode ser arrastada pela alça ⋯ e volta para a lateral com duplo clique.
+- **Cabeçalho enxuto**: título, resumo da pauta (instrumento, tonalidade, compasso, andamento, mão — clique abre o quadro Pauta) e ▶ Tocar.
+- Janela de Composição abre maior, aproveitando o espaço do menu lateral.
+
+### Adicionado — modo foco
+- Ao abrir uma janela, os menus laterais que não fazem parte dela **saem pela lateral**: o menu esquerdo sempre; o dock de painéis só fica quando a janela é a Composição; ícones do desktop e o quadro da Comunidade também se recolhem.
+- O que fica recolhido deixa uma **faixa translúcida desfocada** (passe o mouse para ver) e aparece na **bandeja da barra de menus**: menus recolhidos com ponto desfocado e contorno tracejado; **janelas minimizadas com ponto laranja**. Clique na bandeja para mostrar/restaurar.
+
 ## [0.3.0-alpha] — 2026-11-21
 
 ### Adicionado

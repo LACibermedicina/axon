@@ -26,10 +26,10 @@ import * as audio from "./core/audio";
 import { mountDeskScore } from "./modules/deskscore";
 import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.3.0-alpha";
+const VERSION = "0.4.0-alpha";
 
 const APPS: Record<string, AppDef> = {
-  compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1060, innerWidth - 206 - 312 - 24)), height: 640, x: 206, y: 46, mount: mountScoreEditor },
+  compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1180, innerWidth - 40 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 30, y: 44, mount: mountScoreEditor },
   import: { id: "import", title: t("import"), icon: ICONS.import, width: 760, height: 560, mount: mountImporter },
   mixer: { id: "mixer", title: t("mixer"), icon: ICONS.mixer, width: 820, height: 460, mount: mountMixer },
   library: { id: "library", title: t("library"), icon: ICONS.library, width: 900, height: 560, mount: mountLibrary },
@@ -99,7 +99,51 @@ function menubar() {
     menu("Ajuda", [["Passo a passo inicial", () => showWizard(open)], ["Guia: compor e harmonizar", () => guide("compose")], ["Guia: gravar a melodia", () => guide("record")],
       ["Guia: importar áudio", () => guide("audio")], ["Guia: importar imagem de partitura", () => guide("image")], ["Despertar o Maestro (assistente)", () => dispatchEvent(new CustomEvent("maestro:wake"))], ["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
       ["Texto maior (liga/desliga)", () => toggleLargeText()], ["Alto contraste (liga/desliga)", () => toggleContrast()], ["Sobre / versão", about]]),
-    h("span", { class: "spacer" }), notifBell(), clock, userBtn);
+    h("span", { class: "spacer" }), tray(), notifBell(), clock, userBtn);
+}
+
+/** Bandeja na barra de menus: janelas minimizadas (ponto colorido) e menus laterais recolhidos
+ *  pelo modo foco (vidro desfocado). Clique restaura/mostra. */
+const trayBox = h("div", { class: "mb-tray", role: "toolbar", "aria-label": "Abertos e minimizados" });
+function tray() { return trayBox; }
+function drawTray() {
+  const chips: HTMLElement[] = [];
+  for (const w of openWindows().filter((x) => x.el.classList.contains("min")))
+    chips.push(h("button", { class: "tray-chip min", title: `${w.app.title} — minimizada (clique para abrir)`, onclick: () => restoreWindow(w) },
+      h("i", { class: "dot", "aria-hidden": "true" }), h("span", { class: "tray-ic", html: w.app.icon }), h("span", {}, w.app.title)));
+  const peek = (cls: string, label: string, icon: string, on: () => void) => h("button", { class: "tray-chip hidden-side" + (document.body.classList.contains(cls) ? " on" : ""), title: `${label} — recolhido (clique para mostrar)`,
+    onclick: (e: Event) => { e.stopPropagation(); on(); drawTray(); } }, h("i", { class: "blur-dot", "aria-hidden": "true" }), h("span", {}, icon + " " + label));
+  if (document.body.classList.contains("hide-sidebar")) chips.push(peek("peek-sidebar", "Menu", "☰", () => document.body.classList.toggle("peek-sidebar")));
+  if (panels?.isAway()) chips.push(peek("peek-rdock", "Painéis", "▦", () => document.body.classList.toggle("peek-rdock")));
+  if (document.body.classList.contains("focus-mode") && document.querySelector(".panel.floating.discreet:not([hidden])"))
+    chips.push(peek("peek-float", t("community"), "💬", () => document.body.classList.toggle("peek-float")));
+  trayBox.replaceChildren(...chips);
+  trayBox.hidden = !chips.length;
+}
+/** Modo foco: com uma janela aberta, os menus laterais que não fazem parte dela saem pela lateral
+ *  (fica uma faixa translúcida; passar o mouse ou clicar na bandeja mostra de novo). */
+function focusMode() {
+  const apply = () => {
+    if (isMobile()) { document.body.classList.remove("focus-mode", "hide-sidebar"); panels?.setAway(false); drawTray(); return; }
+    const vis = openWindows().filter((w) => !w.el.classList.contains("min")).sort((a, b) => +b.el.style.zIndex - +a.el.style.zIndex);
+    const top = vis[0];
+    const any = !!top;
+    document.body.classList.toggle("focus-mode", any);
+    document.body.classList.toggle("hide-sidebar", any);
+    panels?.setAway(any && top.app.id !== "compose"); // os painéis da partitura só fazem parte da Composição
+    if (!any) document.body.classList.remove("peek-sidebar", "peek-rdock", "peek-float");
+    drawTray();
+  };
+  onWindowsChange(apply); addEventListener("layoutchange", apply);
+  // clicar fora fecha as espiadas
+  addEventListener("pointerdown", (e) => {
+    const t0 = e.target as HTMLElement;
+    if (t0.closest(".sidebar, .rdock, .mb-tray, .float-layer")) return;
+    if (document.body.classList.contains("peek-sidebar") || document.body.classList.contains("peek-rdock") || document.body.classList.contains("peek-float")) {
+      document.body.classList.remove("peek-sidebar", "peek-rdock", "peek-float"); drawTray();
+    }
+  });
+  apply();
 }
 
 /** Área de notificações: sino com contador e lista (transcrições, exportações, atualizações, avisos). */
@@ -318,6 +362,7 @@ async function boot() {
     if (on !== composeShown) { composeShown = on; if (!isMobile()) panels.setDockOpen(on); }
   });
   mountDeskScore(() => open("compose"), newComposition);
+  focusMode();
   // autosave remoto da composição aberta
   store.on(async (r) => {
     if (r !== "autosave" || !currentUser || !store.compositionId) return;

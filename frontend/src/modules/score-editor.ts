@@ -106,14 +106,12 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     h("option", { value: "block" }, "Acordes em bloco"), h("option", { value: "arpeggio" }, "Arpejo"), h("option", { value: "alberti" }, "Baixo de Alberti"), h("option", { value: "bass-chord" }, "Baixo + acorde"));
   const harmBtn = tip(h("button", { class: "btn accent", onclick: (e: Event) => harmonize(e.currentTarget as HTMLButtonElement, false) }, "✨ " + t("harmonize") + " seleção"), "Gera acordes só nos compassos selecionados, mantendo o resto como contexto");
   const harmAllBtn = h("button", { class: "btn", onclick: (e: Event) => harmonize(e.currentTarget as HTMLButtonElement, true) }, "Harmonizar tudo");
-  const aiBox = h("div", { class: "seg" }, harmBtn, harmAllBtn, styleSel,
-    tip(h("button", { class: "btn", onclick: extractMel }, "Melodia ⇠ harmonia"), "Extrai a voz principal (mais aguda) das camadas de harmonia"),
-    tip(h("button", { class: "btn", onclick: transcribeChords }, "Cifrar"), "Reconhece os acordes a partir das notas e escreve a cifra"));
+  const melBtn = h("button", { class: "btn", onclick: extractMel }, "Melodia ⇠ harmonia");
+  const cifBtn = h("button", { class: "btn", onclick: transcribeChords }, "Cifrar");
   const recSecBtn = tip(h("button", { class: "btn rec", onclick: (e: Event) => recordSection(e.currentTarget as HTMLButtonElement) }, "● " + t("record") + " trecho"),
     "Gravar trecho: grava só os compassos selecionados (ou os primeiros que estão vazios). Conto um compasso antes e o metrônomo acompanha. Vira uma camada nova.") as HTMLButtonElement;
   const recFreeBtn = tip(h("button", { class: "btn rec", onclick: (e: Event) => recordFree(e.currentTarget as HTMLButtonElement) }, "● Nova voz"),
     "Nova voz: você ouve a partitura e grava livremente por cima, até apertar ■. A gravação vira uma nova voz numa camada própria.") as HTMLButtonElement;
-  const recBox = h("div", { class: "seg" }, recSecBtn, recFreeBtn);
   const zoomIn = h("input", { type: "range", min: 0.6, max: 2, step: 0.1, value: zoom, "aria-label": "Zoom", oninput: (e: Event) => { zoom = +(e.target as HTMLInputElement).value; render(); } });
   const metaBox = h("div", { class: "seg" },
     h("button", { class: "btn ghost", title: "Desfazer (⌘Z)", onclick: () => store.undoOp() }, "↶"),
@@ -130,50 +128,6 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const importBtn = tip(h("button", { class: "btn imp", "aria-label": "Importar", onclick: () => dispatchEvent(new CustomEvent("open-app", { detail: "import" })) },
     h("span", { class: "tb-ic" }, "⇪"), h("span", { class: "tb-lb" }, t("import"))),
     "⇪ IMPORTAR — traga um material para editar: arquivo de áudio (MP3, WAV…), foto ou scan de partitura, ou cifra em texto. A IA transcreve e o resultado entra aqui como camadas novas.");
-  const section = (title: string, ...kids: HTMLElement[]) => h("div", { class: "tb-sec", "data-sec": title }, h("small", { class: "tb-h" }, title), ...kids);
-  const TB_KEY = "harmonia.toolbox.v1";
-  let tb: { mode: "docked" | "floating"; collapsed: boolean; x: number; y: number } = { mode: "docked", collapsed: false, x: 12, y: 60 };
-  try { tb = { ...tb, ...JSON.parse(localStorage.getItem(TB_KEY) || "{}") }; } catch { /* */ }
-  const tbCollapse = h("button", { class: "p-btn", title: "Contrair / expandir o painel de ferramentas" });
-  const tbDock = h("button", { class: "p-btn", title: "Soltar / reacoplar ao lado da partitura (duplo clique na alça)" });
-  const tbGrip = h("div", { class: "tb-grip", title: "Arraste para mover o painel de ferramentas" }, h("span", { "aria-hidden": "true" }, "⋮⋮"), h("b", {}, "Ferramentas"), tbCollapse, tbDock);
-  const toolbar = h("aside", { class: "toolbar toolbox", "aria-label": "Ferramentas da composição" }, tbGrip,
-    h("div", { class: "tb-pinned" }, recMain, importBtn),
-    h("div", { class: "tb-scroll" }, section("Ferramentas", tools), section("Duração", durBox), section("Reprodução", transport), section("IA e harmonia", aiBox), section("Gravação", recBox), section("Editar", metaBox)));
-  const applyTb = () => {
-    toolbar.classList.toggle("collapsed", tb.collapsed);
-    toolbar.classList.toggle("floating", tb.mode === "floating");
-    tbCollapse.textContent = tb.collapsed ? "»" : "«";
-    tbDock.textContent = tb.mode === "floating" ? "⇲" : "⇱";
-    if (tb.mode === "floating") Object.assign(toolbar.style, { left: tb.x + "px", top: tb.y + "px", maxHeight: Math.max(160, (stage.clientHeight || 400) - tb.y - 6) + "px" }); else toolbar.removeAttribute("style");
-    try { localStorage.setItem(TB_KEY, JSON.stringify(tb)); } catch { /* */ }
-  };
-  tbCollapse.addEventListener("click", () => { tb.collapsed = !tb.collapsed; applyTb(); });
-  tbDock.addEventListener("click", () => { tb.mode = tb.mode === "floating" ? "docked" : "floating"; applyTb(); });
-  tbGrip.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) { tb.mode = tb.mode === "floating" ? "docked" : "floating"; applyTb(); } });
-  tbGrip.addEventListener("pointerdown", (e) => {
-    if ((e.target as HTMLElement).closest("button") || document.body.classList.contains("mobile")) return;
-    const st = stage.getBoundingClientRect(), r0 = toolbar.getBoundingClientRect();
-    const ox = e.clientX - r0.left, oy = e.clientY - r0.top, sx = e.clientX, sy = e.clientY;
-    let moving = false;
-    tbGrip.setPointerCapture(e.pointerId);
-    const mv = (ev: PointerEvent) => {
-      if (!moving && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
-      if (!moving) { moving = true; tb.mode = "floating"; toolbar.classList.add("dragging"); }
-      tb.x = Math.max(0, Math.min(st.width - 60, ev.clientX - st.left - ox));
-      tb.y = Math.max(0, Math.min(st.height - 40, ev.clientY - st.top - oy));
-      // perto da borda esquerda: reacopla
-      toolbar.classList.toggle("snap", tb.x < 14);
-      applyTb();
-    };
-    const up = () => {
-      tbGrip.removeEventListener("pointermove", mv); tbGrip.removeEventListener("pointerup", up);
-      toolbar.classList.remove("dragging", "snap");
-      if (moving && tb.x < 14) tb.mode = "docked";
-      applyTb();
-    };
-    tbGrip.addEventListener("pointermove", mv); tbGrip.addEventListener("pointerup", up);
-  });
   const titleIn = h("input", { class: "score-title", value: store.score.title, "aria-label": "Título",
     onchange: (e: Event) => store.mutate((s) => (s.title = (e.target as HTMLInputElement).value), "title") });
   const keySel = h("select", { "aria-label": "Armadura", onchange: (e: Event) => store.mutate((s) => (s.keySig = +(e.target as HTMLSelectElement).value), "key") },
@@ -196,7 +150,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     stavesSel.value = st.upper.visible && st.lower.visible ? "both" : st.upper.visible ? "upper" : "lower";
     upperClef.value = st.upper.clef; lowerClef.value = st.lower.clef;
     upperClef.hidden = !st.upper.visible; lowerClef.hidden = !st.lower.visible;
-    handSel.value = store.hand;
+    handSel.value = store.hand; try { drawSummary(); } catch { /* ainda montando */ }
     instSel.value = (store.hand === "lower" ? st.lower : st.upper).instrument || "piano";
   };
   const scratch = tip(h("button", { class: "btn ghost", onclick: () => {
@@ -235,8 +189,107 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     }, "staves");
     toast(msg, "ok", 3500);
   }
-  const header = h("div", { class: "score-head" }, titleIn, h("div", { class: "seg" }, handSel, instSel, keySel, tsSel, stavesSel, upperClef, lowerClef, addMeasure, scratch));
-  syncStaffCtl();
+  // ------------------------------------------------ barra lateral (trilho) + quadros explicativos
+  // Trilho discreto com ícones grandes e amigáveis. Gravar e Importar ficam sempre visíveis;
+  // cada grupo abre um quadro ao lado com explicação e os controles (um de cada vez).
+  const explain = (el: HTMLElement, text: string) => h("div", { class: "fly-item" }, el, h("small", {}, text));
+  const field = (label: string, el: HTMLElement) => h("label", { class: "fly-field" }, h("span", {}, label), el);
+  const playIn = h("button", { class: "btn primary", onclick: () => togglePlay() }, "▶ " + t("play"));
+  const GROUPS: { id: string; icon: string; label: string; color: string; help: string; body: () => HTMLElement[] }[] = [
+    { id: "dur", icon: "♩", label: "Duração", color: "#8d72ff", help: "Escolha a figura antes de clicar na pauta — ou arraste a figura direto para o lugar. O ponto aumenta a duração pela metade.", body: () => [durBox] },
+    { id: "play", icon: "▶", label: "Ouvir", color: "#3db66e", help: "Toque a partitura (ou só os compassos selecionados). O metrônomo marca os tempos; o loop repete o trecho.", body: () => [transport] },
+    { id: "harm", icon: "✨", label: "Harmonia", color: "#ef4a80", help: "A IA cria acordes e o acompanhamento da mão esquerda a partir da melodia. Selecione compassos na faixa numerada para harmonizar só um trecho.", body: () => [
+      explain(harmBtn, "Só nos compassos selecionados; o resto serve de contexto."),
+      explain(harmAllBtn, "A música inteira, do primeiro ao último compasso."),
+      field("Estilo do acompanhamento", styleSel),
+      explain(melBtn, "Faz o caminho inverso: tira a melodia (voz mais aguda) dos acordes."),
+      explain(cifBtn, "Lê as notas e escreve a cifra (C, Am7, G7…) acima dos compassos.")] },
+    { id: "rec", icon: "🎙", label: "Gravação", color: "#e8503a", help: "Grave com o microfone: eu conto um compasso antes e o metrônomo acompanha. Cada gravação vira uma camada nova e é transcrita em notas.", body: () => [
+      explain(recSecBtn, "Grava só os compassos selecionados (ou os primeiros vazios)."),
+      explain(recFreeBtn, "Grava livremente por cima da partitura até você apertar ■ — vira uma nova voz.")] },
+    { id: "staff", icon: "𝄞", label: "Pauta", color: "#2e86de", help: "Mão em edição, instrumento (a clave acompanha), tonalidade, compasso e quais pautas aparecem.", body: () => [
+      field("Mão em edição", handSel), field("Instrumento", instSel),
+      h("div", { class: "fly-grid" }, field("Tonalidade", keySel), field("Compasso", tsSel)),
+      field("Pautas visíveis", stavesSel), h("div", { class: "fly-grid" }, field("Clave de cima", upperClef), field("Clave de baixo", lowerClef)),
+      h("div", { class: "row" }, addMeasure, scratch)] },
+    { id: "edit", icon: "↶", label: "Editar", color: "#f39c12", help: "Desfazer (⌘Z), refazer (⇧⌘Z) e o zoom da partitura.", body: () => [metaBox] },
+  ];
+  const fly = h("div", { class: "fly", role: "dialog", hidden: true });
+  let openGroup = "";
+  const groupBtns = GROUPS.map((g) => tip(h("button", { class: "rail-btn", "data-group": g.id, style: { "--c": g.color }, "aria-label": g.label, "aria-expanded": "false",
+    onclick: () => toggleGroup(g.id) }, h("span", { class: "rail-ic", "aria-hidden": "true" }, g.icon), h("small", {}, g.label)), g.help));
+  function toggleGroup(id: string) {
+    if (openGroup === id || !id) { openGroup = ""; fly.hidden = true; }
+    else {
+      const g = GROUPS.find((x) => x.id === id)!;
+      openGroup = id;
+      fly.style.setProperty("--c", g.color);
+      fly.replaceChildren(
+        h("header", { class: "fly-head" }, h("span", { class: "fly-ic", "aria-hidden": "true" }, g.icon), h("b", {}, g.label),
+          h("button", { class: "fly-x", "aria-label": "Fechar", onclick: () => toggleGroup("") }, "✕")),
+        h("p", { class: "fly-help" }, g.help), h("div", { class: "fly-body" }, ...g.body()));
+      fly.setAttribute("aria-label", g.label);
+      fly.hidden = false; fly.classList.remove("in"); void fly.offsetWidth; fly.classList.add("in");
+      placeFly();
+    }
+    groupBtns.forEach((b) => { const on = b.dataset.group === openGroup; b.classList.toggle("on", on); b.setAttribute("aria-expanded", String(on)); });
+  }
+  const placeFly = () => {
+    if (fly.hidden) return;
+    const st = stage.getBoundingClientRect(), r = toolbar.getBoundingClientRect();
+    const fw = fly.offsetWidth || 300;
+    const right = r.right - st.left + 10;
+    const left = right + fw > st.width && r.left - st.left - fw - 10 > 0 ? r.left - st.left - fw - 10 : right;
+    Object.assign(fly.style, { left: left + "px", top: Math.max(4, r.top - st.top) + "px", maxHeight: st.height - Math.max(4, r.top - st.top) - 8 + "px" });
+  };
+  addEventListener("pointerdown", (e) => { if (openGroup && !fly.contains(e.target as Node) && !toolbar.contains(e.target as Node)) toggleGroup(""); }, true);
+  body.addEventListener("keydown", (e) => { if (e.key === "Escape" && openGroup) { e.stopPropagation(); toggleGroup(""); } });
+
+  const TB_KEY = "harmonia.rail.v1";
+  let tb: { mode: "docked" | "floating"; x: number; y: number } = { mode: "docked", x: 12, y: 12 };
+  try { tb = { ...tb, ...JSON.parse(localStorage.getItem(TB_KEY) || "{}") }; } catch { /* */ }
+  const tbGrip = h("div", { class: "rail-grip", title: "Arraste para mover a barra de ferramentas · duplo clique: voltar para a lateral" }, "⋯");
+  const toolbar = h("aside", { class: "rail", "aria-label": "Barra de ferramentas da composição" }, tbGrip,
+    h("div", { class: "rail-pinned" }, recMain, importBtn), h("i", { class: "rail-sep" }), tools, h("i", { class: "rail-sep" }), ...groupBtns);
+  const applyTb = () => {
+    toolbar.classList.toggle("floating", tb.mode === "floating");
+    if (tb.mode === "floating") Object.assign(toolbar.style, { left: tb.x + "px", top: tb.y + "px", maxHeight: Math.max(160, (stage.clientHeight || 400) - tb.y - 6) + "px" }); else toolbar.removeAttribute("style");
+    try { localStorage.setItem(TB_KEY, JSON.stringify(tb)); } catch { /* */ }
+    placeFly();
+  };
+  tbGrip.addEventListener("dblclick", () => { tb.mode = "docked"; applyTb(); });
+  tbGrip.addEventListener("pointerdown", (e) => {
+    if (document.body.classList.contains("mobile")) return;
+    const st = stage.getBoundingClientRect(), r0 = toolbar.getBoundingClientRect();
+    const ox = e.clientX - r0.left, oy = e.clientY - r0.top, sx = e.clientX, sy = e.clientY;
+    let moving = false;
+    tbGrip.setPointerCapture(e.pointerId);
+    const mv = (ev: PointerEvent) => {
+      if (!moving && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+      if (!moving) { moving = true; tb.mode = "floating"; toolbar.classList.add("dragging"); }
+      tb.x = Math.max(0, Math.min(st.width - 70, ev.clientX - st.left - ox));
+      tb.y = Math.max(0, Math.min(st.height - 60, ev.clientY - st.top - oy));
+      toolbar.classList.toggle("snap", tb.x < 14);
+      applyTb();
+    };
+    const up = () => {
+      tbGrip.removeEventListener("pointermove", mv); tbGrip.removeEventListener("pointerup", up);
+      toolbar.classList.remove("dragging", "snap");
+      if (moving && tb.x < 14) tb.mode = "docked";
+      applyTb();
+    };
+    tbGrip.addEventListener("pointermove", mv); tbGrip.addEventListener("pointerup", up);
+  });
+
+  // cabeçalho limpo: título, resumo da pauta (abre o quadro "Pauta") e ▶
+  const summary = h("button", { class: "score-sum", title: "Pauta, instrumento, tonalidade e compasso", onclick: () => toggleGroup("staff") });
+  const drawSummary = () => {
+    const s = store.score, st = staves(s), inst = instrument((store.hand === "lower" ? st.lower : st.upper).instrument);
+    summary.replaceChildren(...[`${inst.icon} ${inst.name}`, `${KEY_NAMES[s.keySig] ?? ""} maior`, s.timeSig.join("/"), `♩=${s.tempo}`, store.hand === "both" ? "🙌 ambas as mãos" : store.hand === "upper" ? "✋ mão direita" : "🤚 mão esquerda"]
+      .map((x) => h("span", {}, x)));
+  };
+  const header = h("div", { class: "score-head" }, titleIn, summary, playIn);
+  syncStaffCtl(); drawSummary();
 
   const status = h("div", { class: "statusbar", "data-noi18n": "" });
   const canvas = h("div", { class: "score-canvas", tabindex: "0" });
@@ -246,7 +299,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const legend = h("div", { class: "score-legend", "data-noi18n": "" });
   if (document.body.classList.contains("mobile")) { zoom = 0.9; }
   const main = h("div", { class: "score-main" }, legend, canvas);
-  stage.append(toolbar, main);
+  stage.append(toolbar, main, fly);
   body.append(header, stage, status);
   applyTb();
 
@@ -941,18 +994,21 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     if (a === "record-section") recordSection(recSecBtn);
     if (a === "hand-both") { store.hand = "both"; syncStaffCtl(); render(); }
     if (a === "tool-pencil") setTool("pencil");
+    if (typeof a === "string" && a.startsWith("group:")) { const id = a.slice(6); if (openGroup !== id) toggleGroup(id); }
+    if (a === "group-close") toggleGroup("");
   };
   addEventListener("harmonia:action", onAction);
   const off = store.on((reason) => {
     if (reason === "autosave") return;
     if (["load", "merge", "staves", "undo", "redo"].includes(reason)) syncStaffCtl();
+    if (["load", "merge", "staves", "undo", "redo", "key", "ts", "tempo"].includes(reason)) drawSummary();
     if (reason === "load" || reason === "merge" || reason === "tempo" || reason === "key" || reason === "ts") {
       titleIn.value = store.score.title; tempoIn.value = String(store.score.tempo);
       keySel.value = String(store.score.keySig); tsSel.value = store.score.timeSig.join("/");
     }
     render();
   });
-  const offPlay = audio.onPlayState((on) => { playBtn.textContent = (on ? "■ " + t("stop") : "▶ " + t("play")); if (!on) { playhead = -1; drawPlayhead(); } });
+  const offPlay = audio.onPlayState((on) => { playBtn.textContent = playIn.textContent = (on ? "■ " + t("stop") : "▶ " + t("play")); if (!on) { playhead = -1; drawPlayhead(); } });
   const ro = new ResizeObserver(() => render());
   ro.observe(canvas);
   setTool("select");
