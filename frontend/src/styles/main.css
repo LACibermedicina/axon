@@ -650,3 +650,109 @@ body.mobile .notif-panel { position: fixed; left: 8px; right: 8px; top: 60px; wi
 .wiz-foot .skip { color: var(--accent); font-weight: 700; }
 .btn.attention { box-shadow: 0 0 0 3px #ffd36e; animation: pulse 1s ease 4; }
 @media (max-width: 520px) { .wiz-grid { grid-template-columns: 1fr; } .wiz-card { min-height: 0; } }
+
+/* ===================================================== v0.2.1 — estação de composição */
+/* editor: painel de ferramentas lateral + área da partitura */
+.score-stage { flex: 1; min-height: 0; display: flex; position: relative; }
+.score-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.score-head { flex-wrap: wrap; }
+.score-head .seg { flex-wrap: wrap; }
+.toolbox { flex: none; width: 198px; margin: 6px 0 0 10px; padding: 0 !important; display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0;
+  background: #f8f6fd; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 2px 10px rgba(40, 20, 90, .08); overflow: visible; z-index: 30; }
+.toolbox.floating { position: absolute; margin: 0; max-height: calc(100% - 8px); box-shadow: 0 14px 40px rgba(30, 10, 70, .35); }
+.toolbox.dragging { opacity: .92; } .toolbox.snap { outline: 2px dashed var(--accent); }
+.tb-grip { display: flex; align-items: center; gap: 4px; padding: 5px 6px; cursor: grab; user-select: none; touch-action: none; border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .6); border-radius: 12px 12px 0 0; }
+.tb-grip b { flex: 1; font-size: 11.5px; } .tb-grip > span { font-size: 10px; letter-spacing: -2px; color: var(--ink2); }
+.tb-pinned { display: flex; flex-direction: column; gap: 5px; padding: 7px; border-bottom: 1px solid var(--line); }
+.tb-pinned .btn { display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 700; padding: 8px 10px; }
+.btn.big-rec { background: linear-gradient(180deg, #ff6b6b, #e03a3a); color: #fff; border-color: transparent; font-size: 14px; }
+.btn.big-rec .tb-ic { font-size: 16px; }
+.btn.big-rec.recording { animation: recpulse 1s ease-in-out infinite; }
+@keyframes recpulse { 50% { box-shadow: 0 0 0 6px rgba(224, 58, 58, .25); } }
+.btn.imp { background: linear-gradient(180deg, #4fc3f7, #1e88e5); color: #fff; border-color: transparent; }
+.tb-scroll { overflow-y: auto; overflow-x: visible; padding: 4px 7px 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.tb-sec { display: flex; flex-direction: column; gap: 3px; }
+.tb-h { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink2); font-weight: 700; margin-top: 2px; }
+.toolbox .seg { display: flex; flex-wrap: wrap; width: 100%; }
+.toolbox .seg .btn { flex: 1 1 auto; }
+.toolbox select { max-width: 100%; }
+.toolbox [data-tip]:hover::after { top: 0; left: calc(100% + 10px); max-width: 280px; z-index: 9000; }
+.toolbox.floating [data-tip]:hover::after { left: auto; right: calc(100% + 10px); }
+.toolbox.collapsed { width: 64px; }
+.toolbox.collapsed .tb-h, .toolbox.collapsed .tb-lb, .toolbox.collapsed .tb-grip b, .toolbox.collapsed .tool small, .toolbox.collapsed .inline,
+.toolbox.collapsed [data-sec="IA e harmonia"], .toolbox.collapsed [data-sec="Gravação"], .toolbox.collapsed [data-sec="Editar"], .toolbox.collapsed .durs > :last-child { display: none; }
+.toolbox.collapsed .tb-grip { flex-wrap: wrap; justify-content: center; }
+.toolbox.collapsed .tb-pinned { padding: 6px 5px; }
+.toolbox.collapsed .tb-pinned .btn { padding: 9px 0; }
+.toolbox.collapsed .tool { min-width: 40px; }
+.toolbox.collapsed [data-sec="Reprodução"] .btn:not(.primary) { display: none; }
+.toolbox.collapsed [data-sec="Reprodução"] .btn.primary { font-size: 0; padding: 7px 0; } .toolbox.collapsed [data-sec="Reprodução"] .btn.primary::first-letter { font-size: 15px; }
+.layer.other-hand { opacity: .28; pointer-events: none; }
+.marquee { fill: rgba(124, 92, 255, .12); stroke: var(--accent); stroke-dasharray: 4 3; }
+
+/* painéis laterais: maximizar e redimensionar */
+.p-resize { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, rgba(124, 92, 255, .45) 50%, rgba(124, 92, 255, .45) 60%, transparent 60%, transparent 72%, rgba(124, 92, 255, .45) 72%, rgba(124, 92, 255, .45) 82%, transparent 82%); border-radius: 0 0 10px 0; z-index: 2; }
+.panel { position: relative; }
+.panel:not(.floating) .p-resize { cursor: ns-resize; }
+.panel.collapsed .p-resize { display: none; }
+.panel.maxed { position: fixed !important; inset: 46px calc(var(--rdock) + 14px) 104px 206px !important; width: auto !important; height: auto !important; max-width: none; max-height: none; pointer-events: auto; resize: none; box-shadow: 0 30px 80px rgba(10, 0, 40, .5); }
+.panel.maxed .p-resize { display: none; }
+.panel.maxed .panel-body { font-size: 14px; }
+
+/* pentagrama final no desktop */
+.desk-score { position: absolute; left: calc(50% + 50px - var(--rdock) / 2); top: 58px; transform: translateX(-50%); width: min(760px, calc(100vw - 230px - var(--rdock) - 130px)); z-index: 6;
+  background: #fffdf8; border-radius: 16px; box-shadow: 0 18px 50px rgba(20, 0, 60, .35); border: 1px solid rgba(255, 255, 255, .7); overflow: hidden; }
+.desk-score .ds-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: linear-gradient(180deg, #f3effe, #ebe5fd); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; touch-action: none; }
+.ds-ic { font-size: 20px; } .ds-tt { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ds-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-meta { color: var(--ink2); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-body { max-height: 44vh; overflow: auto; padding: 4px; cursor: zoom-in; }
+.desk-score.min .ds-body { display: none; }
+.ds-line { stroke: #4a4560; stroke-width: .7; } .ds-bar { stroke: #4a4560; stroke-width: .9; } .ds-bar.fin { stroke-width: 2.4; }
+.ds-clef { font-family: var(--music); font-size: 22px; fill: #2a2540; } .ds-clef.g { font-size: 30px; }
+.ds-acc { font-size: 10px; fill: #2a2540; } .ds-chord { font-size: 10px; font-weight: 700; fill: var(--accent); }
+.ds-head-line { stroke: #ff4d7d; stroke-width: 2; }
+body.mobile .desk-score { display: none; }
+
+/* ícone "Nova composição" no desktop */
+.desk-icon.new .new-ic { position: relative; display: inline-block; }
+.desk-icon.new .new-ic::after { content: "+"; position: absolute; right: -4px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; background: #2ecc71; color: #fff; font: 700 18px/22px system-ui; text-align: center; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
+
+/* Maestro: ícone de ajuda arrastável */
+.maestro-fab { touch-action: none; cursor: grab; }
+.avatar-wrap.dragging .maestro-fab { cursor: grabbing; transform: scale(1.1); }
+
+/* guia passo a passo com seta cartunesca */
+.tour { position: fixed; inset: 0; z-index: 9800; pointer-events: none; animation: fadein .2s; }
+.tour.out { opacity: 0; transition: opacity .2s; }
+.tour-dim { position: fixed; background: rgba(12, 4, 30, .68); pointer-events: auto; }
+.tour-ring { position: fixed; border-radius: 12px; box-shadow: 0 0 0 3px #ffd36e, 0 0 26px 6px rgba(255, 211, 110, .65); pointer-events: none; animation: ringpulse 1.4s ease-in-out infinite; }
+@keyframes ringpulse { 50% { box-shadow: 0 0 0 5px #ffd36e, 0 0 36px 12px rgba(255, 211, 110, .45); } }
+.tour-arrow { position: fixed; width: 96px; height: 96px; pointer-events: none; transform: rotate(var(--rot, 0deg)); transform-origin: 50% 50%; }
+.tour-arrow svg { display: block; animation: arrowbob 1.1s cubic-bezier(.45, 0, .55, 1) infinite; transform-origin: 30% 80%; }
+.tour-arrow.tpop svg { animation: arrowpop .5s cubic-bezier(.2, 1.6, .4, 1), arrowbob 1.1s .5s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes arrowbob { 0%, 100% { transform: translate(0, 0) scale(1, 1); } 45% { transform: translate(9px, -6px) scale(1.07, .93); } 60% { transform: translate(11px, -7px) scale(.96, 1.05); } }
+@keyframes arrowpop { 0% { transform: scale(.2) rotate(-30deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+.tour-card { position: fixed; width: 320px; max-width: calc(100vw - 24px); background: #fff; border-radius: 18px; padding: 16px 18px 12px; pointer-events: auto;
+  box-shadow: 0 20px 60px rgba(20, 0, 60, .45), 0 0 0 4px rgba(255, 211, 110, .9); color: var(--ink); }
+.tour-card.tpop { animation: cardpop .35s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes cardpop { from { transform: scale(.85); opacity: 0; } }
+.tour-card b { display: block; font-size: 17px; margin: 2px 0 6px; } .tour-card p { margin: 0 0 10px; line-height: 1.45; font-size: 13.5px; }
+.tour-count { color: var(--accent); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+.tour-x { position: absolute; right: 10px; top: 8px; border: 0; background: rgba(0, 0, 0, .05); width: 28px; height: 28px; border-radius: 50%; font-size: 13px; cursor: pointer; }
+.tour-foot { display: flex; justify-content: space-between; gap: 8px; }
+.tour-hint { display: block; margin-top: 8px; color: var(--ink2); font-size: 10.5px; }
+@keyframes fadein { from { opacity: 0; } }
+
+/* admin: formulário de credenciais em destaque */
+.cred-form { padding: 10px; border-radius: 12px; border: 1px solid var(--line); transition: box-shadow .3s; }
+.cred-form.flash { box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(124, 92, 255, .4); }
+.row-actions { white-space: nowrap; }
+
+/* celular: ferramentas viram faixa horizontal rolável */
+body.mobile .toolbox { width: auto !important; margin: 6px 8px 0; position: static !important; flex-direction: row; overflow-x: auto; }
+body.mobile .score-stage { flex-direction: column; }
+body.mobile .tb-grip { display: none; }
+body.mobile .tb-pinned { flex-direction: row; border: 0; padding: 5px; }
+body.mobile .tb-scroll { flex-direction: row; overflow: visible; padding: 5px; }
+body.mobile .tb-sec { flex-direction: row; } body.mobile .tb-h { display: none; }
+body.mobile .toolbox .seg { flex-wrap: nowrap; width: auto; }
+.toolbox .tool { min-width: 52px; } .toolbox .tool small { font-size: 9.5px; }

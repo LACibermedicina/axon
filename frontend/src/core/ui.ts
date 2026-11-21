@@ -27,8 +27,8 @@ export function toast(msg: string, kind: "info" | "ok" | "warn" | "error" = "inf
 }
 
 export function busy(btn: HTMLButtonElement, on: boolean, label?: string) {
-  if (on) { btn.dataset.label = btn.textContent || ""; btn.disabled = true; btn.innerHTML = `<span class="spin"></span>${label || ""}`; }
-  else { btn.disabled = false; btn.textContent = btn.dataset.label || ""; }
+  if (on) { btn.dataset.html = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<span class="spin"></span>${label || ""}`; }
+  else { btn.disabled = false; btn.innerHTML = btn.dataset.html || ""; }
 }
 
 export function download(blob: Blob, name: string) {

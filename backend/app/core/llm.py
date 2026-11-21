@@ -271,6 +271,8 @@ async def diagnose(names: list[str] | None = None, timeout: float = 20) -> list[
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         results = list(await asyncio.gather(*(one(p, client) for p in targets)))
+    if names is not None:  # teste pontual de um provedor (botão "Testar")
+        return results
     # fallbacks gratuitos sem chave
     t0 = time.time()
     mm = await free_translate(["Tocar"], "en")

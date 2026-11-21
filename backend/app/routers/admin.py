@@ -184,12 +184,17 @@ def delete_credential(name: str, admin: User = Depends(admin_only), db: Session 
     return {"ok": True, "providers": llm.status()}
 
 
+class DiagIn(BaseModel):
+    names: list[str] | None = None  # vazio = todas; uma lista = testa só essas (botão "Testar" da linha)
+
+
 @router.post("/ai/diagnose")
-async def ai_diagnose(admin: User = Depends(admin_only), db: Session = Depends(get_db)):
+async def ai_diagnose(body: DiagIn | None = None, admin: User = Depends(admin_only), db: Session = Depends(get_db)):
     """Rodada diagnóstica: testa cada IA isoladamente e diz qual funciona e por que a outra falhou."""
     from ..core import llm
     t0 = __import__("time").time()
-    results = await llm.diagnose()
+    names = [n.strip().lower() for n in (body.names if body and body.names else [])][:20] or None
+    results = await llm.diagnose(names)
     ok = [r["name"] for r in results if r["ok"] and r["name"] not in ("mymemory", "offline")]
     db.add(AuditLog(user_id=admin.id, action="ai_diagnose", detail={"ok": ok, "failed": [r["name"] for r in results if r["state"] == "erro"]}))
     db.commit()

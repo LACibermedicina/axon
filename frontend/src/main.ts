@@ -23,8 +23,10 @@ import { notifications, unread, markAllRead, clearNotifications, onNotify } from
 import { PanelDock } from "./core/paneldock";
 import { mountProperties, mountAnnotations } from "./modules/inspector";
 import * as audio from "./core/audio";
+import { mountDeskScore } from "./modules/deskscore";
+import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.2.0-alpha";
+const VERSION = "0.3.0-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1060, innerWidth - 206 - 312 - 24)), height: 640, x: 206, y: 46, mount: mountScoreEditor },
@@ -58,6 +60,14 @@ const open = (id: string) => {
   if (!allowed(id)) { toast("Acesso restrito ao administrador", "warn"); return; }
   return openApp(APPS[id]);
 };
+/** Nova composição: partitura vazia + editor aberto (confirma se já há notas). */
+function newComposition() {
+  const has = store.score.layers.some((l) => l.notes.length || l.kind === "recording");
+  if (has && !confirm("Começar uma composição nova em uma pauta vazia? (o que já foi salvo continua na Biblioteca)")) return;
+  store.startFromScratch("Nova composição");
+  open("compose");
+}
+const guide = (name: string) => { if (name === "audio" || name === "image") { open("import"); dispatchEvent(new CustomEvent("import:preset", { detail: { tab: name, mode: "melody" } })); } else open("compose"); setTimeout(() => startTour(name, TOURS[name]), 500); };
 // Ao sair/trocar de conta, fecha janelas administrativas abertas
 addEventListener("auth", () => openWindows().forEach((w) => !allowed(w.app.id) && w.close()));
 
@@ -82,11 +92,12 @@ function menubar() {
   addEventListener("click", () => document.querySelectorAll(".mb-menu.open").forEach((x) => x.classList.remove("open")));
   return h("header", { class: "menubar" },
     h("button", { class: "mb-logo", onclick: () => about(), "aria-label": "Sobre o harmonIA" }, h("b", {}, "harmon"), h("i", {}, "IA")),
-    menu("Arquivo", [["Nova composição", () => { if (confirm("Começar uma composição nova? (a atual continua na biblioteca se foi salva)")) store.load({ title: "Sem título", tempo: 96, timeSig: [4, 4], keySig: 0, measures: 8, layers: [], chords: [], annotations: [] }); }],
+    menu("Arquivo", [["Nova composição", newComposition], ["Abrir o editor de composição", () => open("compose")],
       ["Importar áudio / foto / cifra…", () => open("import")], ["Biblioteca", () => open("library")], ["Exportar…", () => open("mixer")]]),
     menu("Editar", [["Desfazer ⌘Z", () => store.undoOp()], ["Refazer ⇧⌘Z", () => store.redoOp()], ["Selecionar todos os compassos", () => { store.selectedMeasures = new Set([...Array(store.score.measures).keys()]); store.emit("selection"); }]]),
     menuDyn("Janelas", () => visible().map((id) => [(PANEL_IDS.has(id) ? "▸ Painel: " : "") + titleOf(id), () => open(id)] as [string, () => void])),
-    menu("Ajuda", [["Passo a passo inicial", () => showWizard(open)], ["Despertar o Maestro (assistente)", () => dispatchEvent(new CustomEvent("maestro:wake"))], ["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
+    menu("Ajuda", [["Passo a passo inicial", () => showWizard(open)], ["Guia: compor e harmonizar", () => guide("compose")], ["Guia: gravar a melodia", () => guide("record")],
+      ["Guia: importar áudio", () => guide("audio")], ["Guia: importar imagem de partitura", () => guide("image")], ["Despertar o Maestro (assistente)", () => dispatchEvent(new CustomEvent("maestro:wake"))], ["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
       ["Texto maior (liga/desliga)", () => toggleLargeText()], ["Alto contraste (liga/desliga)", () => toggleContrast()], ["Sobre / versão", about]]),
     h("span", { class: "spacer" }), notifBell(), clock, userBtn);
 }
@@ -157,7 +168,9 @@ function dock() {
 
 function desktopIcons() {
   const box = h("div", { class: "desk-icons" });
-  const draw = () => box.replaceChildren(...["import", "library", "graph", "admin"].filter(allowed).map((id) =>
+  const fresh = h("button", { class: "desk-icon new", title: "Abrir uma pauta nova (clique)", onclick: newComposition },
+    h("span", { class: "new-ic", html: ICONS.compose }), h("small", {}, "Nova composição"));
+  const draw = () => box.replaceChildren(fresh, ...["import", "library", "graph", "admin"].filter(allowed).map((id) =>
     h("button", { class: "desk-icon", ondblclick: () => open(id), onclick: (e: Event) => (e.currentTarget as HTMLElement).classList.toggle("sel") },
       h("span", { html: APPS[id].icon }), h("small", { "data-i18n": id }, t(id)))));
   addEventListener("auth", draw); draw();
@@ -297,6 +310,14 @@ async function boot() {
   mountAvatar();
   addEventListener("layoutchange", (e: any) => toast(e.detail === "mobile" ? "📱 Layout para celular ativado" : "🖥 Layout desktop ativado", "info", 2200));
   addEventListener("open-app", (e: any) => open(e.detail));
+  addEventListener("harmonia:action", (e: any) => { if (e.detail === "open-layers") panels.reveal("layers"); });
+  // Os painéis de edição (Propriedades, Camadas…) não começam abertos: aparecem com o editor e recolhem quando ele fecha
+  let composeShown = false;
+  onWindowsChange(() => {
+    const on = openWindows().some((w) => w.app.id === "compose" && !w.el.classList.contains("min"));
+    if (on !== composeShown) { composeShown = on; if (!isMobile()) panels.setDockOpen(on); }
+  });
+  mountDeskScore(() => open("compose"), newComposition);
   // autosave remoto da composição aberta
   store.on(async (r) => {
     if (r !== "autosave" || !currentUser || !store.compositionId) return;
@@ -310,7 +331,7 @@ async function boot() {
   // usuário novo → passo a passo; senão → estação completa (desktop) ou Início (celular).
   const start = () => {
     if (needsOnboarding()) { showWizard(open); return; }
-    if (!isMobile()) open("compose");
+    // desktop: o editor não abre sozinho — o pentagrama do desktop mostra a composição e o editor é aberto quando solicitado
   };
   if (!(await publicRoutes())) {
     if (!currentUser) showLogin(start); else start();

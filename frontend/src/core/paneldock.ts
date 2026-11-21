@@ -11,11 +11,11 @@ export interface PanelDef {
   defaultMode?: Mode; defaultRect?: { x: number; y: number; w: number; h: number }; discreet?: boolean; defaultCollapsed?: boolean;
 }
 type Mode = "docked" | "floating" | "hidden";
-interface PState { mode: Mode; collapsed: boolean; x: number; y: number; w: number; h: number; }
+interface PState { mode: Mode; collapsed: boolean; x: number; y: number; w: number; h: number; dh?: number; max?: boolean; }
 interface Layout { order: string[]; panels: Record<string, PState>; dockCollapsed: boolean; }
 interface P { def: PanelDef; el: HTMLElement; body: HTMLElement; st: PState; }
 
-const KEY = "harmonia.panels.v1";
+const KEY = "harmonia.panels.v2";
 const DOCK_W = 312, STRIP_W = 52;
 
 export class PanelDock {
@@ -31,7 +31,7 @@ export class PanelDock {
   constructor(root: HTMLElement) {
     let saved: Layout | null = null;
     try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch { /* layout corrompido */ }
-    this.layout = saved || { order: [], panels: {}, dockCollapsed: false };
+    this.layout = saved || { order: [], panels: {}, dockCollapsed: true }; // começa contraído: os painéis aparecem quando solicitados
     const head = h("div", { class: "rdock-head" },
       h("button", { class: "sb-toggle", title: "Recolher/expandir painéis", onclick: () => this.setCollapsed(!this.layout.dockCollapsed) }, "☰"),
       h("b", {}, "Painéis"),
@@ -41,6 +41,7 @@ export class PanelDock {
     root.append(this.dock, this.floatLayer);
     addEventListener("resize", () => this.panels.forEach((p) => p.st.mode === "floating" && this.clamp(p)));
     addEventListener("layoutchange", () => this.apply());
+    addEventListener("keydown", (e) => { if (e.key === "Escape") { let ch = false; this.panels.forEach((p) => { if (p.st.max) { p.st.max = false; ch = true; } }); if (ch) this.apply(); } });
   }
 
   register(defs: PanelDef[]) {
@@ -52,12 +53,27 @@ export class PanelDock {
       const body = h("div", { class: "panel-body" });
       const btnDock = h("button", { class: "p-btn", title: "Destacar / reacoplar (duplo clique no título)", onclick: () => this.toggleFloat(d.id) });
       const btnCol = h("button", { class: "p-btn", title: "Recolher", onclick: () => { st.collapsed = !st.collapsed; this.apply(); } }, "▾");
+      const btnMax = h("button", { class: "p-btn p-max", title: "Maximizar / restaurar (Esc restaura)", onclick: () => { st.max = !st.max; if (st.max) st.collapsed = false; this.apply(); } }, "⤢");
       const head = h("header", { class: "panel-head" },
         h("span", { class: "grip", "aria-hidden": "true" }, "⋮⋮"), h("span", { class: "p-ic", html: d.icon }), h("b", { "data-i18n": d.id }, d.title),
-        h("span", { class: "spacer" }), btnCol, btnDock,
-        h("button", { class: "p-btn", title: "Fechar painel", onclick: () => { st.mode = "hidden"; this.apply(); } }, "✕"));
-      const el = h("section", { class: "panel" + (d.discreet ? " discreet" : ""), "data-panel": d.id, role: "region", "aria-label": d.title }, head, body);
-      head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) this.toggleFloat(d.id); });
+        h("span", { class: "spacer" }), btnCol, btnDock, btnMax,
+        h("button", { class: "p-btn", title: "Fechar painel", onclick: () => { st.mode = "hidden"; st.max = false; this.apply(); } }, "✕"));
+      // alça de redimensionar: altura quando acoplado; largura e altura quando flutuante
+      const grip = h("div", { class: "p-resize", title: "Arraste para redimensionar", "aria-hidden": "true" });
+      const el = h("section", { class: "panel" + (d.discreet ? " discreet" : ""), "data-panel": d.id, role: "region", "aria-label": d.title }, head, body, grip);
+      grip.addEventListener("pointerdown", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const r0 = el.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+        grip.setPointerCapture(e.pointerId);
+        const mv = (ev: PointerEvent) => {
+          const hh = Math.max(90, r0.height + ev.clientY - sy);
+          if (st.mode === "floating") { st.w = Math.max(240, r0.width + ev.clientX - sx); st.h = hh; Object.assign(el.style, { width: st.w + "px", height: st.h + "px" }); }
+          else { st.dh = hh; el.style.flex = `0 0 ${hh}px`; }
+        };
+        const up = () => { grip.removeEventListener("pointermove", mv); grip.removeEventListener("pointerup", up); this.save(); };
+        grip.addEventListener("pointermove", mv); grip.addEventListener("pointerup", up);
+      });
+      head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) { if (st.max) { st.max = false; this.apply(); } else this.toggleFloat(d.id); } });
       head.addEventListener("pointerdown", (e) => this.startDrag(e, d.id));
       el.addEventListener("pointerdown", () => { if (st.mode === "floating") el.style.zIndex = String(++this.topZ); });
       new ResizeObserver(() => { if (st.mode === "floating" && el.offsetWidth) { st.w = el.offsetWidth; st.h = el.offsetHeight; this.save(); } }).observe(el);
@@ -90,6 +106,8 @@ export class PanelDock {
   }
 
   private setCollapsed(v: boolean) { this.layout.dockCollapsed = v; this.apply(); }
+  /** Abre/contrai o dock (ex.: abre junto com a janela de Composição e contrai quando ela fecha). */
+  setDockOpen(open: boolean) { if (this.layout.dockCollapsed === !open) return; this.layout.dockCollapsed = !open; this.apply(); }
 
   private reset() {
     localStorage.removeItem(KEY);
@@ -118,14 +136,21 @@ export class PanelDock {
       const floating = st.mode === "floating" && !mobile; // no celular tudo fica na folha inferior
       el.classList.toggle("floating", floating);
       el.hidden = st.mode === "hidden";
+      const maxed = !!st.max && !mobile && st.mode !== "hidden";
+      el.classList.toggle("maxed", maxed);
+      const mb = el.querySelector(".p-max") as HTMLElement; mb.textContent = maxed ? "⤡" : "⤢"; mb.title = maxed ? "Restaurar tamanho (Esc)" : "Maximizar";
       (el.querySelector(".p-btn:nth-of-type(2)") as HTMLElement).textContent = st.mode === "floating" ? "⇲" : "⇱";
       (el.querySelector(".p-btn:nth-of-type(2)") as HTMLElement).title = st.mode === "floating" ? "Reacoplar ao painel lateral" : "Destacar (janela flutuante)";
-      if (floating) {
+      if (maxed) {
+        if (el.parentElement !== this.floatLayer) this.floatLayer.append(el);
+        el.removeAttribute("style"); el.style.zIndex = String(++this.topZ + 500);
+      } else if (floating) {
         if (el.parentElement !== this.floatLayer) this.floatLayer.append(el);
         Object.assign(el.style, { left: st.x + "px", top: st.y + "px", width: st.w + "px", height: st.collapsed ? "" : st.h + "px", zIndex: String(++this.topZ) });
         this.clamp(p);
       } else {
         el.removeAttribute("style");
+        if (st.dh && !st.collapsed) el.style.flex = `0 0 ${st.dh}px`;
         this.stack.append(el); // ordem segue layout.order
       }
     }
@@ -135,7 +160,7 @@ export class PanelDock {
       return h("button", { class: "strip-btn" + (p.st.mode === "hidden" ? " off" : "") + (p.st.mode === "floating" ? " float" : ""), title: p.def.title,
         onclick: () => this.reveal(id), html: p.def.icon });
     }));
-    const collapsed = this.layout.dockCollapsed || !docked.length;
+    const collapsed = this.layout.dockCollapsed || !docked.filter((id) => !this.panels.get(id)!.st.max).length;
     this.dock.classList.toggle("collapsed", collapsed);
     document.body.style.setProperty("--rdock", mobile ? "0px" : (collapsed ? STRIP_W : DOCK_W) + "px");
     this.save();

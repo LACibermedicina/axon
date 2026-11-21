@@ -2,6 +2,21 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.3.0-alpha] — 2026-11-21
+
+### Adicionado
+- **Pentagrama final no desktop**: a composição inteira aparece em overlay sobre o fundo, com ▶ Tocar / ■ Parar e cursor de reprodução, ✎ Editar e ＋ Nova. Dá para mover (arrastar o título), recolher, e duplo clique no título volta à posição padrão.
+- **Ícone "Nova composição"** no desktop: abre uma pauta vazia no editor.
+- **Editor sob demanda**: a janela de Composição e os painéis de edição não abrem sozinhos; o painel lateral expande junto com o editor e recolhe quando ele fecha.
+- **Painel de ferramentas lateral** dentro do editor: movível (arraste pela alça ⋮⋮, solte perto da borda para reacoplar), contraível (só ícones) ou expandido. **● Gravar** e **⇪ Importar** ficam sempre visíveis no topo, com explicações didáticas ao passar o mouse.
+- **Gravar inteligente**: sem compassos selecionados grava uma nova voz livre; com compassos selecionados grava só aquele trecho.
+- **Painéis maximizáveis e redimensionáveis** (Propriedades, Camadas, Anotações, Mesa…): botão ⤢ (Esc restaura) e alça de redimensionar.
+- **Mão em edição**: direita, esquerda ou **ambas ao mesmo tempo**; seleção por retângulo pega as duas pautas; ⌘A seleciona as notas da(s) mão(s) em edição; a mão não editada fica esmaecida.
+- **Instrumentos com clave automática**: violino/flauta/trompete… em Sol, viola em Dó, violoncelo/fagote/trombone/baixo em Fá; piano, órgão e harpa usam as duas pautas. O timbre da reprodução e o programa MIDI acompanham o instrumento.
+- **Maestro (ícone de ajuda) arrastável**: solte onde preferir; a posição fica salva.
+- **Guia passo a passo com holofote e seta cartunesca** após escolher no passo a passo inicial (compor, gravar, importar áudio, importar imagem). Fecha com ✕, Esc ou duplo clique fora do quadro. Também em **Ajuda → Guia: …**.
+- **IA (admin)**: botão 🧪 Testar por provedor, 🔑 Trocar/Cadastrar chave direto da tabela e do diagnóstico (já testa ao salvar). API `POST /api/admin/ai/diagnose` aceita `{"names": [...]}` para testar só alguns.
+
 ## [0.2.0-alpha] — 2026-11-21
 
 ### Corrigido

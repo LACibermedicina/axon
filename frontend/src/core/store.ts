@@ -1,5 +1,5 @@
 // Estado da composição aberta com desfazer/refazer e eventos.
-import { Score, Layer, uid, LayerKind } from "./types";
+import { Score, Layer, uid, LayerKind, Hand } from "./types";
 
 type Listener = (reason: string) => void;
 
@@ -57,6 +57,9 @@ class Store {
   selectedLayer: string | null = this.score.layers[0]?.id ?? null;
   selectedMeasures = new Set<number>();
   selectedNotes = new Set<string>();
+  /** Mão em edição: "both" seleciona/edita as duas pautas ao mesmo tempo. */
+  hand: Hand = "both";
+  inHand(l: Layer) { return this.hand === "both" || (this.hand === "upper") === (l.staff !== "bass"); }
   private undo: string[] = [];
   private redo: string[] = [];
   private listeners = new Set<Listener>();
@@ -135,7 +138,7 @@ class Store {
     const bpm = (s.timeSig[0] * 4) / s.timeSig[1];
     const ms = [...this.selectedMeasures];
     const pick = (l: Layer) => l.notes.filter((n) => source === "notes" ? this.selectedNotes.has(n.id) : ms.includes(Math.floor(n.start / bpm + 1e-9)));
-    const srcLayers = s.layers.filter((l) => l.kind !== "recording" && (source === "notes" || l.visible));
+    const srcLayers = s.layers.filter((l) => l.kind !== "recording" && (source === "notes" || (l.visible && this.inHand(l))));
     let skippedLocked = 0;
     const byStaff: Record<string, { notes: typeof s.layers[0]["notes"]; from: string[] }> = {};
     for (const l of srcLayers) {

@@ -1,6 +1,7 @@
 // Motor de áudio: síntese de piano (WebAudio), reprodução por camadas (mute/solo/volume),
 // metrônomo, gravação por microfone com contagem, e recorte/ganho de áudio antes do envio.
-import { Score, Layer } from "./types";
+import { Score, Layer, staves } from "./types";
+import { instrument, Timbre } from "./instruments";
 
 let ctx: AudioContext | null = null;
 let master: GainNode;
@@ -17,8 +18,9 @@ export const ac = () => {
 
 const freq = (p: number) => 440 * Math.pow(2, (p - 69) / 12);
 
-/** Piano sintetizado: parciais inarmônicos com envelope percussivo. */
-export function playNote(pitch: number, when: number, dur: number, vel = 80, gain = 1, dest?: AudioNode) {
+/** Piano sintetizado: parciais inarmônicos com envelope percussivo. Outros timbres: ver `voice()`. */
+export function playNote(pitch: number, when: number, dur: number, vel = 80, gain = 1, dest?: AudioNode, timbre: Timbre = "piano") {
+  if (timbre !== "piano") return voice(timbre, pitch, when, dur, vel, gain, dest);
   const c = ac();
   const out = c.createGain();
   const v = (vel / 127) * 0.32 * gain;
@@ -41,6 +43,52 @@ export function playNote(pitch: number, when: number, dur: number, vel = 80, gai
     o.connect(g).connect(out);
     o.start(t0); o.stop(t0 + dur + 0.3);
   });
+}
+
+// timbres sustentados/dedilhados simples: forma de onda, ataque, filtro, vibrato e decaimento
+const TIMBRES: Record<Exclude<Timbre, "piano">, { wave: OscillatorType; atk: number; rel: number; cut: number; vib: number; pluck?: boolean; detune?: number; level: number }> = {
+  strings: { wave: "sawtooth", atk: 0.09, rel: 0.25, cut: 2600, vib: 5, detune: 6, level: 0.16 },
+  winds: { wave: "sine", atk: 0.06, rel: 0.12, cut: 4000, vib: 4, level: 0.3 },
+  reed: { wave: "square", atk: 0.04, rel: 0.1, cut: 1800, vib: 3, level: 0.12 },
+  brass: { wave: "sawtooth", atk: 0.05, rel: 0.12, cut: 2200, vib: 2, level: 0.15 },
+  plucked: { wave: "triangle", atk: 0.003, rel: 0.4, cut: 3000, vib: 0, pluck: true, level: 0.32 },
+  organ: { wave: "sine", atk: 0.02, rel: 0.08, cut: 5000, vib: 0, level: 0.14 },
+  voice: { wave: "triangle", atk: 0.08, rel: 0.2, cut: 1500, vib: 6, level: 0.3 },
+};
+function voice(t: Exclude<Timbre, "piano">, pitch: number, when: number, dur: number, vel: number, gain: number, dest?: AudioNode) {
+  const c = ac(); const p = TIMBRES[t];
+  const t0 = Math.max(c.currentTime, when);
+  const v = (vel / 127) * p.level * gain;
+  const out = c.createGain();
+  out.gain.setValueAtTime(0, t0);
+  out.gain.linearRampToValueAtTime(v, t0 + p.atk);
+  if (p.pluck) out.gain.exponentialRampToValueAtTime(Math.max(0.0001, v * Math.exp(-dur * 1.6)), t0 + dur);
+  else out.gain.setValueAtTime(v * 0.85, t0 + Math.max(p.atk, dur - 0.02));
+  out.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + p.rel);
+  const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = p.cut + vel * 10;
+  out.connect(lp).connect(dest || master);
+  const f = freq(pitch);
+  const oscs: OscillatorNode[] = [];
+  const mk = (type: OscillatorType, mult: number, amp: number, det = 0) => {
+    const o = c.createOscillator(); o.type = type; o.frequency.value = f * mult; o.detune.value = det;
+    const g = c.createGain(); g.gain.value = amp; o.connect(g).connect(out); oscs.push(o);
+  };
+  mk(p.wave, 1, 1);
+  if (p.detune) mk(p.wave, 1, 0.7, p.detune);
+  if (t === "organ") { mk("sine", 2, 0.5); mk("sine", 3, 0.25); mk("sine", 0.5, 0.35); }
+  if (t === "voice") mk("sine", 2, 0.25);
+  if (p.vib) { // vibrato entra depois do ataque
+    const lfo = c.createOscillator(); const lg = c.createGain();
+    lfo.frequency.value = 5.2; lg.gain.setValueAtTime(0, t0); lg.gain.linearRampToValueAtTime(p.vib, t0 + Math.min(0.4, dur));
+    lfo.connect(lg); oscs.forEach((o) => lg.connect(o.detune)); lfo.start(t0); lfo.stop(t0 + dur + p.rel + 0.05);
+  }
+  oscs.forEach((o) => { o.start(t0); o.stop(t0 + dur + p.rel + 0.05); });
+}
+
+/** Timbre da camada segundo o instrumento da pauta em que ela está. */
+export function timbreOf(s: Score, l: Layer): Timbre {
+  const st = staves(s);
+  return instrument((l.staff === "bass" ? st.lower : st.upper).instrument).timbre;
 }
 
 export function click(when: number, accent: boolean) {
@@ -77,10 +125,11 @@ export async function play(s: Score, opts: { fromBeat?: number; toBeat?: number;
   const t0 = c.currentTime + 0.12;
   const sources: AudioScheduledSourceNode[] = [];
   for (const l of audibleLayers(s)) {
+    const tb = timbreOf(s, l);
     for (const n of l.notes) {
       if (n.start + n.dur <= from || n.start >= end) continue;
       const st = Math.max(n.start, from);
-      playNote(n.pitch, t0 + (st - from) * spb, (Math.min(n.start + n.dur, end) - st) * spb, n.vel ?? 80, l.volume);
+      playNote(n.pitch, t0 + (st - from) * spb, (Math.min(n.start + n.dur, end) - st) * spb, n.vel ?? 80, l.volume, undefined, tb);
     }
     const url = l.audioUrl || (l.audio ? `/api/media/${l.audio}` : "");
     if (url) {
@@ -111,10 +160,14 @@ export async function play(s: Score, opts: { fromBeat?: number; toBeat?: number;
     startedAt: t0, spb, fromBeat: from,
     stop: () => { cancelAnimationFrame(raf); sources.forEach((x) => { try { x.stop(); } catch { /* */ } }); master.gain.cancelScheduledValues(0); const g = master.gain.value; master.gain.setValueAtTime(0, c.currentTime); master.gain.setValueAtTime(g, c.currentTime + 0.05); },
   };
+  stateListeners.forEach((f) => f(true));
   return current;
 }
 
-export function stop() { current?.stop(); current = null; }
+const stateListeners = new Set<(playing: boolean) => void>();
+/** Avisa quem mostra botões ▶/■ (editor, pentagrama do desktop) quando a reprodução começa/para. */
+export const onPlayState = (fn: (playing: boolean) => void) => { stateListeners.add(fn); return () => stateListeners.delete(fn); };
+export function stop() { const was = !!current; current?.stop(); current = null; if (was) stateListeners.forEach((f) => f(false)); }
 export const isPlaying = () => !!current;
 
 // ------------------------------------------------------------- gravação

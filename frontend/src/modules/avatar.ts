@@ -37,7 +37,31 @@ export function mountAvatar() {
     say(document.body.classList.contains("mobile") ? "Olá! Sou o Maestro 🎼 — pergunte o que quiser." : "Olá! Sou o Maestro. Pergunte qualquer coisa sobre a partitura ou o editor. " + TIPS[0], 7000);
   };
   const sleep = () => { awake = false; wrap.classList.add("asleep"); ask.hidden = true; bubble.hidden = true; speechSynthesis?.cancel(); };
-  fab.addEventListener("click", () => {
+  // o ícone de ajuda pode ser reposicionado: arraste e solte (a posição fica salva)
+  const POS_KEY = "harmonia.maestro.pos";
+  const place = (x: number, y: number) => Object.assign(wrap.style, { left: Math.max(4, Math.min(innerWidth - 70, x)) + "px", top: Math.max(34, Math.min(innerHeight - 70, y)) + "px", right: "auto", bottom: "auto" });
+  try { const p0 = JSON.parse(localStorage.getItem(POS_KEY) || "null"); if (p0) place(p0.x, p0.y); } catch { /* */ }
+  addEventListener("resize", () => { if (wrap.style.left) place(parseFloat(wrap.style.left), parseFloat(wrap.style.top)); });
+  let fabDragged = false;
+  fab.addEventListener("pointerdown", (e) => {
+    if (document.body.classList.contains("mobile")) return;
+    const r = wrap.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top, sx = e.clientX, sy = e.clientY;
+    fabDragged = false;
+    fab.setPointerCapture(e.pointerId);
+    const mv = (ev: PointerEvent) => {
+      if (!fabDragged && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6) return;
+      fabDragged = true; wrap.classList.add("dragging");
+      place(ev.clientX - ox, ev.clientY - oy);
+    };
+    const up = () => {
+      fab.removeEventListener("pointermove", mv); fab.removeEventListener("pointerup", up); wrap.classList.remove("dragging");
+      if (fabDragged) try { localStorage.setItem(POS_KEY, JSON.stringify({ x: parseFloat(wrap.style.left), y: parseFloat(wrap.style.top) })); } catch { /* */ }
+    };
+    fab.addEventListener("pointermove", mv); fab.addEventListener("pointerup", up);
+  });
+  fab.title = "Ajuda: clique para despertar o Maestro · arraste para mudar de lugar";
+  fab.addEventListener("click", (e) => {
+    if (fabDragged) { fabDragged = false; e.preventDefault(); return; }
     if (document.body.classList.contains("mobile") && awake) { ask.hidden = !ask.hidden; return; }
     awake ? sleep() : wake();
   });

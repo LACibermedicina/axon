@@ -1,7 +1,8 @@
 // Editor de partitura para piano (sistema Sol/Fá) com drag & drop profissional e camadas.
 // Híbrido didático: notação tradicional + barra de duração colorida por camada (mostra a duração real).
 import { store, newLayer } from "../core/store";
-import { Note, Score, uid, beatsPerMeasure, ChordEv, staves, Clef } from "../core/types";
+import { Note, Score, uid, beatsPerMeasure, ChordEv, staves, Clef, Hand } from "../core/types";
+import { INSTRUMENTS, instrument } from "../core/instruments";
 import { h, toast, busy, tip } from "../core/ui";
 import { SOLFEGE, NAMES, parseChord, voiceChords, extractMelody, chordPcs, symbolOf, KEY_NAMES } from "../core/theory";
 import * as audio from "../core/audio";
@@ -107,16 +108,72 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const harmAllBtn = h("button", { class: "btn", onclick: (e: Event) => harmonize(e.currentTarget as HTMLButtonElement, true) }, "Harmonizar tudo");
   const aiBox = h("div", { class: "seg" }, harmBtn, harmAllBtn, styleSel,
     tip(h("button", { class: "btn", onclick: extractMel }, "Melodia ⇠ harmonia"), "Extrai a voz principal (mais aguda) das camadas de harmonia"),
-    tip(h("button", { class: "btn", onclick: transcribeChords }, "Cifrar"), "Reconhece os acordes a partir das notas e escreve a cifra"),
-    tip(h("button", { class: "btn rec", onclick: (e: Event) => recordSection(e.currentTarget as HTMLButtonElement) }, "● " + t("record") + " trecho"), "Grava os compassos selecionados (ou os que faltam) com contagem e metrônomo — vira uma camada nova"),
-    tip(h("button", { class: "btn rec", onclick: (e: Event) => recordFree(e.currentTarget as HTMLButtonElement) }, "● Nova voz"), "Grava livremente sobre os compassos existentes (ouvindo a partitura) até você parar — a gravação vira uma nova voz/camada"));
+    tip(h("button", { class: "btn", onclick: transcribeChords }, "Cifrar"), "Reconhece os acordes a partir das notas e escreve a cifra"));
+  const recSecBtn = tip(h("button", { class: "btn rec", onclick: (e: Event) => recordSection(e.currentTarget as HTMLButtonElement) }, "● " + t("record") + " trecho"),
+    "Gravar trecho: grava só os compassos selecionados (ou os primeiros que estão vazios). Conto um compasso antes e o metrônomo acompanha. Vira uma camada nova.") as HTMLButtonElement;
+  const recFreeBtn = tip(h("button", { class: "btn rec", onclick: (e: Event) => recordFree(e.currentTarget as HTMLButtonElement) }, "● Nova voz"),
+    "Nova voz: você ouve a partitura e grava livremente por cima, até apertar ■. A gravação vira uma nova voz numa camada própria.") as HTMLButtonElement;
+  const recBox = h("div", { class: "seg" }, recSecBtn, recFreeBtn);
   const zoomIn = h("input", { type: "range", min: 0.6, max: 2, step: 0.1, value: zoom, "aria-label": "Zoom", oninput: (e: Event) => { zoom = +(e.target as HTMLInputElement).value; render(); } });
   const metaBox = h("div", { class: "seg" },
     h("button", { class: "btn ghost", title: "Desfazer (⌘Z)", onclick: () => store.undoOp() }, "↶"),
     h("button", { class: "btn ghost", title: "Refazer (⇧⌘Z)", onclick: () => store.redoOp() }, "↷"),
     h("label", { class: "inline" }, "🔍", zoomIn));
 
-  const toolbar = h("div", { class: "toolbar" }, tools, durBox, transport, aiBox, metaBox);
+  // Painel de ferramentas lateral: movível (arraste pela alça), contraível (só ícones) ou expandido.
+  // Gravar e Importar ficam fixos no topo e continuam visíveis mesmo com o painel contraído.
+  const recMain = tip(h("button", { class: "btn rec big-rec", "aria-label": "Gravar", onclick: (e: Event) => {
+    const b = e.currentTarget as HTMLButtonElement;
+    if (freeRec || !store.selectedMeasures.size) recordFree(b); else recordSection(b);
+  } }, h("span", { class: "tb-ic" }, "●"), h("span", { class: "tb-lb" }, t("record"))),
+    "🎙 GRAVAR — cante ou toque no microfone. Sem compassos selecionados: grava livremente uma nova voz por cima da partitura até você apertar ■. Com compassos selecionados (faixa numerada): grava só aquele trecho. Eu conto 1 compasso antes. A gravação vira uma camada nova e é transcrita em notas.") as HTMLButtonElement;
+  const importBtn = tip(h("button", { class: "btn imp", "aria-label": "Importar", onclick: () => dispatchEvent(new CustomEvent("open-app", { detail: "import" })) },
+    h("span", { class: "tb-ic" }, "⇪"), h("span", { class: "tb-lb" }, t("import"))),
+    "⇪ IMPORTAR — traga um material para editar: arquivo de áudio (MP3, WAV…), foto ou scan de partitura, ou cifra em texto. A IA transcreve e o resultado entra aqui como camadas novas.");
+  const section = (title: string, ...kids: HTMLElement[]) => h("div", { class: "tb-sec", "data-sec": title }, h("small", { class: "tb-h" }, title), ...kids);
+  const TB_KEY = "harmonia.toolbox.v1";
+  let tb: { mode: "docked" | "floating"; collapsed: boolean; x: number; y: number } = { mode: "docked", collapsed: false, x: 12, y: 60 };
+  try { tb = { ...tb, ...JSON.parse(localStorage.getItem(TB_KEY) || "{}") }; } catch { /* */ }
+  const tbCollapse = h("button", { class: "p-btn", title: "Contrair / expandir o painel de ferramentas" });
+  const tbDock = h("button", { class: "p-btn", title: "Soltar / reacoplar ao lado da partitura (duplo clique na alça)" });
+  const tbGrip = h("div", { class: "tb-grip", title: "Arraste para mover o painel de ferramentas" }, h("span", { "aria-hidden": "true" }, "⋮⋮"), h("b", {}, "Ferramentas"), tbCollapse, tbDock);
+  const toolbar = h("aside", { class: "toolbar toolbox", "aria-label": "Ferramentas da composição" }, tbGrip,
+    h("div", { class: "tb-pinned" }, recMain, importBtn),
+    h("div", { class: "tb-scroll" }, section("Ferramentas", tools), section("Duração", durBox), section("Reprodução", transport), section("IA e harmonia", aiBox), section("Gravação", recBox), section("Editar", metaBox)));
+  const applyTb = () => {
+    toolbar.classList.toggle("collapsed", tb.collapsed);
+    toolbar.classList.toggle("floating", tb.mode === "floating");
+    tbCollapse.textContent = tb.collapsed ? "»" : "«";
+    tbDock.textContent = tb.mode === "floating" ? "⇲" : "⇱";
+    if (tb.mode === "floating") Object.assign(toolbar.style, { left: tb.x + "px", top: tb.y + "px", maxHeight: Math.max(160, (stage.clientHeight || 400) - tb.y - 6) + "px" }); else toolbar.removeAttribute("style");
+    try { localStorage.setItem(TB_KEY, JSON.stringify(tb)); } catch { /* */ }
+  };
+  tbCollapse.addEventListener("click", () => { tb.collapsed = !tb.collapsed; applyTb(); });
+  tbDock.addEventListener("click", () => { tb.mode = tb.mode === "floating" ? "docked" : "floating"; applyTb(); });
+  tbGrip.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) { tb.mode = tb.mode === "floating" ? "docked" : "floating"; applyTb(); } });
+  tbGrip.addEventListener("pointerdown", (e) => {
+    if ((e.target as HTMLElement).closest("button") || document.body.classList.contains("mobile")) return;
+    const st = stage.getBoundingClientRect(), r0 = toolbar.getBoundingClientRect();
+    const ox = e.clientX - r0.left, oy = e.clientY - r0.top, sx = e.clientX, sy = e.clientY;
+    let moving = false;
+    tbGrip.setPointerCapture(e.pointerId);
+    const mv = (ev: PointerEvent) => {
+      if (!moving && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+      if (!moving) { moving = true; tb.mode = "floating"; toolbar.classList.add("dragging"); }
+      tb.x = Math.max(0, Math.min(st.width - 60, ev.clientX - st.left - ox));
+      tb.y = Math.max(0, Math.min(st.height - 40, ev.clientY - st.top - oy));
+      // perto da borda esquerda: reacopla
+      toolbar.classList.toggle("snap", tb.x < 14);
+      applyTb();
+    };
+    const up = () => {
+      tbGrip.removeEventListener("pointermove", mv); tbGrip.removeEventListener("pointerup", up);
+      toolbar.classList.remove("dragging", "snap");
+      if (moving && tb.x < 14) tb.mode = "docked";
+      applyTb();
+    };
+    tbGrip.addEventListener("pointermove", mv); tbGrip.addEventListener("pointerup", up);
+  });
   const titleIn = h("input", { class: "score-title", value: store.score.title, "aria-label": "Título",
     onchange: (e: Event) => store.mutate((s) => (s.title = (e.target as HTMLInputElement).value), "title") });
   const keySel = h("select", { "aria-label": "Armadura", onchange: (e: Event) => store.mutate((s) => (s.keySig = +(e.target as HTMLSelectElement).value), "key") },
@@ -128,7 +185,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const stavesSel = h("select", { "aria-label": "Pautas visíveis", title: "Pautas visíveis", onchange: (e: Event) => {
     const v = (e.target as HTMLSelectElement).value;
     store.mutate((x) => { const st = staves(x); st.upper.visible = v !== "lower"; st.lower.visible = v !== "upper"; x.staves = st; }, "staves");
-  } }, h("option", { value: "both" }, "𝄞+𝄢 Piano"), h("option", { value: "upper" }, "Ocultar mão esquerda"), h("option", { value: "lower" }, "Só pauta inferior")) as HTMLSelectElement;
+  } }, h("option", { value: "both" }, "𝄞+𝄢 Duas pautas"), h("option", { value: "upper" }, "Ocultar mão esquerda"), h("option", { value: "lower" }, "Só pauta inferior")) as HTMLSelectElement;
   const clefSel = (which: "upper" | "lower") => h("select", { "aria-label": which === "upper" ? "Clave da pauta superior" : "Clave da pauta inferior",
     title: which === "upper" ? "Clave da pauta superior" : "Clave da pauta inferior",
     onchange: (e: Event) => store.mutate((x) => { const st = staves(x); st[which].clef = (e.target as HTMLSelectElement).value as Clef; x.staves = st; }, "staves") },
@@ -139,22 +196,59 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     stavesSel.value = st.upper.visible && st.lower.visible ? "both" : st.upper.visible ? "upper" : "lower";
     upperClef.value = st.upper.clef; lowerClef.value = st.lower.clef;
     upperClef.hidden = !st.upper.visible; lowerClef.hidden = !st.lower.visible;
+    handSel.value = store.hand;
+    instSel.value = (store.hand === "lower" ? st.lower : st.upper).instrument || "piano";
   };
   const scratch = tip(h("button", { class: "btn ghost", onclick: () => {
     if (!confirm("Começar do zero? A partitura atual será substituída por uma vazia (o que já foi salvo na Biblioteca continua lá; ⌘Z não desfaz).")) return;
     store.startFromScratch();
     toast("Partitura vazia pronta — escolha a ferramenta ✎ Nota ou grave um trecho", "ok");
   } }, "⟲ Do zero"), "Recomeçar com uma partitura vazia");
-  const header = h("div", { class: "score-head" }, titleIn, h("div", { class: "seg" }, keySel, tsSel, stavesSel, upperClef, lowerClef, addMeasure, scratch));
+  // Mão em edição (direita, esquerda ou as duas ao mesmo tempo) e instrumento — a clave acompanha o instrumento
+  const handSel = tip(h("select", { "aria-label": "Mão em edição", onchange: (e: Event) => {
+    store.hand = (e.target as HTMLSelectElement).value as Hand; syncStaffCtl(); render();
+    toast(store.hand === "both" ? "Editando as duas mãos: seleção, cópia, recorte e ⌘A pegam as duas pautas" : store.hand === "upper" ? "Editando a mão direita (pauta superior)" : "Editando a mão esquerda (pauta inferior)", "info", 2200);
+  } }, h("option", { value: "both" }, "🙌 Ambas as mãos"), h("option", { value: "upper" }, "✋ Mão direita"), h("option", { value: "lower" }, "🤚 Mão esquerda")) as HTMLSelectElement,
+    "Qual mão você está editando. 'Ambas' deixa selecionar, copiar, recortar e transpor as duas pautas juntas (arraste um retângulo na partitura).") as HTMLSelectElement;
+  const instSel = tip(h("select", { "aria-label": "Instrumento", onchange: (e: Event) => applyInstrument((e.target as HTMLSelectElement).value) },
+    ...INSTRUMENTS.map((i) => h("option", { value: i.id }, `${i.icon} ${i.name}`))) as HTMLSelectElement,
+    "Instrumento da pauta em edição. A clave muda sozinha: violino e flauta em Sol, viola em Dó, violoncelo, fagote e baixo em Fá. Piano, órgão e harpa usam as duas pautas.") as HTMLSelectElement;
+  function applyInstrument(id: string) {
+    const inst = instrument(id);
+    const lowerHasNotes = store.score.layers.some((l) => l.staff === "bass" && l.notes.length);
+    let msg = "";
+    store.mutate((x) => {
+      const st = staves(x);
+      if (inst.grand) {
+        st.upper = { ...st.upper, clef: "G", visible: true, instrument: inst.id };
+        st.lower = { ...st.lower, clef: "F", visible: true, instrument: inst.id };
+        x.layers.forEach((l) => (l.program = inst.program));
+        msg = `${inst.name}: pautas em Sol e Fá`;
+      } else {
+        const which = store.hand === "lower" ? "lower" : "upper";
+        st[which] = { ...st[which], clef: inst.clef, visible: true, instrument: inst.id };
+        x.layers.forEach((l) => { if ((l.staff === "bass") === (which === "lower")) l.program = inst.program; });
+        if (store.hand === "both" && !lowerHasNotes) { st.lower.visible = false; msg = ` · a pauta inferior (vazia) foi ocultada — reexiba em “Pautas”`; }
+        msg = `${inst.name} → clave de ${({ G: "Sol", F: "Fá", C: "Dó" } as const)[inst.clef]} na pauta ${which === "lower" ? "inferior" : "superior"}` + msg;
+      }
+      x.staves = st;
+    }, "staves");
+    toast(msg, "ok", 3500);
+  }
+  const header = h("div", { class: "score-head" }, titleIn, h("div", { class: "seg" }, handSel, instSel, keySel, tsSel, stavesSel, upperClef, lowerClef, addMeasure, scratch));
   syncStaffCtl();
 
   const status = h("div", { class: "statusbar", "data-noi18n": "" });
   const canvas = h("div", { class: "score-canvas", tabindex: "0" });
+  const stage = h("div", { class: "score-stage" });
   const paper = svg("svg", { class: "score-svg" });
   canvas.append(paper);
   const legend = h("div", { class: "score-legend", "data-noi18n": "" });
   if (document.body.classList.contains("mobile")) { zoom = 0.9; }
-  body.append(header, toolbar, legend, canvas, status);
+  const main = h("div", { class: "score-main" }, legend, canvas);
+  stage.append(toolbar, main);
+  body.append(header, stage, status);
+  applyTb();
 
   function renderLegend() {
     const s = store.score; const bpm = beatsPerMeasure(s);
@@ -310,7 +404,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const fromBeat = sys.firstMeasure * bpm, toBeat = (sys.firstMeasure + sys.nMeasures) * bpm;
     for (const l of s.layers) {
       if (!l.visible) continue;
-      const lg = svg("g", { class: "layer" + (l.id === store.selectedLayer ? " active" : "") + (l.locked ? " locked" : ""), "data-layer": l.id, style: `--lc:${l.color}` });
+      const lg = svg("g", { class: "layer" + (l.id === store.selectedLayer ? " active" : "") + (l.locked ? " locked" : "") + (store.inHand(l) ? "" : " other-hand"), "data-layer": l.id, style: `--lc:${l.color}` });
       g.append(lg);
       if (l.kind === "recording") {
         for (const m of l.measures || []) if (m >= sys.firstMeasure && m < sys.firstMeasure + sys.nMeasures) {
@@ -393,7 +487,10 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const beat = measure * bpm + Math.round(inBeat / grid) * grid;
     const st = staves(s);
     const mid = (sys.trebleY + 40 + sys.bassY) / 2;
-    const staff: "treble" | "bass" = st.upper.visible && st.lower.visible ? (py < mid ? "treble" : "bass") : st.upper.visible ? "treble" : "bass";
+    let staff: "treble" | "bass" = st.upper.visible && st.lower.visible ? (py < mid ? "treble" : "bass") : st.upper.visible ? "treble" : "bass";
+    // com uma só mão em edição, o lápis escreve na pauta dela (se estiver visível)
+    if (store.hand === "upper" && st.upper.visible) staff = "treble";
+    if (store.hand === "lower" && st.lower.visible) staff = "bass";
     const step = staff === "treble" ? Math.round(CLEF_TOP[st.upper.clef] - (py - sys.trebleY) / (LS / 2)) : Math.round(CLEF_TOP[st.lower.clef] - (py - sys.bassY) / (LS / 2));
     return { px, py, sys, measure, beat, staff, step, pitch: stepToPitch(step, s.keySig) };
   }
@@ -413,6 +510,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     return nl;
   }
 
+  const timbreFor = (staff: "treble" | "bass") => instrument((staff === "bass" ? staves(store.score).lower : staves(store.score).upper).instrument).timbre;
   function insertNote(pitch: number, beat: number, staff: "treble" | "bass", d = dur * (dotted ? 1.5 : 1)) {
     store.mutate(() => {
       const l = targetLayer(staff);
@@ -421,7 +519,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       store.selectedLayer = l.id;
       store.selectedNotes = new Set([n.id]);
     }, "add");
-    audio.playNote(pitch, 0, 0.5);
+    audio.playNote(pitch, 0, 0.5, 80, 1, undefined, timbreFor(staff));
   }
 
   // ------------------------------------------------------ interações
@@ -466,6 +564,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       const id = noteEl.dataset.id!;
       const f = findNote(id);
       if (!f) return;
+      if (!store.inHand(f.l)) { toast(`Essa nota é da ${f.l.staff === "bass" ? "mão esquerda" : "mão direita"} — troque a mão em edição ou escolha “Ambas”`, "info", 2600); return; }
       if (tool === "erase") { store.mutate(() => (f.l.notes = f.l.notes.filter((x) => x.id !== id)), "erase"); return; }
       if (tool === "lyrics") { editLyric(id, loc); return; }
       if (f.l.locked) { toast(`Camada "${f.l.name}" está bloqueada`, "warn"); return; }
@@ -477,13 +576,45 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       drag = { kind: resizeId ? "resize" : "move", ids, startX: ev.clientX, startY: ev.clientY, moved: false, dup: ev.altKey,
         orig: new Map(ids.map((i) => { const x = findNote(i)!.n; return [i, { start: x.start, pitch: x.pitch, dur: x.dur }]; })) };
       paper.setPointerCapture(ev.pointerId);
-      audio.playNote(f.n.pitch, 0, 0.35);
+      audio.playNote(f.n.pitch, 0, 0.35, 80, 1, undefined, audio.timbreOf(store.score, f.l));
       store.emit("selection");
       return;
     }
     if (tool === "pencil") { insertNote(loc.pitch, loc.beat, loc.staff); return; }
-    if (tool === "select" && !ev.shiftKey) { store.selectedNotes.clear(); store.emit("selection"); }
+    if (tool === "select") startMarquee(ev);
   });
+
+  /** Seleção por retângulo: pega notas das duas pautas de uma vez (ou só da mão em edição). */
+  function startMarquee(ev: PointerEvent) {
+    const r = paper.getBoundingClientRect();
+    const x0 = ev.clientX - r.left, y0 = ev.clientY - r.top;
+    const base = ev.shiftKey ? new Set(store.selectedNotes) : new Set<string>();
+    const box = svg("rect", { class: "marquee", x: x0, y: y0, width: 0, height: 0 });
+    let shown = false;
+    const mv = (e: PointerEvent) => {
+      const x1 = e.clientX - r.left, y1 = e.clientY - r.top;
+      if (!shown && Math.hypot(x1 - x0, y1 - y0) < 4) return;
+      if (!shown) { paper.append(box); shown = true; }
+      const bx = Math.min(x0, x1), by = Math.min(y0, y1), bw = Math.abs(x1 - x0), bh = Math.abs(y1 - y0);
+      Object.entries({ x: bx, y: by, width: bw, height: bh }).forEach(([k, v]) => box.setAttribute(k, String(v)));
+      const sel = new Set(base);
+      paper.querySelectorAll<SVGGElement>(".layer:not(.other-hand):not(.locked) .note").forEach((n) => {
+        const hr = n.querySelector(".head")!.getBoundingClientRect();
+        const cx = hr.left + hr.width / 2 - r.left, cy = hr.top + hr.height / 2 - r.top;
+        if (cx >= bx && cx <= bx + bw && cy >= by && cy <= by + bh) sel.add(n.dataset.id!);
+      });
+      store.selectedNotes = sel;
+      paper.querySelectorAll<SVGGElement>(".note").forEach((n) => n.classList.toggle("sel", sel.has(n.dataset.id!)));
+    };
+    const up = () => {
+      removeEventListener("pointermove", mv); removeEventListener("pointerup", up);
+      box.remove();
+      if (!shown && !ev.shiftKey) store.selectedNotes.clear();
+      if (store.selectedNotes.size) store.selectedMeasures.clear();
+      store.emit("selection");
+    };
+    addEventListener("pointermove", mv); addEventListener("pointerup", up);
+  }
 
   let snapshotTaken = false;
   paper.addEventListener("pointermove", (ev) => {
@@ -520,7 +651,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     render();
   });
   paper.addEventListener("pointerup", () => {
-    if (drag?.moved) { const f = findNote(drag.ids[0]); if (f) audio.playNote(f.n.pitch, 0, 0.35); store.emit("edit"); }
+    if (drag?.moved) { const f = findNote(drag.ids[0]); if (f) audio.playNote(f.n.pitch, 0, 0.35, 80, 1, undefined, audio.timbreOf(store.score, f.l)); store.emit("edit"); }
     drag = null; snapshotTaken = false;
   });
 
@@ -545,7 +676,11 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       if (src) extract(e.key.toLowerCase() === "x" ? "cut" : "copy", src);
       return;
     }
-    if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); store.selectedNotes = new Set(store.layer()?.notes.map((n) => n.id) || []); store.emit("selection"); return; }
+    if (mod && e.key.toLowerCase() === "a") { // todas as notas da(s) mão(s) em edição
+      e.preventDefault();
+      store.selectedNotes = new Set(store.score.layers.filter((l) => l.visible && !l.locked && l.kind !== "recording" && store.inHand(l)).flatMap((l) => l.notes.map((n) => n.id)));
+      store.selectedMeasures.clear(); store.emit("selection"); return;
+    }
     if (e.key === " ") { e.preventDefault(); togglePlay(); return; }
     const k = { v: "select", n: "pencil", e: "erase", c: "chord", l: "lyrics", a: "annotate" }[e.key.toLowerCase()] as Tool | undefined;
     if (k && !mod) { setTool(k); return; }
@@ -631,15 +766,14 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
 
   // ------------------------------------------------------------ ações
   function togglePlay() {
-    if (audio.isPlaying()) { audio.stop(); playhead = -1; drawPlayhead(); playBtn.textContent = "▶ " + t("play"); return; }
+    if (audio.isPlaying()) { audio.stop(); playhead = -1; drawPlayhead(); return; }
     const s = store.score; const bpm = beatsPerMeasure(s);
     const sel = [...store.selectedMeasures].sort((a, b) => a - b);
-    playBtn.textContent = "■ " + t("stop");
     audio.play(s, {
       fromBeat: sel.length ? sel[0] * bpm : 0, toBeat: sel.length ? (sel[sel.length - 1] + 1) * bpm : undefined,
       metronome, loop,
       onBeat: (b) => { playhead = b; drawPlayhead(); },
-      onEnd: () => { playhead = -1; drawPlayhead(); playBtn.textContent = "▶ " + t("play"); },
+      onEnd: () => { playhead = -1; drawPlayhead(); },
     });
   }
 
@@ -732,7 +866,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     try {
       busy(btn, true, "");
       const rec = await audio.record({ countInBeats: bpm, spb, onCount: (n) => (btn.innerHTML = `<b>${n}</b>`) });
-      btn.innerHTML = "■ Gravando…"; btn.disabled = false;
+      btn.innerHTML = `<span class="tb-ic">■</span><span class="tb-lb">Gravando…</span>`; btn.disabled = false;
       audio.play(s, { fromBeat: from * bpm, toBeat: to * bpm, metronome: true, onBeat: (b) => { playhead = b; drawPlayhead(); } });
       await new Promise((r) => setTimeout(r, (to - from) * bpm * spb * 1000));
       const blob = await rec.stop();
@@ -756,11 +890,11 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const s = store.score; const bpm = beatsPerMeasure(s); const spb = 60 / s.tempo;
     const sel = [...store.selectedMeasures].sort((a, b) => a - b);
     const from = sel[0] ?? 0;
-    const label = btn.textContent || "";
+    const label = btn.innerHTML;
     try {
       busy(btn, true, "");
       const rec = await audio.record({ countInBeats: bpm, spb, onCount: (n) => (btn.innerHTML = `<b>${n}</b>`) });
-      btn.disabled = false; btn.classList.add("recording"); btn.textContent = "■ Parar gravação";
+      btn.disabled = false; btn.classList.add("recording"); btn.innerHTML = `<span class="tb-ic">■</span><span class="tb-lb">Parar gravação</span>`;
       const t0 = performance.now();
       audio.play(s, { fromBeat: from * bpm, metronome: true, onBeat: (b) => { playhead = b; drawPlayhead(); } });
       freeRec = {
@@ -769,7 +903,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
           const secs = (performance.now() - t0) / 1000;
           const blob = await rec.stop();
           audio.stop(); playhead = -1; drawPlayhead();
-          btn.classList.remove("recording"); btn.textContent = label;
+          btn.classList.remove("recording"); btn.innerHTML = label;
           const nMeas = Math.max(1, Math.ceil(secs / spb / bpm));
           const measures = Array.from({ length: nMeas }, (_, i) => from + i);
           const layer = { ...newLayer("recording", `Voz gravada c.${from + 1}–${from + nMeas}`), audioUrl: URL.createObjectURL(blob), audioOffset: from * bpm * spb, measures };
@@ -803,8 +937,9 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const a = (e as CustomEvent).detail;
     if (a === "harmonize") harmonize(harmBtn as HTMLButtonElement, false);
     if (a === "play-selection") { if (audio.isPlaying()) togglePlay(); togglePlay(); }
-    if (a === "record-free") recordFree(toolbar.querySelectorAll<HTMLButtonElement>(".btn.rec")[1]);
-    if (a === "record-section") recordSection(toolbar.querySelectorAll<HTMLButtonElement>(".btn.rec")[0]);
+    if (a === "record-free") recordFree(recMain);
+    if (a === "record-section") recordSection(recSecBtn);
+    if (a === "hand-both") { store.hand = "both"; syncStaffCtl(); render(); }
     if (a === "tool-pencil") setTool("pencil");
   };
   addEventListener("harmonia:action", onAction);
@@ -817,10 +952,11 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     }
     render();
   });
+  const offPlay = audio.onPlayState((on) => { playBtn.textContent = (on ? "■ " + t("stop") : "▶ " + t("play")); if (!on) { playhead = -1; drawPlayhead(); } });
   const ro = new ResizeObserver(() => render());
   ro.observe(canvas);
   setTool("select");
   render();
   win.setTitle(`${t("compose")} — ${store.score.title}`);
-  return () => { off(); ro.disconnect(); audio.stop(); removeEventListener("harmonia:action", onAction); };
+  return () => { off(); ro.disconnect(); audio.stop(); removeEventListener("harmonia:action", onAction); offPlay(); };
 }

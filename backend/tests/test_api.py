@@ -112,6 +112,8 @@ def test_admin_ai_credentials_and_diagnose(monkeypatch):
     res = {x["name"]: x for x in d["results"]}
     assert res["groq"]["ok"] and res["minha-ia"]["state"] == "erro" and "chave inválida" in res["minha-ia"]["detail"]
     assert res["offline"]["ok"] and res["mymemory"]["ok"] and d["working"] >= 1
+    one = c.post("/api/admin/ai/diagnose", json={"names": ["groq"]}, headers=ha).json()
+    assert [x["name"] for x in one["results"]] == ["groq"] and one["results"][0]["ok"]
     assert c.delete("/api/admin/ai/credentials/minha-ia", headers=ha).status_code == 200
     assert not any(p["name"] == "minha-ia" for p in c.get("/api/admin/ai", headers=ha).json()["providers"])
 

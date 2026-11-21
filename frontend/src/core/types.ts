@@ -51,7 +51,9 @@ export interface Annotation {
 }
 
 export type Clef = "G" | "F" | "C";
-export interface StaffCfg { clef: Clef; visible: boolean; }
+export interface StaffCfg { clef: Clef; visible: boolean; instrument?: string; }
+/** Mão (pauta) em edição: direita = superior, esquerda = inferior, ambas = as duas ao mesmo tempo. */
+export type Hand = "both" | "upper" | "lower";
 
 export interface Score {
   title: string;

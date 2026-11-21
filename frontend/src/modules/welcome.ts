@@ -5,6 +5,9 @@ import { api, setToken, currentUser } from "../core/api";
 import { store } from "../core/store";
 import { prefs, setCaptureMode, CaptureMode } from "../core/prefs";
 import { KEY_NAMES, NAMES } from "../core/theory";
+import { startTour, TOURS } from "./tour";
+
+const tour = (name: string) => setTimeout(() => startTour(name, TOURS[name]), 650);
 
 type Goal = "compose" | "image" | "record" | "audio";
 const onboardKey = () => `harmonia.onboarded.${currentUser?.id ?? "anon"}`;
@@ -61,8 +64,8 @@ export function showWizard(go: (id: string) => void) {
   let goal: Goal | null = null;
   const skip = () => {
     store.startFromScratch("Nova composição");
-    markOnboarded(); close(); go("compose");
-    toast("Estação completa aberta com um projeto vazio. O Maestro (🎼 ?) ajuda quando você quiser.", "info", 6000);
+    markOnboarded(); close();
+    toast(document.body.classList.contains("mobile") ? "Projeto vazio criado. Toque em ♫ Compor para editar." : "Projeto vazio criado. Abra o editor pelo ícone “Nova composição” ou ✎ Editar no pentagrama. O Maestro (🎼 ?) ajuda quando quiser.", "info", 7000);
   };
   const footer = (back?: () => void) => h("div", { class: "wiz-foot" },
     back ? h("button", { class: "btn ghost", onclick: back }, "‹ Voltar") : h("span"),
@@ -107,8 +110,7 @@ export function showWizard(go: (id: string) => void) {
       h("button", { class: "btn primary big", onclick: () => {
         store.startFromScratch("Minha melodia", { keySig: +key.value, timeSig: ts.value.split("/").map(Number) as [number, number], tempo: +tempo.value || 96, measures: +meas.value });
         markOnboarded(); close(); go("compose");
-        setTimeout(() => dispatchEvent(new CustomEvent("harmonia:action", { detail: "tool-pencil" })), 400);
-        toast("Escreva a melodia com ✎ Nota (toque na pauta). Depois selecione compassos e use ✨ Harmonizar.", "info", 8000);
+        tour("compose");
       } }, "Começar a compor"),
       footer(step1)), "Passo 2");
   }
@@ -119,12 +121,12 @@ export function showWizard(go: (id: string) => void) {
     markOnboarded(); close();
     if (goal === "record") {
       go("compose");
-      toast(`Toque em “● Nova voz” para gravar o tema (contagem de 1 compasso). Ao parar, ele vira camada ${m === "melody" ? "de melodia" : "e será transcrito"}.`, "info", 9000);
-      setTimeout(() => document.querySelectorAll<HTMLElement>(".btn.rec")[1]?.classList.add("attention"), 600);
+      tour("record");
     } else {
       prefs.importTab = goal === "image" ? "image" : "audio";
       go("import");
       dispatchEvent(new CustomEvent("import:preset", { detail: { tab: prefs.importTab, mode: m } }));
+      tour(prefs.importTab);
     }
   }
   step1();

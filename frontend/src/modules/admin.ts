@@ -29,10 +29,24 @@ export function mountAdmin(body: HTMLElement) {
         h("td", {}, p.configured ? `${SRC[p.keySource] || p.keySource} ${p.keyHint}` : "—"),
         h("td", { class: "mono" }, p.model),
         h("td", {}, !p.configured ? "sem chave" : p.paused ? `⏸ em pausa (${p.lastError})` : p.lastOk ? "✅ ok" : "pronto"),
-        h("td", {}, p.keySource === "painel" ? h("button", { class: "btn ghost danger", title: "Remover credencial do painel", onclick: async () => {
+        h("td", { class: "row-actions" },
+          p.configured ? h("button", { class: "btn ghost", title: "Testar só esta IA agora", onclick: (e: Event) => testOne(p.name, e.currentTarget as HTMLButtonElement) }, "🧪 Testar") : "",
+          h("button", { class: "btn ghost", title: p.configured ? "Trocar a chave / modelo desta IA" : "Cadastrar chave para esta IA", onclick: () => editCred(p.name) }, p.configured ? "🔑 Trocar" : "🔑 Cadastrar"),
+          p.keySource === "painel" ? h("button", { class: "btn ghost danger", title: "Remover credencial do painel", onclick: async () => {
           if (!confirm(`Remover a credencial de ${p.label}?`)) return;
           r = await api(`/api/admin/ai/credentials/${p.name}`, { method: "DELETE" }); drawStatus(); toast("Credencial removida", "ok");
         } }, "🗑") : ""))))));
+    /** Testa uma IA isolada e mostra o resultado na própria linha (notificação também). */
+    async function testOne(name: string, btn: HTMLButtonElement) {
+      btn.disabled = true; btn.textContent = "⏳";
+      try {
+        const d = await api("/api/admin/ai/diagnose", { method: "POST", json: { names: [name] } });
+        r = { providers: d.providers }; drawStatus();
+        const x = d.results[0];
+        if (x?.ok) toast(`✅ ${x.label} respondeu em ${x.ms} ms`, "ok", 4000);
+        else { toast(`❌ ${x?.label || name}: ${x?.code ? "HTTP " + x.code + " — " : ""}${x?.detail || "falhou"}${x?.provider_message ? " · " + x.provider_message : ""}`, "error", 9000); editCred(name); }
+      } catch (e: any) { toast(e.message, "error"); btn.disabled = false; btn.textContent = "🧪 Testar"; }
+    }
     drawStatus();
 
     // ----- diagnóstico
@@ -49,7 +63,8 @@ export function mountAdmin(body: HTMLElement) {
               h("td", {}, x.ok ? "✅" : x.state === "sem_chave" ? "⚪" : "❌"), h("td", {}, h("b", {}, x.label)), h("td", {}, SRC[x.keySource] ?? x.keySource),
               h("td", { class: "mono" }, x.model), h("td", {}, x.ms != null ? `${x.ms} ms` : "—"),
               h("td", {}, x.ok ? (x.reply ? `respondeu “${x.reply}”` : x.detail || "ok") : `${x.code ? "HTTP " + x.code + " — " : ""}${x.detail}`,
-                x.provider_message ? h("div", { class: "mono hint" }, "Provedor: " + x.provider_message) : ""))))));
+                x.provider_message ? h("div", { class: "mono hint" }, "Provedor: " + x.provider_message) : "",
+                !x.ok && !["mymemory", "offline"].includes(x.name) ? h("button", { class: "btn ghost", onclick: () => editCred(x.name) }, x.state === "sem_chave" ? "🔑 Cadastrar chave" : "🔑 Trocar chave e testar") : ""))))));
       } catch (e: any) { diagBox.replaceChildren(h("p", {}, "❌ " + e.message)); }
       finally { diagBtn.disabled = false; }
     } }, "🩺 Rodar diagnóstico") as HTMLButtonElement;
@@ -75,6 +90,15 @@ export function mountAdmin(body: HTMLElement) {
       model.placeholder = cur ? `Modelo (vazio = ${cur.model})` : "Modelo (ex.: deepseek-chat)";
     };
     sel.addEventListener("change", syncSel); syncSel();
+    /** Leva ao formulário já com o provedor escolhido: basta colar a nova chave e "Salvar e testar". */
+    function editCred(name: string) {
+      if (KNOWN.some((k) => k[0] === name)) sel.value = name;
+      else { sel.value = "__custom"; const cur = r.providers.find((p: any) => p.name === name); cname.value = name; clabel.value = cur?.label || name; }
+      syncSel();
+      formBox.scrollIntoView({ behavior: "smooth", block: "center" });
+      formBox.classList.add("flash"); setTimeout(() => formBox.classList.remove("flash"), 900);
+      setTimeout(() => key.focus(), 300);
+    }
     const save = h("button", { class: "btn primary", onclick: async () => {
       const custom = sel.value === "__custom";
       const body: any = { name: custom ? cname.value.trim().toLowerCase() : sel.value, key: key.value.trim() || undefined, model: model.value.trim() || undefined, test: true };
@@ -89,14 +113,16 @@ export function mountAdmin(body: HTMLElement) {
       finally { save.disabled = false; }
     } }, "💾 Salvar e testar") as HTMLButtonElement;
 
-    return h("div", { class: "ai-admin" },
-      h("h4", {}, "Provedores (ordem de failover)"), statusBox,
-      h("h4", {}, "Diagnóstico"), h("div", { class: "row" }, diagBtn, h("span", { class: "hint" }, "Testa cada IA isoladamente e mostra qual funciona e o motivo de falha (chave inválida, limite, modelo inexistente…).")), diagBox,
-      h("h4", {}, "Registrar ou atualizar credencial"),
+    const formBox = h("div", { class: "cred-form" },
       h("div", { class: "grid2" }, h("label", {}, "Provedor", sel), h("label", {}, "Modelo", model)),
       customBox,
       h("label", { class: "prop" }, h("span", {}, "Chave de API"), h("div", { class: "prop-ctl" }, key)), link,
-      h("div", { class: "row" }, save, result),
+      h("div", { class: "row" }, save, result));
+    key.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save.click(); } });
+    return h("div", { class: "ai-admin" },
+      h("h4", {}, "Provedores (ordem de failover)"), statusBox,
+      h("h4", {}, "Diagnóstico"), h("div", { class: "row" }, diagBtn, h("span", { class: "hint" }, "Testa cada IA isoladamente e mostra qual funciona e o motivo de falha (chave inválida, limite, modelo inexistente…).")), diagBox,
+      h("h4", {}, "Registrar ou atualizar credencial"), formBox,
       h("p", { class: "hint" }, "A chave é cifrada (AES-256-GCM) antes de ir ao banco e nunca volta para a tela — aparecem só os 4 últimos caracteres. Chave cadastrada aqui tem prioridade sobre a do .env/GitHub para o mesmo provedor. Deixe a chave em branco para trocar só o modelo."));
   }
 
