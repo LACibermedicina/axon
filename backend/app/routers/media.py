@@ -49,8 +49,14 @@ async def upload(kind: str = Form(...), file: UploadFile = File(...),
     ext = Path(file.filename or "").suffix.lower()[:6] or ".bin"
     rel = f"u{user.id}/{kind}/{uuid.uuid4().hex}{ext}"
     dst = Path(settings().media_root) / rel
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_bytes(data)
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(data)
+    except OSError as e:
+        import logging
+        logging.getLogger("harmonia.media").error("falha ao gravar %s: %s", dst, e)
+        raise HTTPException(507, "O servidor não conseguiu salvar o arquivo (sem permissão ou sem espaço na pasta de mídia). "
+                                 "O administrador pode corrigir rodando a atualização na VPS.")
     a = Asset(owner_id=user.id, kind=kind, path=rel, mime=file.content_type or "", size=len(data))
     db.add(a); db.commit()
     return {"id": a.id, "path": rel, "url": f"/api/media/{rel}", "size": a.size}
@@ -90,9 +96,12 @@ def create_job(body: JobIn, user: User = Depends(require("ai"))):
         except (ValueError, KeyError) as e:
             raise HTTPException(422, str(e))
     jid = uuid.uuid4().hex
-    rds().hset(f"harmonia:job:{jid}", mapping={"status": "queued", "owner": str(user.id), "type": body.type})
-    rds().expire(f"harmonia:job:{jid}", 86400)
-    rds().rpush("harmonia:jobs", json.dumps({"id": jid, "type": body.type, "payload": p}))
+    try:
+        rds().hset(f"harmonia:job:{jid}", mapping={"status": "queued", "owner": str(user.id), "type": body.type})
+        rds().expire(f"harmonia:job:{jid}", 86400)
+        rds().rpush("harmonia:jobs", json.dumps({"id": jid, "type": body.type, "payload": p}))
+    except redis.RedisError:
+        raise HTTPException(503, "A fila de processamento de IA está fora do ar (Redis). O arquivo foi enviado; tente de novo em instantes.")
     return {"id": jid, "status": "queued"}
 
 

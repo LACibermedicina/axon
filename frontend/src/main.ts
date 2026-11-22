@@ -3,7 +3,7 @@ import "./styles/main.css";
 import { initWM, openApp, AppDef, onWindowsChange, openWindows, restoreWindow, minimizeAll } from "./core/wm";
 import { initDevice, isMobile, preference, setPreference, toggleLargeText, toggleContrast } from "./core/device";
 import { ICONS, installIconDefs } from "./core/icons";
-import { h, toast } from "./core/ui";
+import { h, toast, installTips } from "./core/ui";
 import { LANGS, setLang, lang, t, watchI18n } from "./core/i18n";
 import { restoreSession, currentUser, api } from "./core/api";
 import { store } from "./core/store";
@@ -29,7 +29,7 @@ import { playerBar } from "./modules/playerbar";
 import { mountTaskHub } from "./modules/taskhub";
 import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.7.1-alpha";
+const VERSION = "0.7.2-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1220, innerWidth - 24 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 16, y: 44, mount: mountScoreEditor },
@@ -338,6 +338,7 @@ function mobileShell() {
 
 async function boot() {
   installIconDefs();
+  installTips();
   initDevice();
   const app = document.getElementById("app")!;
   const winLayer = h("div", { class: "win-layer", id: "main-content" });
@@ -379,6 +380,8 @@ async function boot() {
   });
   document.addEventListener("visibilitychange", () => document.hidden && audio.stop());
   watchForUpdates();
+  // aviso ao administrador quando o servidor não consegue gravar arquivos (envio de áudio/imagem falharia)
+  setTimeout(async () => { try { const hc = await api("/api/health"); if (hc.storage === false && isAdmin()) toast("⚠️ O servidor não consegue gravar na pasta de mídia: envios vão falhar. Rode a atualização na VPS (corrige a permissão).", "warn", 12000); } catch { /* */ } }, 4000);
   await restoreSession();
   // Fluxo de entrada: link público → abre direto; sem sessão → tela de login/visitante;
   // usuário novo → passo a passo; senão → estação completa (desktop) ou Início (celular).

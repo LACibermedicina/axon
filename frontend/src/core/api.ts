@@ -78,6 +78,15 @@ export async function runJob(type: string, payload: any, onProgress?: (s: string
   throw fail("Tempo esgotado (20 min). Tente um trecho menor.");
 }
 
+/** Mensagem compreensível para falhas de envio (o servidor nem sempre devolve JSON). */
+function uploadError(status: number, detail?: any) {
+  if (typeof detail === "string" && detail) return detail;
+  return ({ 401: "Sua sessão expirou — entre de novo", 403: "Sem permissão para enviar arquivos", 413: "Arquivo grande demais — recorte um trecho menor",
+    415: "Formato não suportado — use MP3, WAV, M4A, OGG, PNG ou JPG", 500: "Erro no servidor ao salvar o arquivo — o administrador precisa rodar a atualização na VPS",
+    502: "Servidor reiniciando — tente de novo em 1 minuto", 503: "Servidor ocupado — tente de novo em instantes", 504: "O envio demorou demais — tente um trecho menor",
+    507: "O servidor não conseguiu salvar o arquivo (permissão/espaço)" } as Record<number, string>)[status] || `Falha no envio (HTTP ${status || "sem resposta"})`;
+}
+
 /** Envia um arquivo. Com `task`, mostra o % do envio no ícone de tarefas. */
 export async function upload(kind: string, blob: Blob, filename: string, task?: Task) {
   const fd = new FormData();
@@ -91,8 +100,8 @@ export async function upload(kind: string, blob: Blob, filename: string, task?: 
     x.upload.onprogress = (e) => { if (e.lengthComputable) updateTask(task, { pct: Math.round((e.loaded / e.total) * 4), detail: `${Math.round(e.loaded / 1024)} de ${Math.round(e.total / 1024)} KB` }); };
     x.onload = () => {
       let body: any = {}; try { body = JSON.parse(x.responseText); } catch { /* */ }
-      if (x.status >= 200 && x.status < 300) { updateTask(task, { pct: 4, detail: "arquivo enviado" }); resolve(body); }
-      else { const m = body.detail || x.statusText || "Falha no envio"; updateTask(task, { status: "error", error: m, endedAt: Date.now() }); reject(new Error(m)); }
+      if (x.status >= 200 && x.status < 300) { updateTask(task, { pct: 4, stage: "queue", stageLabel: "Na fila do processador de IA", detail: "arquivo enviado" }); resolve(body); }
+      else { const m = uploadError(x.status, body.detail); updateTask(task, { status: "error", error: m, endedAt: Date.now() }); reject(new Error(m)); }
     };
     x.onerror = () => { updateTask(task, { status: "error", error: "Sem conexão com o servidor", endedAt: Date.now() }); reject(new Error("Sem conexão com o servidor")); };
     x.send(fd);

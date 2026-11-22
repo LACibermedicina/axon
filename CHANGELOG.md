@@ -2,6 +2,18 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.7.2-alpha] — 2026-11-22
+
+### Corrigido — envio de arquivos ("Falha no envio")
+- **Causa**: a pasta de mídia da VPS (`data/media`) pertencia ao root e os containers rodam como usuário 10001 — todo envio de áudio/imagem terminava em "Internal Server Error". O deploy agora ajusta a permissão de `data/media` e `data/models` a cada atualização.
+- `/api/health` informa `storage` (se a mídia aceita gravação) e o administrador recebe aviso quando não aceita.
+- Erros do servidor voltam sempre em JSON legível; falha ao gravar devolve 507 com explicação; fila de IA fora do ar devolve 503 com explicação.
+- No navegador, falhas de envio mostram o motivo pelo código (sessão expirada, arquivo grande, formato, servidor reiniciando…) em vez de "Falha no envio". Após o envio, a tarefa passa corretamente para "Na fila".
+
+### Alterado — barra de ferramentas
+- Ferramentas **agrupadas** com títulos discretos: **Criar** (Gravar, Importar) · **Escrever** (Mover, Nota, Apagar, Cifra, Letra, Nota+) · **Ajustar** (Duração, Ouvir, Pauta, Editar) · **IA** (Harmonia), com ícones 3D menores e animação suave.
+- **Dicas flutuantes** novas em todo o app: ficam por cima de tudo (nunca cortadas pela janela ou pelo painel), ao lado das barras laterais, dentro da tela, com título em destaque e seta; também aparecem ao navegar pelo teclado.
+
 ## [0.7.1-alpha] — 2026-11-22
 
 ### Adicionado — transcrições com feedback e % de evolução

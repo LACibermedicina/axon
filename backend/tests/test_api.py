@@ -129,3 +129,19 @@ def test_guest_login():
     comp = c.post("/api/compositions", json={"title": "Rascunho"}, headers=hg)
     assert comp.status_code == 200
     assert c.post(f"/api/compositions/{comp.json()['id']}/publish", json={"visibility": "public"}, headers=hg).status_code == 403
+
+
+def test_upload_and_storage_health(tmp_path, monkeypatch):
+    h = auth()
+    hc = c.get("/api/health").json()
+    assert "storage" in hc
+    wav = b"RIFF" + b"\0" * 40
+    ok = c.post("/api/assets", data={"kind": "audio"}, files={"file": ("Raiz_da_Equação.wav", wav, "audio/wav")}, headers=h)
+    assert ok.status_code == 200 and ok.json()["path"].endswith(".wav")
+    # sem permissão para gravar: erro claro (507) em vez de "Internal Server Error"
+    from pathlib import Path
+    def boom(*a, **k):
+        raise PermissionError("negado")
+    monkeypatch.setattr(Path, "write_bytes", boom)
+    bad = c.post("/api/assets", data={"kind": "audio"}, files={"file": ("a.wav", wav, "audio/wav")}, headers=h)
+    assert bad.status_code == 507 and "salvar o arquivo" in bad.json()["detail"]

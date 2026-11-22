@@ -1036,3 +1036,27 @@ body:not(.mobile) .rail-pinned .btn .tb-lb { font-size: 9.5px; }
 .th-result.err { background: #fdecec; }
 body.mobile .taskhub { left: 10px; bottom: calc(var(--tabbar) + 60px); }
 body.mobile .th-fab { width: 58px; height: 58px; } body.mobile .th-face { top: 6px; } body.mobile .th-panel { width: calc(100vw - 20px); }
+
+/* ===================================================== v0.7.2 — dicas flutuantes + barra agrupada */
+[data-tip]:hover::after { display: none !important; content: none !important; }
+#tipbox { position: fixed; z-index: 10000; max-width: 300px; padding: 9px 12px; border-radius: 12px; background: #221a3d; color: #fff; font-size: 12px; line-height: 1.45;
+  box-shadow: 0 12px 30px rgba(10, 0, 40, .4); pointer-events: none; animation: tipin .16s ease-out; }
+#tipbox b { display: block; font-size: 12.5px; margin-bottom: 2px; color: #ffd36e; }
+#tipbox::before { content: ""; position: absolute; width: 10px; height: 10px; background: #221a3d; transform: rotate(45deg); }
+#tipbox.at-right::before { left: -4px; top: calc(50% - 5px); } #tipbox.at-left::before { right: -4px; top: calc(50% - 5px); }
+#tipbox.at-below::before { top: -4px; left: calc(50% - 5px); } #tipbox.at-above::before { bottom: -4px; left: calc(50% - 5px); }
+@keyframes tipin { from { opacity: 0; transform: translateY(3px) scale(.97); } }
+/* barra lateral agrupada: Criar · Escrever · Ajustar · IA */
+body:not(.mobile) .rail { width: 92px; padding: 6px 7px 10px; gap: 2px; }
+.rail-sec { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 6px 0 7px; border-bottom: 1px dashed #ebe6fa; }
+.rail-sec:last-child { border-bottom: 0; }
+.rail-h { font-size: 8.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #b2a8d4; text-align: center; }
+.rail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+body:not(.mobile) .rail .rail-btn { width: 100%; padding: 2px 0; }
+body:not(.mobile) .rail-btn .rail-ic, body:not(.mobile) .rail-btn .rail-ic svg { width: 32px; height: 32px; }
+body:not(.mobile) .rail-btn small { font-size: 9px; }
+.rail .ic3d { opacity: .92; transition: opacity .15s, transform .15s; } .rail button:hover .ic3d { opacity: 1; }
+.rail button:hover .ic3d .ic-bounce { animation-duration: .5s; }
+.rail-sec[aria-label="IA"] .rail-btn .rail-ic, .rail-sec[aria-label="IA"] .rail-btn .rail-ic svg { width: 38px; height: 38px; }
+body.mobile .rail-sec { flex-direction: row; border: 0; padding: 0; width: auto; align-items: center; } body.mobile .rail-h { display: none; }
+body.mobile .rail-grid { display: flex; }

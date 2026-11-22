@@ -79,7 +79,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
 
   // ------------------------------------------------------------ toolbar
   const toolBtn = (id: Tool, icon: string, label: string, help: string) =>
-    tip(h("button", { class: "tool" + (tool === id ? " on" : ""), "data-tool": id, "aria-label": label, onclick: () => setTool(id) }, h("span", { html: icon }), h("small", {}, label)), help);
+    tip(h("button", { class: "tool" + (tool === id ? " on" : ""), "data-tool": id, "aria-label": label, onclick: () => setTool(id) }, h("span", { html: icon }), h("small", {}, label)), `${label} — ${help}`);
   const tools = h("div", { class: "seg" },
     toolBtn("select", ICONS.t_select, "Mover", "Selecionar e arrastar notas. ↑↓ transpõe, Shift+arrastar = cromático, Alt+arrastar = duplicar."),
     toolBtn("pencil", ICONS.t_pencil, "Nota", "Clique na pauta para inserir uma nota com a duração escolhida."),
@@ -216,7 +216,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const fly = h("div", { class: "fly", role: "dialog", hidden: true });
   let openGroup = "";
   const groupBtns = GROUPS.map((g) => tip(h("button", { class: "rail-btn", "data-group": g.id, style: { "--c": g.color }, "aria-label": g.label, "aria-expanded": "false",
-    onclick: () => toggleGroup(g.id) }, h("span", { class: "rail-ic", "aria-hidden": "true", html: g.icon }), h("small", {}, g.label)), g.help));
+    onclick: () => toggleGroup(g.id) }, h("span", { class: "rail-ic", "aria-hidden": "true", html: g.icon }), h("small", {}, g.label)), `${g.label} — ${g.help}`));
   function toggleGroup(id: string) {
     if (openGroup === id || !id) { openGroup = ""; fly.hidden = true; }
     else {
@@ -248,8 +248,13 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   let tb: { mode: "docked" | "floating"; x: number; y: number } = { mode: "docked", x: 12, y: 12 };
   try { tb = { ...tb, ...JSON.parse(localStorage.getItem(TB_KEY) || "{}") }; } catch { /* */ }
   const tbGrip = h("div", { class: "rail-grip", title: "Arraste para mover a barra de ferramentas · duplo clique: voltar para a lateral" }, "⋯");
+  const gb = (id: string) => groupBtns.find((b) => b.dataset.group === id)!;
+  const sec = (label: string, ...kids: HTMLElement[]) => h("div", { class: "rail-sec", role: "group", "aria-label": label }, h("small", { class: "rail-h" }, label), ...kids);
   const toolbar = h("aside", { class: "rail", "aria-label": "Barra de ferramentas da composição" }, tbGrip,
-    h("div", { class: "rail-pinned" }, recMain, importBtn), h("i", { class: "rail-sep" }), tools, h("i", { class: "rail-sep" }), ...groupBtns);
+    sec("Criar", h("div", { class: "rail-pinned" }, recMain, importBtn)),
+    sec("Escrever", tools),
+    sec("Ajustar", h("div", { class: "rail-grid" }, gb("dur"), gb("play"), gb("staff"), gb("edit"))),
+    sec("IA", gb("harm")));
   const applyTb = () => {
     toolbar.classList.toggle("floating", tb.mode === "floating");
     if (tb.mode === "floating") Object.assign(toolbar.style, { left: tb.x + "px", top: tb.y + "px", maxHeight: Math.max(160, (stage.clientHeight || 400) - tb.y - 6) + "px" }); else toolbar.removeAttribute("style");
