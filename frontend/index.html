@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>axon · Biofísica da Neuromodulação</title>
+<meta name="description" content="axon — simulação biofísica multiescala, mapeamento neuroanatômico e dosimetria computacional. Pesquisa e ensino in silico.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/axon.css">
+</head>
+<body>
+<header class="menubar">
+  <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+  <span class="pill">v0.1.0-alpha</span><span class="pill" id="apiPill">offline</span>
+  <div class="brand">axon <small>axon.m3d.pro</small></div>
+  <span class="sp"></span>
+  <div class="flags" id="flags" role="group" aria-label="Idioma"></div>
+</header>
+<div class="disclaimer" role="note"><b>⚠</b> <span data-i18n="disclaimer"></span></div>
+
+<main class="desk">
+  <aside class="side" id="left" aria-label="Anatomia, sintomas e protocolo">
+    <div class="side-h"><button aria-label="Recolher painel">‹</button><span data-i18n="leftTitle"></span></div>
+    <div class="side-body">
+      <div class="tabs" id="leftTabs"><button data-tab="anat" data-i18n="tabAnat"></button><button data-tab="phys" data-i18n="tabPhys"></button><button data-tab="proto" data-i18n="tabProto"></button></div>
+      <div id="leftBody"></div>
+    </div>
+  </aside>
+
+  <section class="stage" id="stage" aria-label="Palco 3D multiescala">
+    <div class="gl"></div><div class="labels"></div><div class="stage-fade"></div>
+    <nav class="scalebar" id="scalebar" aria-label="Escala"></nav>
+    <div class="hint">arraste: girar · roda: zoom semântico · clique: selecionar</div>
+    <div class="legend"><span class="fib"><i style="background:#4fb3ff"></i>Aβ</span><span class="fib"><i style="background:#ff8a3d"></i>Aδ</span><span class="fib"><i style="background:#ffb547"></i>nervos</span><span class="fib"><i style="background:#4fb3ff"></i>vago</span><span class="fib"><i style="background:#6ee7a8"></i>simpático</span><span class="fib"><i style="background:#ff5fa2"></i>acupontos</span><span id="fstat"></span></div>
+  </section>
+
+  <aside class="side" id="right" aria-label="Parâmetros e IA preditiva">
+    <div class="side-h"><button aria-label="Recolher painel">›</button><span data-i18n="rightTitle"></span></div>
+    <div class="side-body" id="rightBody"></div>
+  </aside>
+</main>
+
+<nav class="dock" id="dock" aria-label="Dock de aplicativos"></nav>
+<div class="bot" id="bot" title="Axon Bot"><div class="bubble"></div><div class="art"></div><button id="botMute" aria-label="Silenciar" style="position:absolute;right:0;top:0;border:0;background:rgba(0,0,0,.4);border-radius:10px;font-size:12px">🔊</button></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/reference.js"></script>
+<script src="js/model.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/stage3d.js"></script>
+<script src="js/app.js"></script>
+<script>{ try { AxonApp.init(); } catch (e) { console.error(e); document.body.insertAdjacentHTML("beforeend", '<div class="warnbox" style="position:fixed;top:80px;left:20px;z-index:99">Falha ao iniciar o palco 3D: ' + e.message + '</div>'); } }</script>
+</body>
+</html>

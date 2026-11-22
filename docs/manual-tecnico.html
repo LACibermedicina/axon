@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>axon · Manual Técnico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="doc.css">
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="#inicio"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="#10262d"/><path d="M5 16h4l3-7 4 14 3-9 2 2h6" fill="none" stroke="#3ee6c5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>axon <span style="font-weight:500;color:var(--muted);font-size:14px">Manual Técnico</span></a>
+  <span class="sp"></span>
+  <input id="q" type="search" placeholder="Buscar (ex.: SERVIDOR_ENV)…" aria-label="Buscar no manual">
+  <a class="b" href="manual-usuario.html">Manual do usuário</a>
+  <a class="b pri" href="../">Abrir o axon</a>
+</header>
+
+<div class="hero" id="inicio">
+  <div class="in">
+    <div>
+      <h1>Duas funções puras, um domínio verificado, uma semente fixa.</h1>
+      <p>Referência de arquitetura, API, núcleo científico, frontend 3D, infraestrutura e processo de desenvolvimento do <b>axon</b> — para quem vai implantar, manter, auditar ou estender.</p>
+      <div class="meta">v0.1.0-alpha · Python 3.11 · FastAPI · NumPy/SciPy · Three.js r128 · Docker Compose · GitHub Actions</div>
+    </div>
+    <figure>
+      <svg viewBox="0 0 700 380" role="img" aria-label="Arquitetura em camadas do axon">
+        <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+        <g font-size="12.5" fill="#e9f3ef" text-anchor="middle">
+          <rect x="10" y="10" width="680" height="64" rx="12" fill="#1c3e48" stroke="#7fd6e0"/><text x="350" y="32" font-weight="700">Apresentação — Desktop macOS 3D (navegador)</text>
+          <g font-size="11"><rect x="24" y="42" width="120" height="22" rx="6" fill="#123039"/><text x="84" y="57">stage3d · 5 níveis</text><rect x="152" y="42" width="120" height="22" rx="6" fill="#123039"/><text x="212" y="57">app · janelas/Dock</text><rect x="280" y="42" width="120" height="22" rx="6" fill="#123039"/><text x="340" y="57">model.js (port)</text><rect x="408" y="42" width="120" height="22" rx="6" fill="#123039"/><text x="468" y="57">charts · canvas</text><rect x="536" y="42" width="140" height="22" rx="6" fill="#123039"/><text x="606" y="57">i18n · 5 idiomas</text></g>
+          <rect x="10" y="100" width="680" height="64" rx="12" fill="#1c3e48" stroke="#3ee6c5"/><text x="350" y="122" font-weight="700">Serviço — FastAPI /api · envelope de procedência</text>
+          <g font-size="11"><rect x="24" y="132" width="150" height="22" rx="6" fill="#123039"/><text x="99" y="147">/model /safety</text><rect x="182" y="132" width="150" height="22" rx="6" fill="#123039"/><text x="257" y="147">/integrative /anatomy</text><rect x="340" y="132" width="150" height="22" rx="6" fill="#123039"/><text x="415" y="147">/noise</text><rect x="498" y="132" width="178" height="22" rx="6" fill="#123039"/><text x="587" y="147">/ai · failover provedores</text></g>
+          <rect x="10" y="190" width="680" height="64" rx="12" fill="#1c3e48" stroke="#ffb547"/><text x="350" y="212" font-weight="700">Núcleo científico — core/ (puro, sem estado)</text>
+          <g font-size="11"><rect x="24" y="222" width="120" height="22" rx="6" fill="#123039"/><text x="84" y="237">bio_model</text><rect x="152" y="222" width="120" height="22" rx="6" fill="#123039"/><text x="212" y="237">safety</text><rect x="280" y="222" width="120" height="22" rx="6" fill="#123039"/><text x="340" y="237">stochastic</text><rect x="408" y="222" width="120" height="22" rx="6" fill="#123039"/><text x="468" y="237">integrative</text><rect x="536" y="222" width="140" height="22" rx="6" fill="#123039"/><text x="606" y="237">anatomy</text></g>
+          <rect x="10" y="280" width="680" height="44" rx="12" fill="#1c3e48" stroke="#c084fc"/><text x="350" y="307" font-weight="700">Infraestrutura — Docker · nginx · proxy do host/Traefik · Let's Encrypt · CI/CD</text>
+          <rect x="10" y="336" width="680" height="34" rx="10" fill="#2a1f3a" stroke="#c084fc" stroke-dasharray="4 3"/><text x="350" y="358">Procedência atravessa todas as camadas: nenhum número sem etiqueta, versão e semente</text>
+        </g>
+        <g stroke="#ffd36b" stroke-width="2" marker-end="url(#a1)"><path d="M350 74v24"/><path d="M350 164v24"/><path d="M350 254v24"/></g>
+      </svg>
+    </figure>
+  </div>
+</div>
+
+<div class="wrap">
+<nav class="toc" aria-label="Índice">
+  <div class="grp">Arquitetura</div><a href="#principios">Princípios</a><a href="#contexto">Contexto e containers</a><a href="#repo">Estrutura do repositório</a>
+  <div class="grp">Ciência</div><a href="#nucleo">Núcleo nodal</a><a href="#verificacao">Verificação</a><a href="#modulos">Módulos científicos</a>
+  <div class="grp">Interfaces</div><a href="#api">API REST</a><a href="#frontend">Frontend 3D</a><a href="#ia">IA contextual</a>
+  <div class="grp">Operação</div><a href="#infra">Implantação na VPS</a><a href="#cicd">CI/CD e SERVIDOR_ENV</a><a href="#seguranca">Segurança e LGPD</a><a href="#testes">Testes</a>
+  <div class="grp">Processo</div><a href="#contrib">Contribuição</a><a href="#adr">Decisões (ADR)</a><a href="#roadmap">Roadmap</a><a href="#problemas">Solução de problemas</a>
+</nav>
+<main>
+
+<section id="principios">
+  <h2>Princípios de engenharia</h2>
+  <div class="grid2">
+    <div class="card"><h4>Procedência obrigatória</h4><p>Toda saída da API é embrulhada num envelope com <code>provenance</code>, <code>version</code>, <code>seed</code> e <code>disclaimer</code>. Todo parâmetro novo entra com etiqueta no comentário da linha.</p></div>
+    <div class="card"><h4>Núcleo puro</h4><p><code>h()</code> e <code>Ith()</code> não têm estado global nem efeitos colaterais. Unidades CGS no núcleo; conversão só na fronteira pública.</p></div>
+    <div class="card"><h4>Domínio é contrato</h4><p>Fora de 1–16 µm ou 0,3–1,5 mm, <code>Ith_checked</code> levanta <code>DomainError</code> e a API responde 422. Estender o domínio exige refazer a convergência.</p></div>
+    <div class="card"><h4>Funciona offline</h4><p>O frontend tem um port numericamente idêntico do núcleo: o desktop roda de um pen drive, sem rede (Decisão 6 do livro). A API acrescenta IA e salas.</p></div>
+  </div>
+</section>
+
+<section id="contexto">
+  <h2>Contexto e containers</h2>
+  <figure class="board">
+    <svg viewBox="0 0 800 400" role="img" aria-label="Diagrama de containers e implantação">
+      <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+      <g font-size="12" fill="#e9f3ef" text-anchor="middle">
+        <rect x="20" y="20" width="140" height="56" rx="10" fill="#1c3e48" stroke="#7fd6e0"/><text x="90" y="44">Navegador</text><text x="90" y="62" fill="#9fc" font-size="11">estudante · docente</text>
+        <rect x="20" y="300" width="140" height="70" rx="10" fill="#1c3e48" stroke="#c084fc"/><text x="90" y="324">GitHub Actions</text><text x="90" y="342" fill="#9fc" font-size="11">ci-axon</text><text x="90" y="358" fill="#9fc" font-size="11">secrets: SERVIDOR_ENV</text>
+        <rect x="200" y="20" width="580" height="360" rx="14" fill="none" stroke="#7fd6e0" stroke-dasharray="5 4"/><text x="490" y="40" fill="#9fc">VPS compartilhada · /opt/axon</text>
+        <rect x="220" y="60" width="150" height="56" rx="10" fill="#2a3448" stroke="#ffb547"/><text x="295" y="84">Proxy do host</text><text x="295" y="102" fill="#9fc" font-size="11">nginx/apache :443 · certbot</text>
+        <rect x="410" y="60" width="150" height="56" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="485" y="84">web (nginx)</text><text x="485" y="102" fill="#9fc" font-size="11">127.0.0.1:HTTP_PORT→8080</text>
+        <rect x="410" y="160" width="150" height="56" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="485" y="184">api (FastAPI)</text><text x="485" y="202" fill="#9fc" font-size="11">:8000 · uvicorn</text>
+        <rect x="600" y="60" width="160" height="56" rx="10" fill="#1c3e48" stroke="#4fb3ff" stroke-dasharray="4 3"/><text x="680" y="84">realtime (Node ws)</text><text x="680" y="102" fill="#9fc" font-size="11">perfil collab · :8090</text>
+        <rect x="600" y="160" width="160" height="56" rx="10" fill="#1c3e48" stroke="#4fb3ff" stroke-dasharray="4 3"/><text x="680" y="184">db (PostgreSQL 16)</text><text x="680" y="202" fill="#9fc" font-size="11">perfil data</text>
+        <rect x="600" y="240" width="160" height="56" rx="10" fill="#1c3e48" stroke="#4fb3ff" stroke-dasharray="4 3"/><text x="680" y="264">graph (Neo4j 5)</text><text x="680" y="282" fill="#9fc" font-size="11">perfil data</text>
+        <rect x="410" y="300" width="150" height="56" rx="10" fill="#2a1f3a" stroke="#c084fc"/><text x="485" y="324">.env (chmod 600)</text><text x="485" y="342" fill="#9fc" font-size="11">merge-env.sh</text>
+        <rect x="220" y="160" width="150" height="56" rx="10" fill="#2a3448" stroke="#ff8a3d"/><text x="295" y="184">Provedores de IA</text><text x="295" y="202" fill="#9fc" font-size="11">Anthropic, Groq, Gemini…</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="1.8" fill="none" marker-end="url(#a2)"><path d="M160 48h58"/><path d="M370 88h38"/><path d="M485 116v42"/><path d="M560 88h38"/><path d="M560 188h38"/><path d="M560 200 C580 240 590 260 598 266"/><path d="M408 188h-36"/><path d="M160 330h248"/><path d="M485 300v-82"/></g>
+      <g font-size="10.5" fill="#ffd36b"><text x="168" y="40">HTTPS</text><text x="374" y="80">proxy</text><text x="492" y="140">/api</text><text x="564" y="80">/ws</text><text x="374" y="180">egress</text><text x="230" y="322">SSH: rsync · deploy.sh · merge-env</text><text x="492" y="270">env_file</text></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha T1.</b> Containers e implantação. Linha tracejada = perfil opcional do Compose. Redes: <code>edge</code> (web), <code>internal</code> (sem saída), <code>egress</code> (api → IA).</figcaption>
+</section>
+
+<section id="repo">
+  <h2>Estrutura do repositório</h2>
+<pre><code>axon/
+├── .github/workflows/deploy.yml   # ci-axon: test → sync-ai-env → deploy (SSH)
+├── backend/
+│   ├── core/                      # núcleo científico puro (sem FastAPI)
+│   │   ├── bio_model.py           # h(), Ith(), Monte Carlo — Anexo G
+│   │   ├── safety.py              # Shannon, Pennes 0D/CEM43, MI, crônica
+│   │   ├── stochastic.py          # k_BT, ressonância estocástica
+│   │   ├── integrative.py         # EA, taVNS (ABVN), acupressão
+│   │   └── anatomy.py             # variações anatômicas (regras, LGPD)
+│   ├── app/main.py · app/ai.py    # API e IA contextual com failover
+│   ├── tests/                     # 28 testes + API (TestClient)
+│   └── Dockerfile · requirements*.txt
+├── frontend/                      # desktop 3D (HTML/CSS/JS, Three.js r128)
+│   ├── index.html · css/axon.css · nginx.conf · Dockerfile
+│   └── js/ model.js stage3d.js app.js charts.js i18n.js data.js icons.js reference.js
+├── realtime/                      # sinalização WebRTC (Node + ws)
+├── infra/traefik/ · infra/host-proxy/
+├── scripts/ setup_vps.sh deploy.sh merge-env.sh ci-sync-ai-env.sh lib-ports.sh build_standalone.py
+├── docs/ manual-usuario.html manual-tecnico.html · site/index.html
+├── docker-compose.yml · .env.example · VERSION · CHANGELOG.md</code></pre>
+</section>
+
+<section id="nucleo">
+  <h2>Núcleo nodal (Caps. 3, 6 e 7; Anexo G)</h2>
+  <p>Cadeia McNeal-like de N = 41 nós, membrana passiva, regime linear. Como a resposta é linear na corrente, o limiar sai por divisão: I<sub>lim</sub> = V<sub>lim</sub> / h(D, r).</p>
+  <div class="eq">Vₑ(xₙ) = −ρₑ·I / (4π·√(xₙ² + r²)),  xₙ = (n − 20)·L,  L = 100·D</div>
+  <div class="eq">C·dVₙ/dt = −g·Vₙ + Gₐ·(Vₙ₋₁ − 2Vₙ + Vₙ₊₁) + Gₐ·(Vₑ,ₙ₋₁ − 2Vₑ,ₙ + Vₑ,ₙ₊₁)</div>
+  <div class="eq">Gₐ = π·d²/(4·ρᵢ·L) · C = Cₘ·π·d·Lₙ · g = g_L·π·d·Lₙ · d = 0,7·D</div>
+  <figure class="board">
+    <svg viewBox="0 0 800 210" role="img" aria-label="Os sete passos do preditor">
+      <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+      <g font-size="11.5" fill="#e9f3ef" text-anchor="middle">
+        <rect x="10" y="20" width="370" height="150" rx="12" fill="none" stroke="#3ee6c5" stroke-dasharray="4 3"/><text x="195" y="40" fill="#8ff3df">grade determinística</text>
+        <rect x="420" y="20" width="370" height="150" rx="12" fill="none" stroke="#c084fc" stroke-dasharray="4 3"/><text x="605" y="40" fill="#dcbcff">amostragem estocástica (semente 42)</text>
+        <rect x="24" y="64" width="104" height="70" rx="9" fill="#1c3e48"/><text x="76" y="92">1 · Vₑ por nó</text><text x="76" y="110" fill="#9fc">fonte pontual</text>
+        <rect x="142" y="64" width="104" height="70" rx="9" fill="#1c3e48"/><text x="194" y="92">2 · Euler 1 µs</text><text x="194" y="110" fill="#9fc">400 passos</text>
+        <rect x="260" y="64" width="104" height="70" rx="9" fill="#1c3e48"/><text x="312" y="92">3 · grade</text><text x="312" y="110" fill="#9fc">16 D × 5 r</text>
+        <rect x="434" y="64" width="80" height="70" rx="9" fill="#2a1f3a"/><text x="474" y="92">4 · N=20k</text><text x="474" y="110" fill="#9fc">D, r</text>
+        <rect x="524" y="64" width="80" height="70" rx="9" fill="#2a1f3a"/><text x="564" y="92">5 · interp.</text><text x="564" y="110" fill="#9fc">log–log</text>
+        <rect x="614" y="64" width="80" height="70" rx="9" fill="#2a1f3a"/><text x="654" y="92">6 · curvas</text><text x="654" y="110" fill="#9fc">F(I)</text>
+        <rect x="704" y="64" width="74" height="70" rx="9" fill="#2a1f3a"/><text x="741" y="92">7 · boot</text><text x="741" y="110" fill="#9fc">2 000</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="2" marker-end="url(#a3)"><path d="M128 99h12"/><path d="M246 99h12"/><path d="M364 99h68"/><path d="M514 99h8"/><path d="M604 99h8"/><path d="M694 99h8"/></g>
+      <text x="400" y="196" fill="#9fc" font-size="12" text-anchor="middle">A separação 1–3 / 4–7 permite trocar a distribuição de calibres sem recalcular a física (Diagrama 1 do livro)</text>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha T2.</b> Algoritmo do preditor.</figcaption>
+<pre><code>def h(D, r, pw=100e-6, rho_i=RHO_I, N=41, dt=1e-6, rho_e=RHO_E, ln=LN):
+    Dc = D*1e-4; d = .7*Dc; L = 100*Dc                 # µm → cm; [LITERATURA refs. 2, 35]
+    Ga = np.pi*d**2/4/(rho_i*L); ar = np.pi*d*ln; C = CM*ar; g = GL*ar
+    x = (np.arange(N)-N//2)*L
+    Ve = -rho_e/(4*np.pi*np.sqrt(x**2+r**2))           # fonte pontual, corrente unitária
+    drv = np.zeros(N); drv[1:-1] = Ga*(Ve[:-2]-2*Ve[1:-1]+Ve[2:])
+    V = np.zeros(N); vm = 0
+    for k in range(int((pw+300e-6)/dt)):               # pulso + cauda de 300 µs
+        Vp = np.pad(V, 1, mode="edge"); lap = Vp[:-2]-2*V+Vp[2:]   # Neumann
+        V = V + dt/C*(-g*V + Ga*lap + (drv if k*dt &lt; pw else 0)); vm = max(vm, V.max())
+    return vm
+
+def Ith(D, r, **kw): return VTH / h(D, r, **kw)        # A</code></pre>
+  <div class="scroll"><table class="stack">
+    <tr><th>Parâmetro</th><th>Valor</th><th>Procedência</th></tr>
+    <tr><td>ρᵢ</td><td class="n">110 Ω·cm</td><td><span class="tag t-lit">LITERATURA</span> ref. 35</td></tr>
+    <tr><td>ρₑ</td><td class="n">300 Ω·cm</td><td><span class="tag t-pre">PREMISSA</span> razões independem</td></tr>
+    <tr><td>Cₘ · g_L</td><td class="n">2 µF/cm² · 30,3 mS/cm²</td><td><span class="tag t-lit">LITERATURA</span> ref. 35</td></tr>
+    <tr><td>Lₙ · d/D · L/D</td><td class="n">2,5 µm · 0,7 · 100</td><td><span class="tag t-lit">LITERATURA</span> refs. 2, 35</td></tr>
+    <tr><td>V<sub>lim</sub> · pulso</td><td class="n">20 mV · 100 µs</td><td><span class="tag t-pre">PREMISSA</span></td></tr>
+    <tr><td>Δt · N</td><td class="n">1 µs · 41</td><td><span class="tag t-der">DERIVADO</span> estabilidade e convergência</td></tr>
+  </table></div>
+</section>
+
+<section id="verificacao">
+  <h2>Verificação e regressão</h2>
+  <p>A suíte reproduz os valores do livro com o mesmo gerador (NumPy PCG64, semente 42). Saída obtida nesta versão:</p>
+  <div class="scroll"><table>
+    <tr><th>Grandeza</th><th>axon v0.1.0-alpha</th><th>Livro</th><th>Tolerância</th></tr>
+    <tr><td>Expoente α (1 mm)</td><td class="n">1,126553</td><td class="n">1,1266</td><td class="n">± 1e-4</td></tr>
+    <tr><td>Razão Aδ(3)/Aβ(9) a 1 mm</td><td class="n">3,207684</td><td class="n">3,2077</td><td class="n">± 1e-4</td></tr>
+    <tr><td>Razão a 0,5 / 1,5 mm</td><td class="n">2,1714 / 4,0687</td><td class="n">2,17 / 4,07</td><td class="n">2 casas</td></tr>
+    <tr><td>Razão de medianas (IC 95 %)</td><td class="n">3,0959 (2,9797–3,2249)</td><td class="n">3,10 (2,98–3,22)</td><td class="n">2 casas</td></tr>
+    <tr><td>F<sub>Aδ</sub> com F<sub>Aβ</sub> ≤ 10 %</td><td class="n">0,383 %</td><td class="n">0,38 %</td><td class="n">2 casas</td></tr>
+    <tr><td>ρᵢ = 70 / 150 Ω·cm</td><td class="n">2,8467 / 3,4833</td><td class="n">2,85 / 3,48</td><td class="n">2 casas</td></tr>
+    <tr><td>Cota de estabilidade (D = 1 µm)</td><td class="n">7,02 µs</td><td class="n">≈ 7 µs</td><td class="n">5 %</td></tr>
+  </table></div>
+  <p>Propriedades testadas: invariância a ρₑ (precisão de máquina), convergência em Δt (&lt; 1 % de 1 para 0,25 µs), convergência em N (&lt; 0,5 % de 41 para 81), monotonicidade estrita em D e r, recusa fora do domínio, reprodutibilidade bit a bit.</p>
+  <div class="note"><b>Port JavaScript.</b> <code>frontend/js/model.js</code> repete as mesmas operações na mesma ordem: <code>Ith(3,.1)/Ith(9,.1)</code> = 3,207684442794423 em Python e em JS. O Monte Carlo do navegador usa mulberry32 e por isso é rotulado “ao vivo”; os valores canônicos vêm de <code>reference.js</code>, gerado por <code>run_reference()</code>.</div>
+  <div class="note warn"><b>Verificado ≠ validado.</b> Pendências ASME V&amp;V 40: comparação com MRG em NEURON, confronto com dados experimentais independentes e propagação formal de incerteza — Fase 0.</div>
+</section>
+
+<section id="modulos">
+  <h2>Módulos científicos</h2>
+  <div class="scroll"><table class="stack">
+    <tr><th>Módulo</th><th>Funções</th><th>Saída e etiqueta</th></tr>
+    <tr><td><code>safety</code></td><td><code>shannon(I_mA, pw_us, area_cm2)</code> · <code>cem43(temps, dt)</code> · <code>pennes_0d(q, t)</code> · <code>mechanical(p, f, ispta)</code> · <code>chronic(z)</code> · <code>diffraction_attenuation(foco)</code></td><td>valor + <code>level</code> (conservador/atencao/risco) + <code>ref</code> + <code>caveat</code> · DERIVADO</td></tr>
+    <tr><td><code>stochastic</code></td><td><code>thermal_energy(T)</code> · <code>sr_detector(σ)</code> · <code>sr_curve()</code></td><td>k_BT = 4,28×10⁻²¹ J; σ ótimo desta implementação ≈ 0,55 (livro 0,61) · MODELO</td></tr>
+    <tr><td><code>integrative</code></td><td><code>electroacupuncture(...)</code> · <code>tavns(site, ...)</code> · <code>acupressure(kPa)</code></td><td>limiares do núcleo + Shannon + mapa ABVN + bandas · LITERATURA/HIPÓTESE</td></tr>
+    <tr><td><code>anatomy</code></td><td><code>Profile.from_dict()</code> · <code>predict(profile)</code></td><td>r efetivo, fator de transmissão, Δ limiares; recusa fora do domínio · HIPÓTESE</td></tr>
+  </table></div>
+  <p>Regras do <code>anatomy.predict</code> (v0.1): r<sub>ef</sub> = r + tecido adiposo; transmissão = 1/(1 + 0,8·hipertrofia + 0,5·fibrose), que escala Vₑ e portanto não altera razões (§6.1); Lₙ × (1 + 4·desmielinização). São regras didáticas para o futuro microsserviço de IA preditiva, que deverá manter a mesma interface e etiquetas.</p>
+</section>
+
+<section id="api">
+  <h2>API REST</h2>
+  <p>Base: <code>https://axon.m3d.pro/api</code> · OpenAPI em <code>/api/docs</code>. Interface em µm/mm/mA; núcleo em CGS.</p>
+  <div class="scroll"><table class="stack">
+    <tr><th>Método</th><th>Rota</th><th>Corpo / query</th><th>Resposta</th></tr>
+    <tr><td>GET</td><td><code>/health</code></td><td>—</td><td><code>{status, project:"axon", version, git_sha}</code></td></tr>
+    <tr><td>GET</td><td><code>/model/provenance</code></td><td>—</td><td>tabela de parâmetros com etiquetas</td></tr>
+    <tr><td>POST</td><td><code>/model/threshold</code></td><td><code>{D_um, r_mm, pw_us}</code></td><td><code>Ith_mA</code> · 422 fora do domínio</td></tr>
+    <tr><td>GET</td><td><code>/model/reference</code></td><td>—</td><td>res.json do Anexo G (cache)</td></tr>
+    <tr><td>GET</td><td><code>/model/profile</code></td><td><code>D_um, r_mm, I_mA</code></td><td>Vₑ e Δ²Vₑ por nó</td></tr>
+    <tr><td>POST</td><td><code>/safety/frontiers</code></td><td><code>{I_mA, pw_us, area_cm2, q_W_m3?, p_neg_MPa?, f_MHz?, ispta?, z_ratio?}</code></td><td>4 fronteiras</td></tr>
+    <tr><td>GET</td><td><code>/noise/sr</code></td><td>—</td><td>curva SNR × σ</td></tr>
+    <tr><td>POST</td><td><code>/integrative/electroacupuncture</code> · <code>/tavns</code></td><td>parâmetros da técnica</td><td>limiares, Shannon, bandas/ABVN</td></tr>
+    <tr><td>GET</td><td><code>/integrative/acupressure</code></td><td><code>pressure_kPa</code></td><td>F<sub>Aβ</sub> mecânica</td></tr>
+    <tr><td>POST</td><td><code>/anatomy/predict</code></td><td>perfil anônimo</td><td>Δ limiares · 422 se houver campo não permitido</td></tr>
+    <tr><td>GET/POST</td><td><code>/ai/status</code> · <code>/ai/bot</code> · <code>/ai/translate</code></td><td><code>{question, lang}</code> · <code>{texts, target}</code></td><td>texto + provedor + modo (ia/offline)</td></tr>
+  </table></div>
+<pre><code>curl -s -X POST https://axon.m3d.pro/api/model/threshold \
+  -H 'content-type: application/json' -d '{"D_um": 9, "r_mm": 1}'
+# {"data":{"Ith_mA":0.2957,"D_um":9,"r_mm":1},"provenance":"RESULTADO DE MODELO",
+#  "version":"0.1.0-alpha","seed":42,"disclaimer":"Ferramenta de pesquisa…"}</code></pre>
+</section>
+
+<section id="frontend">
+  <h2>Frontend 3D</h2>
+  <figure class="board">
+    <svg viewBox="0 0 800 260" role="img" aria-label="Módulos do frontend e eventos">
+      <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+      <g font-size="12" fill="#e9f3ef" text-anchor="middle">
+        <rect x="320" y="100" width="160" height="60" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="400" y="126" font-weight="700">app.js</text><text x="400" y="144" fill="#9fc" font-size="11">estado · WM · 8 apps</text>
+        <rect x="40" y="20" width="150" height="50" rx="10" fill="#1c3e48"/><text x="115" y="50">stage3d.js</text>
+        <rect x="40" y="190" width="150" height="50" rx="10" fill="#1c3e48"/><text x="115" y="220">model.js</text>
+        <rect x="610" y="20" width="150" height="50" rx="10" fill="#1c3e48"/><text x="685" y="50">charts.js</text>
+        <rect x="610" y="105" width="150" height="50" rx="10" fill="#1c3e48"/><text x="685" y="135">i18n.js</text>
+        <rect x="610" y="190" width="150" height="50" rx="10" fill="#1c3e48"/><text x="685" y="220">data.js · icons.js</text>
+        <rect x="320" y="20" width="160" height="50" rx="10" fill="#2a1f3a"/><text x="400" y="50">reference.js</text>
+        <rect x="320" y="190" width="160" height="50" rx="10" fill="#2a3448"/><text x="400" y="214">/api (opcional)</text><text x="400" y="230" fill="#9fc" font-size="11">health · ai · ws</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="1.6" fill="none" marker-end="url(#a4)"><path d="M320 120 L192 55"/><path d="M192 40 C260 70 290 100 318 112"/><path d="M320 145 L192 210"/><path d="M482 120 L608 50"/><path d="M482 130h126"/><path d="M482 145 L608 210"/><path d="M400 70v28"/><path d="M400 160v28"/><path d="M115 190V72"/></g>
+      <g font-size="10.5" fill="#ffd36b"><text x="200" y="98">setParams · setLevel</text><text x="214" y="70">axon:scale · axon:select</text><text x="120" y="140">grid · interp</text><text x="490" y="170">axon:lang</text></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha T3.</b> Dependências e barramento de eventos (CustomEvent no <code>document</code>).</figcaption>
+  <h3>Motor de zoom semântico</h3>
+  <p>Cinco grupos Three.js (<code>L1…L5</code>) com visibilidade exclusiva. A roda acumula intenção: ao exceder 0,55×/2,2× da distância nominal três vezes, <code>setLevel(±1)</code> dispara um <i>fade</i> de 260 ms, troca o grupo, interpola a câmera e emite <code>axon:scale</code>. Rótulos são <code>div</code> projetados por quadro (sem texto em textura).</p>
+  <div class="scroll"><table class="stack">
+    <tr><th>Grupo</th><th>Geometria</th><th>Dado do modelo</th></tr>
+    <tr><td>L1</td><td>Lathe/Cylinder + ShaderMaterial com faixas de dermátomo e fresnel; TubeGeometry para nervos</td><td>hotspots → <code>axon:select</code></td></tr>
+    <tr><td>L2</td><td>Camadas teciduais translúcidas; dispositivo por modalidade; plano com CanvasTexture</td><td>profundidade = f(r), campo ∝ 1/d</td></tr>
+    <tr><td>L3</td><td>Epineuro aberto, 7 fascículos, cuff; 182 fibras</td><td>recrutamento por <code>interp(T, D, r) ≤ I</code></td></tr>
+    <tr><td>L4</td><td>Mielina, nós, barras por nó</td><td><code>activation()</code> Δ²Vₑ</td></tr>
+    <tr><td>L5</td><td>InstancedMesh (cabeças lipídicas, íons); canais</td><td>didático</td></tr>
+  </table></div>
+  <h3>Gerenciador de janelas</h3>
+  <p>Estados: <code>aberta → em foco ⇄ minimizada → fechada</code>. Arraste pela barra de título (pointer capture), redimensionamento CSS com <code>ResizeObserver</code> que chama <code>draw()</code>, duplo clique fora de <code>.win/.dock/.side/.menubar</code> fecha a janela em foco. Em telas ≤ 900 px só uma janela fica aberta.</p>
+  <p><b>Biblioteca externa:</b> Three.js r128 via cdnjs. Para operação 100 % offline, coloque <code>three.min.js</code> em <code>frontend/vendor/</code> e troque a tag; <code>scripts/build_standalone.py</code> gera um HTML único.</p>
+</section>
+
+<section id="ia">
+  <h2>IA contextual (App 7 e App 8)</h2>
+  <figure class="board">
+    <svg viewBox="0 0 800 180" role="img" aria-label="Cadeia de failover de IA">
+      <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+      <g font-size="12" fill="#e9f3ef" text-anchor="middle">
+        <rect x="10" y="60" width="120" height="50" rx="10" fill="#1c3e48"/><text x="70" y="90">pergunta</text>
+        <rect x="170" y="60" width="110" height="50" rx="10" fill="#2a3448" stroke="#ff8a3d"/><text x="225" y="84">anthropic</text><text x="225" y="100" font-size="10.5" fill="#9fc">AI_MODEL</text>
+        <rect x="300" y="60" width="110" height="50" rx="10" fill="#2a3448" stroke="#ff8a3d"/><text x="355" y="84">openai</text><text x="355" y="100" font-size="10.5" fill="#9fc">pausa se falhar</text>
+        <rect x="430" y="60" width="110" height="50" rx="10" fill="#2a3448" stroke="#ff8a3d"/><text x="485" y="90">groq · gemini …</text>
+        <rect x="580" y="20" width="200" height="50" rx="10" fill="#173a2a" stroke="#3ee6a0"/><text x="680" y="42">resposta + provedor</text><text x="680" y="58" font-size="10.5" fill="#bfe">etiqueta HIPÓTESE</text>
+        <rect x="580" y="100" width="200" height="50" rx="10" fill="#3a1d1d" stroke="#ff5d5d"/><text x="680" y="122">fallback offline</text><text x="680" y="138" font-size="10.5" fill="#fbb">FAQ do livro · dicionários</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="1.8" fill="none" marker-end="url(#a5)"><path d="M130 85h38"/><path d="M280 85h18"/><path d="M410 85h18"/><path d="M540 75 L578 50"/><path d="M540 95 L578 120"/></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha T4.</b> Ordem por <code>AI_PROVIDERS</code>; provedor que falha (rede, 429, 5xx, chave inválida) entra em pausa crescente (<code>AI_COOLDOWN_S</code>).</figcaption>
+  <ul>
+    <li>Chaves lidas <b>apenas</b> do ambiente do container; nunca logadas nem devolvidas (<code>/api/ai/status</code> lista só nomes de provedores).</li>
+    <li>O prompt do Axon Bot proíbe inventar números, prescrever parâmetros e afirmar eficácia; números entram só pelo campo <code>context</code>, vindos do núcleo.</li>
+    <li>O tradutor preserva símbolos, unidades, equações e etiquetas; a interface usa dicionários estáticos (pt, en, es, zh, hi).</li>
+  </ul>
+</section>
+
+<section id="infra">
+  <h2>Implantação na VPS</h2>
+  <p>A VPS é compartilhada com outras aplicações LACibermedicina. Por isso o axon segue a mesma regra das demais: <b>nenhuma porta abaixo de 1024 e nenhuma porta ocupada</b>; o HTTPS é atendido pelo proxy que já existe no host.</p>
+  <ol class="steps">
+    <li><b>DNS:</b> registro A de <code>axon.m3d.pro</code> → IP da VPS.</li>
+    <li><b>Chave de deploy:</b> gere um par SSH; a pública vai para a VPS, a privada para o secret <code>VPS_SSH_KEY</code>.</li>
+    <li><b>Provisionamento (root):</b> <code>git clone https://github.com/LACibermedicina/axon /tmp/axon && sudo bash /tmp/axon/scripts/setup_vps.sh voce@dominio /caminho/deploy.pub</code></li>
+    <li>O script instala Docker, cria o usuário <code>deploy</code> (sem sudo, grupo docker), copia para <code>/opt/axon</code>, gera <code>.env</code> (chmod 600) com segredos aleatórios, escolhe <code>HTTP_PORT</code> livre ≥ 20180, sobe a stack e cria o vhost nginx/apache com <code>certbot --redirect</code> (rollback se o vhost quebrar o proxy).</li>
+    <li><b>UFW:</b> só ajustado se já estiver ativo (garante 22/80/443). <b>Traefik próprio</b> apenas em VPS dedicada: <code>AXON_TRAEFIK=1</code>.</li>
+  </ol>
+<pre><code># perfis opcionais
+sudo AXON_PROFILES=collab,data bash scripts/setup_vps.sh voce@dominio
+# operação
+cd /opt/axon && docker compose ps && docker compose logs --tail=80 api web
+curl -fsS http://127.0.0.1:$(grep ^HTTP_PORT= .env | cut -d= -f2)/api/health</code></pre>
+</section>
+
+<section id="cicd">
+  <h2>CI/CD e credenciais pelo GitHub (<code>SERVIDOR_ENV</code>)</h2>
+  <figure class="board">
+    <svg viewBox="0 0 800 250" role="img" aria-label="Pipeline ci-axon">
+      <defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+      <g font-size="12" fill="#e9f3ef" text-anchor="middle">
+        <rect x="10" y="90" width="110" height="60" rx="10" fill="#1c3e48"/><text x="65" y="116">push main</text><text x="65" y="134" font-size="10.5" fill="#9fc">PR · cron · manual</text>
+        <rect x="150" y="90" width="150" height="60" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="225" y="112">test</text><text x="225" y="128" font-size="10.5" fill="#9fc">pytest (regressão)</text><text x="225" y="142" font-size="10.5" fill="#9fc">bash -n · compose config</text>
+        <rect x="340" y="20" width="190" height="76" rx="10" fill="#2a1f3a" stroke="#c084fc"/><text x="435" y="42">sync-ai-env</text><text x="435" y="60" font-size="10.5" fill="#dcbcff">SERVIDOR_ENV + secrets</text><text x="435" y="76" font-size="10.5" fill="#dcbcff">→ merge-env.sh na VPS</text>
+        <rect x="340" y="150" width="190" height="76" rx="10" fill="#1c3e48" stroke="#ffb547"/><text x="435" y="172">deploy</text><text x="435" y="190" font-size="10.5" fill="#9fc">rsync (sem .env/data)</text><text x="435" y="206" font-size="10.5" fill="#9fc">deploy.sh · health check</text>
+        <rect x="570" y="90" width="210" height="60" rx="10" fill="#173a2a" stroke="#3ee6a0"/><text x="675" y="114">https://axon.m3d.pro</text><text x="675" y="132" font-size="10.5" fill="#bfe">environment: production</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="1.8" fill="none" marker-end="url(#a6)"><path d="M120 120h28"/><path d="M300 110 L338 64"/><path d="M300 130 L338 182"/><path d="M435 96v52"/><path d="M530 188 L568 128"/></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha T5.</b> O deploy espera o <code>sync-ai-env</code>: a API sobe já com as credenciais. Em PR só roda <code>test</code>.</figcaption>
+  <h3>Secrets e variáveis (Settings → Secrets and variables → Actions, ou Environment <code>production</code>)</h3>
+  <div class="scroll"><table class="stack">
+    <tr><th>Nome</th><th>Tipo</th><th>Uso</th></tr>
+    <tr><td><code>VPS_HOST</code> · <code>VPS_USER</code> · <code>VPS_SSH_KEY</code></td><td>secret</td><td>SSH do usuário <code>deploy</code></td></tr>
+    <tr><td><code>SERVIDOR_ENV</code></td><td>secret (multilinha)</td><td>Bloco <code>CHAVE=valor</code> com as chaves de IA; mesmo formato usado pelas demais apps da organização</td></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>GROQ_API_KEY</code>, <code>GEMINI_API_KEY</code>, <code>GITHUB_MODELS_TOKEN</code>, <code>CEREBRAS_API_KEY</code>, <code>MISTRAL_API_KEY</code>, <code>OPENROUTER_API_KEY</code>, <code>DEEPSEEK_API_KEY</code>, <code>XAI_API_KEY</code>, <code>TOGETHER_API_KEY</code>, <code>HF_TOKEN</code></td><td>secret (opcional)</td><td>Alternativa individual a <code>SERVIDOR_ENV</code></td></tr>
+    <tr><td><code>AI_PROVIDERS</code>, <code>GEMINI_MODEL</code></td><td>variable</td><td>Ordem do failover e modelo</td></tr>
+    <tr><td><code>DEPLOY_MODE</code></td><td>variable</td><td><code>off</code> desliga o deploy automático</td></tr>
+  </table></div>
+<pre><code># SERVIDOR_ENV — exemplo de conteúdo (valores fictícios)
+ANTHROPIC_API_KEY=sk-ant-...
+GROQ_API_KEY=gsk_...
+GEMINI_API_KEY=AIza...
+AI_PROVIDERS=anthropic,groq,gemini</code></pre>
+  <div class="note ok"><b>Garantias do <code>merge-env.sh</code>:</b> aceita só chaves da lista de IA (aliases como <code>CLAUDE_API_KEY → ANTHROPIC_API_KEY</code>); ignora <code>JWT_SECRET</code>, senhas de banco e quaisquer outras; valor vazio não apaga o existente; não imprime valores; reinicia só a <code>api</code> e só se algo mudou. Testado: <code>JWT_SECRET=hack</code> no payload foi ignorado e o arquivo ficou em 600.</div>
+</section>
+
+<section id="seguranca">
+  <h2>Segurança e LGPD</h2>
+  <div class="scroll"><table class="stack">
+    <tr><th>Ameaça</th><th>Controle</th></tr>
+    <tr><td>Vazamento de chaves de IA</td><td>Somente em secrets/.env 600; nunca em logs, respostas ou frontend; CI não ecoa valores</td></tr>
+    <tr><td>Exposição de serviços internos</td><td>web só em 127.0.0.1; rede <code>internal</code> sem saída; api com egress dedicado</td></tr>
+    <tr><td>Escalada no container</td><td>usuário não-root (10001/nginx-unprivileged), <code>read_only</code>, <code>no-new-privileges</code>, tmpfs</td></tr>
+    <tr><td>XSS / clickjacking</td><td>CSP restrita (self + cdnjs + Google Fonts), X-Frame-Options, nosniff, HSTS; textos do usuário inseridos via <code>textContent</code></td></tr>
+    <tr><td>Dados pessoais</td><td>Perfis anatômicos com lista branca de campos geométricos (422 para o resto); salas sem persistência; IA recebe só texto de interface</td></tr>
+    <tr><td>Abuso da API</td><td><code>max_length</code> em entradas de IA; limite de payload 2 MB no nginx; sala WebSocket ≤ 12 pares, 64 KB por mensagem</td></tr>
+    <tr><td>Acesso (RBAC)</td><td>v0.1 é pública e somente leitura. RBAC (visitante, estudante, docente, admin) com JWT está planejado para v0.3, quando houver persistência</td></tr>
+  </table></div>
+</section>
+
+<section id="testes">
+  <h2>Testes</h2>
+<pre><code>cd backend
+pip install -r requirements-dev.txt
+python -m pytest -q            # 28 passed (+4 de API quando fastapi/httpx instalados)
+python -m core.bio_model       # grava res.json e imprime os benchmarks</code></pre>
+  <div class="grid3">
+    <div class="card"><h4>Regressão</h4><p>Valores do livro com tolerância contratual (§22.5).</p></div>
+    <div class="card"><h4>Propriedades</h4><p>Invariâncias, convergência, monotonicidade, domínio, semente.</p></div>
+    <div class="card"><h4>Contrato</h4><p>API: envelope, recusa 422, LGPD; IA offline sem chaves; chaves nunca expostas.</p></div>
+  </div>
+</section>
+
+<section id="contrib">
+  <h2>Contribuição</h2>
+  <ul>
+    <li>Nenhum parâmetro novo sem etiqueta de procedência no comentário da linha.</li>
+    <li>Nenhum resultado exportado sem versão do código e semente.</li>
+    <li>Mudou um valor da tabela de regressão? Atualize os testes, o <code>reference.js</code> (rode <code>run_reference()</code>) e o CHANGELOG na mesma alteração.</li>
+    <li>Estender o domínio verificado exige refazer a convergência no novo domínio.</li>
+    <li>Versionamento SemVer com sufixo de estágio (<code>-alpha</code>, <code>-beta</code>); CHANGELOG no formato Keep a Changelog.</li>
+    <li>Branches curtas a partir de <code>main</code>; PR com CI verde; o deploy roda só a partir de <code>main</code>.</li>
+  </ul>
+</section>
+
+<section id="adr">
+  <h2>Registro de decisões de arquitetura</h2>
+  <div class="scroll"><table class="stack">
+    <tr><th>ADR</th><th>Decisão</th><th>Por quê</th></tr>
+    <tr><td>001</td><td>Reimplementar o Anexo G sem alterar a ordem das operações</td><td>Regressão bit a bit com o livro</td></tr>
+    <tr><td>002</td><td>Port JS do núcleo no frontend</td><td>Demonstração offline; resposta instantânea aos sliders</td></tr>
+    <tr><td>003</td><td>Three.js r128 sem bundler</td><td>Sem etapa de build; CDN permitido pela CSP; vendorável</td></tr>
+    <tr><td>004</td><td>Proxy do host em vez de Traefik por padrão</td><td>VPS compartilhada: não disputar 80/443</td></tr>
+    <tr><td>005</td><td>Credenciais de IA via <code>SERVIDOR_ENV</code> + lista permitida</td><td>Convenção da organização; nunca sobrescrever segredos de dados</td></tr>
+    <tr><td>006</td><td>IA nunca produz números</td><td>Integridade científica: números só do núcleo, com etiqueta</td></tr>
+    <tr><td>007</td><td>Variações anatômicas como regras transparentes</td><td>Sem dados de treino validados; interface pronta para o modelo futuro</td></tr>
+  </table></div>
+</section>
+
+<section id="roadmap">
+  <h2>Roadmap</h2>
+  <div class="scroll"><table class="stack">
+    <tr><th>Versão</th><th>Escopo</th><th>Ligação com o livro</th></tr>
+    <tr><td>0.2</td><td>Formas de onda bifásicas; eletrodo não pontual; importação de campo FEM tabelado</td><td>§22.4 pontos de extensão</td></tr>
+    <tr><td>0.3</td><td>PostgreSQL + Neo4j (grafos de vias e dermátomos); RBAC; salas WebRTC completas</td><td>App 6 e App 8</td></tr>
+    <tr><td>0.4</td><td>Comparação com MRG/NEURON em pontos selecionados; Latin hypercube</td><td>Fase 0 (V&amp;V 40)</td></tr>
+    <tr><td>0.5</td><td>Importação de distribuições p(D) estimadas por RM de difusão</td><td>Substitui a premissa do fascículo</td></tr>
+  </table></div>
+</section>
+
+<section id="problemas">
+  <h2>Solução de problemas</h2>
+  <details><summary>Palco 3D vazio</summary><p>WebGL desativado ou bloqueio do cdnjs. Verifique <code>chrome://gpu</code>; em rede restrita, use a cópia local de <code>three.min.js</code>.</p></details>
+  <details><summary>“HTTP_PORT ocupada por outro serviço” no deploy</summary><p>Outro serviço tomou a porta. Rode <code>sudo bash scripts/setup_vps.sh &lt;email&gt;</code>: ele escolhe uma porta livre e atualiza o vhost.</p></details>
+  <details><summary>IA sempre em modo offline</summary><p>Confira <code>/api/ai/status</code>. Se <code>configured</code> estiver vazio, rode o workflow manualmente (Actions → ci-axon → Run workflow) e verifique o log do passo <i>sync-ai-env</i> (ele avisa se faltarem VPS_HOST/VPS_SSH_KEY).</p></details>
+  <details><summary>Certificado não emitido</summary><p>O DNS ainda não aponta para a VPS. Depois de propagar: <code>sudo certbot --nginx -d axon.m3d.pro</code>.</p></details>
+  <details><summary>Teste de regressão falhou após mudança</summary><p>Se a mudança foi intencional, atualize testes, <code>reference.js</code> e CHANGELOG juntos. Se não foi, procure alteração na ordem das operações de <code>h()</code>.</p></details>
+</section>
+
+</main>
+</div>
+<footer>axon v0.1.0-alpha · Manual Técnico · <a href="../site/">página do projeto</a> · <a href="manual-usuario.html">manual do usuário</a> · autor do modelo: L. S. Teixeira (Ibilce/UNESP)</footer>
+<script src="doc.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+# axon — stack de produção (axon.m3d.pro) em /opt/axon
+# Regra da VPS compartilhada LACibermedicina: nenhuma porta < 1024 e nenhuma porta ocupada.
+#  - web (nginx): publicado SOMENTE em 127.0.0.1:${HTTP_PORT} — o HTTPS fica com o proxy do host
+#    (nginx/apache + certbot) ou com o Traefik opcional (infra/traefik/docker-compose.traefik.yml)
+#  - api, realtime, db, graph: só na rede interna
+# Perfis opcionais: collab (WebSocket/WebRTC), data (PostgreSQL + Neo4j)
+name: axon
+
+x-common: &common
+  restart: unless-stopped
+  env_file: .env
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  web:
+    <<: *common
+    build: { context: ., dockerfile: frontend/Dockerfile }
+    ports: ["127.0.0.1:${HTTP_PORT:?rode scripts/setup_vps.sh}:8080"]
+    depends_on: [api]
+    read_only: true
+    tmpfs: ["/tmp", "/var/cache/nginx"]
+    networks: [edge, internal]
+
+  api:
+    <<: *common
+    build: { context: ., dockerfile: backend/Dockerfile }
+    environment:
+      GIT_SHA: ${GIT_SHA:-dev}
+      SUBDOMINIO: ${SUBDOMINIO:-axon.m3d.pro}
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [internal, egress]   # egress: provedores de IA (tradutor / Axon Bot)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 20s
+      retries: 5
+    deploy:
+      resources:
+        limits: { memory: "${API_MEM:-1g}" }
+
+  realtime:
+    <<: *common
+    profiles: ["collab"]
+    build: ./realtime
+    networks: [internal]
+
+  db:
+    <<: *common
+    profiles: ["data"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-axon}
+      POSTGRES_USER: ${POSTGRES_USER:-axon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina no .env}
+    volumes: ["./data/postgres:/var/lib/postgresql/data"]
+    networks: [internal]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-axon}"], interval: 10s, retries: 10 }
+
+  graph:
+    <<: *common
+    profiles: ["data"]
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?defina no .env}
+      NEO4J_server_memory_heap_max__size: 512m
+    volumes: ["./data/neo4j:/data"]
+    networks: [internal]
+
+networks:
+  edge: {}
+  internal: { internal: true }
+  egress: {}

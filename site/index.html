@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>axon · Projeto</title>
+<meta name="description" content="axon — plataforma de simulação biofísica multiescala da neuromodulação. Produção, notícias, documentação, eventos e equipe.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE  editorial científico, confiante e honesto sobre o estágio (alpha, verificado e não validado).
+IDEA   uma fibra mielinizada atravessa a página; o impulso salta de nó em nó como a navegação salta de seção em seção.
+PICTURE axônio em giz sobre lousa, com nós que acendem em sequência e a curva de limiar desenhada ao lado.
+COLOUR lousa #0e2228 dominante, papel #f3f5f1 de apoio, teal #3ee6c5 como acento; âmbar só para avisos.
+TYPE   Manrope 800 nos títulos, Manrope 400 no texto, JetBrains Mono nos números.
+LAYOUT hero em lousa a toda largura; faixas alternadas papel/lousa; notícias filtráveis; rodapé completo.
+*/
+:root{color-scheme:light dark;--board:#0e2228;--board2:#13303a;--chalk:#e8f3ef;--paper:light-dark(#f3f5f1,#0a171b);--card:light-dark(#fff,#11262d);--ink:light-dark(#10232a,#e3f0ee);--muted:light-dark(#4e6469,#9ab4b8);--line:light-dark(#d5dfdb,#21393f);--teal:#3ee6c5;--teal2:#14a08f;--amber:#f0a93a;--blue:#4fb3ff;--orange:#ff8a3d;--sans:"Manrope",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:72px;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16.5px/1.6 var(--sans);overflow-x:clip}
+a{color:var(--teal2)}
+.band{padding:clamp(36px,6vw,84px) max(5vw,16px)}
+.in{max-width:1240px;margin:auto}
+.dark{background:var(--board);color:var(--chalk)}.dark a{color:var(--teal)}
+nav.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--board) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid #22414a}
+nav.top .in{display:flex;align-items:center;gap:6px;padding:10px max(5vw,16px);flex-wrap:wrap}
+nav.top .logo{display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none;font-weight:800;font-size:19px;letter-spacing:.03em;margin-right:auto}
+nav.top .logo svg{width:30px;height:30px}
+nav.top a.l{color:#bcd8d4;text-decoration:none;font-size:14.5px;font-weight:600;padding:9px 10px;border-radius:9px}
+nav.top a.l:hover{background:#1b3a43;color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:12px;font-weight:700;text-decoration:none;border:1px solid transparent;font-size:15.5px}
+.btn.pri{background:var(--teal);color:#062a24}.btn.sec{border-color:#3d6670;color:#e8f3ef}.btn.lt{border-color:var(--line);color:var(--ink);background:var(--card)}
+.hero{position:relative;overflow:hidden;padding-top:clamp(40px,6vw,80px)}
+.hero .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(24px,4vw,56px);align-items:center}
+.hero h1{font-size:clamp(36px,5vw,58px);line-height:1.04;margin:0 0 18px;text-wrap:balance;font-weight:800}
+.hero p{color:#b9d3cf;font-size:18px;max-width:50ch;margin:0 0 22px}
+.hero .ctas{display:flex;gap:10px;flex-wrap:wrap}
+.status{display:flex;gap:16px;flex-wrap:wrap;margin-top:26px;font:500 13px var(--mono);color:#93b9b3}
+.status b{color:#fff;font-weight:600}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.fig{position:relative}
+.fig svg{width:100%;height:auto;display:block}.fig text{font-family:var(--sans)}.fig text.mn{font-family:var(--mono)}
+.node{transition:fill .2s}
+@keyframes pulse{0%,100%{opacity:.25}10%{opacity:1}}
+.spark{animation:pulse 2.4s infinite}
+.warnline{margin-top:30px;border:1px solid #6b5420;background:#2a2412;color:#ffdc9a;border-radius:12px;padding:10px 14px;font-size:14px}
+h2{font-size:clamp(28px,3.4vw,40px);line-height:1.08;margin:0 0 12px;text-wrap:balance}
+.sub{color:var(--muted);max-width:66ch;font-size:17.5px;margin:0 0 26px}
+.dark .sub{color:#9fc0bb}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+.dark .card{background:var(--board2);border-color:#24464f}
+.card h3{margin:0 0 6px;font-size:18px}
+.card p{margin:0;color:var(--muted);font-size:15px}.dark .card p{color:#a9c8c3}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:6px}
+.kpi{border-top:3px solid var(--teal);padding-top:10px}
+.kpi b{display:block;font:600 clamp(28px,3.2vw,40px)/1.05 var(--mono);color:var(--ink)}
+.dark .kpi b{color:#fff}
+.kpi span{font-size:14px;color:var(--muted)}.dark .kpi span{color:#9fc0bb}
+.tag{display:inline-block;font:600 11px var(--mono);padding:2px 7px;border-radius:6px;background:#eadcfb;color:#5c2f9e;white-space:nowrap}
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:24px;align-items:center;margin-top:28px}
+.ctl{margin:14px 0}.ctl label{display:flex;justify-content:space-between;font-size:15px}.ctl output{font:600 15px var(--mono);color:var(--teal)}
+input[type=range]{width:100%;accent-color:var(--teal);height:30px}
+.big{font:600 clamp(40px,5vw,64px)/1 var(--mono);color:#fff}
+.big small{font-size:.4em;color:#9fc0bb}
+.chart{position:relative;height:300px;background:var(--board2);border-radius:16px;border:1px solid #24464f}
+.chart canvas{position:absolute;inset:0;width:100%;height:100%}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.filters button{min-height:40px;padding:8px 14px;border-radius:22px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:600 14px var(--sans);cursor:pointer}
+.filters button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.news{display:grid;gap:14px}
+.news article{display:grid;grid-template-columns:120px minmax(0,1fr);gap:18px;padding:18px 0;border-top:1px solid var(--line)}
+.news time{font:600 14px var(--mono);color:var(--muted);white-space:nowrap}
+.news h3{margin:0 0 4px;font-size:19px}
+.news p{margin:0;color:var(--muted);max-width:70ch}
+.chip{display:inline-block;font:700 11.5px var(--sans);padding:2px 9px;border-radius:20px;margin-bottom:6px}
+.c-rel{background:#d6f3ee;color:#0f6f63}.c-pes{background:#dcebfb;color:#1d5d9e}.c-evt{background:#fbecd4;color:#8a5a10}.c-inf{background:#eadcfb;color:#5c2f9e}
+.docs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.doc{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit}
+.doc svg{width:54px;height:54px}
+.doc .go{margin-top:auto;font-weight:700;color:var(--teal2)}
+.dark .doc .go{color:var(--teal)}
+.event{display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:20px;align-items:center;padding:20px;border-radius:16px;background:var(--board2);border:1px solid #24464f;margin-bottom:14px}
+.event .when{font:600 15px var(--mono);color:var(--teal)}
+.event h3{margin:0 0 4px}.event p{margin:0;color:#a9c8c3}
+.gantt{display:grid;grid-template-columns:180px minmax(0,1fr);gap:8px 14px;align-items:center;margin-top:20px;font-size:14px}
+.gantt .tr{position:relative;height:22px;background:#17343d;border-radius:6px}
+.gantt i{position:absolute;top:0;bottom:0;border-radius:6px}
+.axis{display:flex;justify-content:space-between;font:500 12px var(--mono);color:#8fb3ad}
+.team{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.person{display:grid;grid-template-columns:96px minmax(0,1fr);gap:18px;align-items:start}
+.avatar{width:96px;height:96px;border-radius:24px;background:linear-gradient(135deg,#14a08f,#0e2228);display:grid;place-items:center;color:#fff;font:800 32px var(--sans)}
+.person h3{margin:0}.person .role{color:var(--teal2);font-weight:700;font-size:14.5px;margin-bottom:6px}
+.person ul{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:15px}
+.mono{font-family:var(--mono);font-size:14px}
+footer{background:var(--board);color:#a9c8c3;font-size:14.5px}
+footer .in{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:24px}
+footer h4{color:#fff;margin:0 0 8px;font-size:15px}
+footer a{display:block;color:#bcd8d4;text-decoration:none;padding:3px 0}
+footer .legal{border-top:1px solid #24464f;margin-top:26px;padding-top:16px;font-size:13px}
+@media(max-width:900px){.hero .grid,.calc,.team{grid-template-columns:minmax(0,1fr)}.cols,.docs{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}footer .in{grid-template-columns:1fr 1fr}nav.top a.l{display:none}}
+@media(max-width:600px){.cols,.docs{grid-template-columns:minmax(0,1fr)}.news article{grid-template-columns:minmax(0,1fr);gap:4px}.event{grid-template-columns:minmax(0,1fr)}.gantt{grid-template-columns:110px minmax(0,1fr)}.person{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px;font-size:22px;border-radius:16px}footer .in{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.spark{animation:none;opacity:1}}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+</style>
+</head>
+<body>
+<nav class="top" aria-label="Principal"><div class="in">
+  <a class="logo" href="#topo"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#13303a" stroke="#3ee6c5"/><path d="M5 16h4l3-7 4 14 3-9 2 2h6" fill="none" stroke="#3ee6c5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>axon</a>
+  <a class="l" href="#ciencia">Ciência</a><a class="l" href="#noticias">Notícias</a><a class="l" href="#docs">Documentação</a><a class="l" href="#eventos">Eventos</a><a class="l" href="#equipe">Equipe</a>
+  <a class="btn pri" href="../">Abrir o axon</a>
+</div></nav>
+
+<header class="band dark hero" id="topo"><div class="in grid">
+  <div>
+    <h1>Até onde a física deixa a neuromodulação chegar perto de uma única fibra?</h1>
+    <p>O <b>axon</b> leva o modelo do livro <i>Biofísica da Neuromodulação</i> para um laboratório 3D no navegador: do dermátomo ao canal iônico, com cada número rastreável até a sua fonte.</p>
+    <div class="ctas"><a class="btn pri" href="https://axon.m3d.pro">Versão em produção</a><a class="btn sec" href="../">Demonstração v0.1.0-alpha</a><a class="btn sec" href="#docs">Manuais</a></div>
+    <div class="status"><span><span class="dot" style="background:#f0a93a"></span>axon.m3d.pro: <b>em implantação</b></span><span><span class="dot" style="background:#3ee6c5"></span>demonstração: <b>no ar</b></span><span>versão <b>0.1.0-alpha</b></span><span>testes <b>28/28</b></span></div>
+  </div>
+  <div class="fig">
+    <svg viewBox="0 0 640 420" role="img" aria-label="Fibra mielinizada com impulso saltando entre nós de Ranvier sob um eletrodo">
+      <defs><radialGradient id="glow"><stop offset="0" stop-color="#3ee6c5" stop-opacity=".9"/><stop offset="1" stop-color="#3ee6c5" stop-opacity="0"/></radialGradient>
+        <linearGradient id="my" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf8f1"/><stop offset=".55" stop-color="#e3ddd0"/><stop offset="1" stop-color="#b9b2a3"/></linearGradient>
+        <linearGradient id="ax" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2a8"/><stop offset="1" stop-color="#d9a75b"/></linearGradient></defs>
+            <circle cx="320" cy="70" r="70" fill="url(#glow)" opacity=".35"/>
+      <path d="M320 40v80" stroke="#cfd8dc" stroke-width="5" stroke-linecap="round"/><circle cx="320" cy="124" r="9" fill="#fff"/>
+      <text x="336" y="58" fill="#e8f3ef" font-size="14">cátodo · fonte pontual</text>
+      <g stroke="#3ee6c5" stroke-opacity=".25" fill="none"><ellipse cx="320" cy="124" rx="80" ry="34"/><ellipse cx="320" cy="124" rx="150" ry="62"/><ellipse cx="320" cy="124" rx="230" ry="92"/></g>
+      <rect x="0" y="232" width="640" height="16" fill="url(#ax)" opacity=".9"/>
+      <g id="segs"></g>
+      <g id="bars"></g>
+      <text x="16" y="300" fill="#9fc0bb" font-size="13" class="mn">d = 0,7·D</text><text x="250" y="300" fill="#9fc0bb" font-size="13" class="mn">L = 100·D</text><text x="470" y="300" fill="#9fc0bb" font-size="13" class="mn">nó · 2,5 µm</text>
+      <g transform="translate(40,330)"><text fill="#e8f3ef" font-size="14" font-weight="700">fₙ = Vₑ,ₙ₋₁ − 2Vₑ,ₙ + Vₑ,ₙ₊₁</text><text y="22" fill="#9fc0bb" font-size="13">verde despolariza · vermelho hiperpolariza (função de ativação)</text></g>
+      <g transform="translate(40,388)"><rect width="10" height="10" fill="#4fb3ff"/><text x="16" y="10" fill="#e8f3ef" font-size="13">Aβ 9 µm: 0,30 mA</text><rect x="170" width="10" height="10" fill="#ff8a3d"/><text x="186" y="10" fill="#e8f3ef" font-size="13">Aδ 3 µm: 0,95 mA</text><text x="350" y="10" fill="#9fc0bb" font-size="12" class="mn">r = 1 mm · resultado de modelo</text></g>
+    </svg>
+  </div>
+</div>
+<div class="in"><div class="warnline">⚠ Ferramenta de pesquisa, ensino e modelagem in silico (ASME V&amp;V 40 — verificado, não validado; Res. CNS 510/2016). Não é dispositivo médico nem protocolo clínico.</div></div>
+</header>
+
+<section class="band" id="ciencia"><div class="in">
+  <h2>O resultado que fecha a primeira pergunta</h2>
+  <p class="sub">Com um eletrodo a 1 mm, o limiar cai com o calibre segundo uma lei de potência. As fibras táteis (Aβ) sempre respondem antes dos nociceptores (Aδ): não há amplitude que inverta essa ordem.</p>
+  <div class="kpis">
+    <div class="kpi"><b>D<sup>−1,13</sup></b><span>lei de escala do limiar, 1–16 µm</span></div>
+    <div class="kpi"><b>3,21×</b><span>limiar Aδ(3 µm) / Aβ(9 µm) a 1 mm</span></div>
+    <div class="kpi"><b>3,10</b><span>razão de medianas · IC 95 % 2,98–3,22</span></div>
+    <div class="kpi"><b>0,38 %</b><span>Aδ recrutadas quando Aβ ≤ 10 %</span></div>
+  </div>
+  <p style="margin-top:14px"><span class="tag">RESULTADO DE MODELO · SEMENTE 42</span> <span class="mono" style="color:var(--muted)">reproduzido pelo axon: α = 1,1266 · razão = 3,2077</span></p>
+</div></section>
+
+<section class="band dark" id="calc"><div class="in">
+  <h2>Experimente o núcleo aqui mesmo</h2>
+  <p class="sub">Este cálculo roda o mesmo modelo nodal de 41 nós do axon, no seu navegador. Fora do domínio verificado, ele se recusa a responder.</p>
+  <div class="calc">
+    <div>
+      <div class="ctl"><label for="cD">Calibre D <output id="oD">9 µm</output></label><input id="cD" type="range" min="1" max="16" step="0.5" value="9"></div>
+      <div class="ctl"><label for="cR">Distância r <output id="oR">1,0 mm</output></label><input id="cR" type="range" min="0.2" max="2" step="0.05" value="1"></div>
+      <div class="big" id="out">0,296 <small>mA</small></div>
+      <p id="cmp" style="color:#a9c8c3;margin:10px 0 0"></p>
+    </div>
+    <div class="chart"><canvas id="cv" aria-label="Limiar contra calibre"></canvas></div>
+  </div>
+</div></section>
+
+<section class="band" id="noticias"><div class="in">
+  <h2>Notícias e atualizações</h2>
+  <p class="sub">Lançamentos, avanços de pesquisa, eventos e infraestrutura — em ordem cronológica inversa.</p>
+  <div class="filters" role="group" aria-label="Filtrar notícias"><button class="on" data-f="all">Tudo</button><button data-f="rel">Lançamentos</button><button data-f="pes">Pesquisa</button><button data-f="evt">Eventos</button><button data-f="inf">Infraestrutura</button></div>
+  <div class="news" id="news"></div>
+</div></section>
+
+<section class="band dark" id="docs"><div class="in">
+  <h2>Documentação</h2>
+  <p class="sub">Manuais ilustrados, código e material científico de origem.</p>
+  <div class="docs">
+    <a class="card doc" href="../docs/manual-usuario.html"><svg viewBox="0 0 54 54"><rect width="54" height="54" rx="14" fill="#14a08f"/><path d="M15 14h18l6 6v20H15z" fill="#fff"/><path d="M20 26h14M20 31h14M20 36h9" stroke="#14a08f" stroke-width="2.4"/></svg><h3>Manual do Usuário</h3><p>Cada tela, controle e número: escalas, mini-apps, fluxos de trabalho, procedência e segurança.</p><span class="go">Ler o manual →</span></a>
+    <a class="card doc" href="../docs/manual-tecnico.html"><svg viewBox="0 0 54 54"><rect width="54" height="54" rx="14" fill="#2f7fd0"/><path d="M18 20l-6 7 6 7M36 20l6 7-6 7M30 16l-6 22" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg><h3>Manual Técnico</h3><p>Arquitetura, núcleo verificado, API, frontend 3D, VPS, CI/CD com SERVIDOR_ENV, testes e ADRs.</p><span class="go">Ler o manual →</span></a>
+    <a class="card doc" href="https://github.com/LACibermedicina/axon"><svg viewBox="0 0 54 54"><rect width="54" height="54" rx="14" fill="#24343c"/><circle cx="27" cy="27" r="12" fill="none" stroke="#fff" stroke-width="3"/><circle cx="27" cy="27" r="4" fill="#3ee6c5"/></svg><h3>Código-fonte</h3><p>Repositório LACibermedicina/axon: backend, frontend, infraestrutura e changelog.</p><span class="go">GitHub →</span></a>
+    <div class="card doc"><svg viewBox="0 0 54 54"><rect width="54" height="54" rx="14" fill="#e39b2a"/><path d="M14 15h12c3 0 4 2 4 4v22c0-2-1-3-4-3H14zM40 15H28" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M40 15v23H30" stroke="#fff" stroke-width="2.6" fill="none"/></svg><h3>Livro · edição consolidada 1.0</h3><p>Teixeira LS. <i>Biofísica da Neuromodulação: resolução de fibra única e limiares de segurança tecidual.</i> Ibilce/UNESP, nov. 2026. 117 p., 24 pranchas.</p><span class="go" style="color:#9fc0bb">PDF mediante solicitação ao autor</span></div>
+    <div class="card doc"><svg viewBox="0 0 54 54"><rect width="54" height="54" rx="14" fill="#8e5bd6"/><rect x="16" y="12" width="22" height="30" rx="2" fill="#fff"/><path d="M20 18h14M20 23h14M20 28h8" stroke="#8e5bd6" stroke-width="2.4"/></svg><h3>Pôsteres 90 × 120 cm</h3><p>Três etapas: revisão, modelo e prova de conceito (referência), proposta experimental.</p><span class="go" style="color:#9fc0bb">Arquivos de impressão com o autor</span></div>
+    <div class="card doc"><svg viewBox="0 0 54 54"><rect width="54" height="54" rx="14" fill="#d6467a"/><rect x="12" y="16" width="30" height="20" rx="3" fill="#fff"/><path d="M24 40h6M27 36v4" stroke="#fff" stroke-width="2.6"/></svg><h3>Submissão · Semana da Física</h3><p>Artigo resumido, ficha do pôster e slides 16:9, nas versões com e sem identificação (avaliação cega).</p><span class="go" style="color:#9fc0bb">Uso restrito ao processo do evento</span></div>
+  </div>
+</div></section>
+
+<section class="band dark" id="eventos" style="padding-top:0"><div class="in">
+  <h2>Eventos</h2>
+  <p class="sub">Onde o projeto é apresentado e os marcos do programa de investigação.</p>
+  <div class="event"><div class="when">data a confirmar</div><div><h3>XIV Semana da Física — Ibilce/UNESP</h3><p>Eixo Física Biológica · São José do Rio Preto · comunicação oral (pôster 90 × 120 cm caso não selecionada). Material preparado: resumo, pôster da Etapa 2 e dez slides.</p></div><a class="btn sec" href="../docs/manual-usuario.html#fluxos">Roteiro da demo</a></div>
+  <div class="event"><div class="when">meses 0–12</div><div><h3>Fase 0 · consolidação computacional</h3><p>MRG em NEURON, FEM anisotrópico e Latin hypercube. Critério: erro &lt; 25 % em dois conjuntos publicados.</p></div><span class="mono" style="color:#9fc0bb">planejado</span></div>
+  <h3 style="margin-top:28px">Cronograma de 48 meses</h3>
+  <div class="gantt" id="gantt"></div>
+  <div class="gantt"><div></div><div class="axis"><span>0</span><span>12</span><span>24</span><span>36</span><span>48 meses</span></div></div>
+  <p class="sub" style="font-size:14.5px;margin-top:12px">Diagrama 3 do livro. As fases avançam pelos critérios de passagem, não pelas datas. Não há etapa em seres humanos.</p>
+</div></section>
+
+<section class="band" id="equipe"><div class="in">
+  <h2>Equipe de desenvolvimento e pesquisa</h2>
+  <p class="sub">Um programa que começa enxuto e declara o que ainda falta.</p>
+  <div class="team">
+    <div class="card person"><div class="avatar" aria-hidden="true">LT</div><div><h3>Lucas da Silva Teixeira</h3><div class="role">Autor do modelo · pesquisador responsável · desenvolvimento</div><p style="margin:0;color:var(--muted)">Graduação em Física no Instituto de Biociências, Letras e Ciências Exatas (Ibilce/UNESP), câmpus de São José do Rio Preto. Formação que combina medicina e desenvolvimento de sistemas.</p>
+      <ul><li class="mono">lucas.silva-teixeira@unesp.br</li><li class="mono"><a href="https://orcid.org/0000-0001-7541-5399">ORCID 0000-0001-7541-5399</a></li></ul></div></div>
+    <div class="card person"><div class="avatar" aria-hidden="true" style="background:linear-gradient(135deg,#5b6b70,#0e2228)">?</div><div><h3>Orientação</h3><div class="role">a informar</div><p style="margin:0;color:var(--muted)">Campo reservado, como no material da submissão. As Fases 2 e 3 exigem supervisão técnica credenciada e protocolo CEUA aprovado antes do início.</p></div></div>
+  </div>
+  <div class="card" style="margin-top:18px"><h3>Ferramentas e transparência</h3><p>Ferramentas de IA generativa auxiliaram na redação, no código das figuras e na diagramação do livro e deste software; toda referência foi verificada na fonte primária e a responsabilidade pelo conteúdo é do autor (Anexo L, §L.3). No axon, a IA nunca gera números: só traduz e explica.</p></div>
+</div></section>
+
+<footer class="band"><div class="in">
+  <div><h4>axon</h4><p style="margin:0">Simulação biofísica multiescala, mapeamento neuroanatômico e dosimetria computacional — pesquisa e ensino in silico.</p></div>
+  <div><h4>Plataforma</h4><a href="https://axon.m3d.pro">Produção</a><a href="../">Demonstração</a><a href="https://github.com/LACibermedicina/axon">Código</a></div>
+  <div><h4>Documentação</h4><a href="../docs/manual-usuario.html">Manual do usuário</a><a href="../docs/manual-tecnico.html">Manual técnico</a><a href="#noticias">Changelog</a></div>
+  <div><h4>Projeto</h4><a href="#eventos">Eventos</a><a href="#equipe">Equipe</a><a href="#ciencia">Resultados</a></div>
+</div><div class="in legal">© 2026 Lucas da Silva Teixeira · Ibilce/UNESP · Não é dispositivo médico; não usar para calcular parâmetros de estimulação em pessoas. Dados tratados conforme a LGPD: a plataforma não coleta dados de pacientes.</div></footer>
+
+<script src="../js/model.js"></script>
+<script>
+{
+  const NEWS = [
+    { d: "21/11/2026", c: "rel", t: "axon v0.1.0-alpha no ar como demonstração", p: "Primeira versão executável: desktop 3D com zoom semântico em cinco escalas, oito mini-apps, painéis retráteis, cinco idiomas e o Axon Bot. O núcleo nodal roda no navegador e no servidor." },
+    { d: "21/11/2026", c: "pes", t: "Benchmarks do livro reproduzidos pela suíte de regressão", p: "α = 1,1266, razão 3,2077 a 1 mm, razão de medianas 3,10 (IC 95 % 2,98–3,22) e 0,38 % de Aδ com Aβ ≤ 10 %. 28 testes, semente 42." },
+    { d: "21/11/2026", c: "inf", t: "CI/CD alinhado à VPS compartilhada", p: "Pipeline ci-axon: testes, sincronização das chaves de IA a partir do secret SERVIDOR_ENV e deploy via SSH. Nenhuma porta abaixo de 1024; HTTPS pelo proxy do host." },
+    { d: "21/11/2026", c: "rel", t: "Manuais do usuário e técnico publicados", p: "Documentação ilustrada com pranchas, fluxogramas, diagramas de arquitetura e a referência completa da API." },
+    { d: "nov/2026", c: "pes", t: "Edição consolidada 1.0 do livro", p: "117 páginas, Partes I a VI, 18 anexos, 24 pranchas. O código foi reexecutado e confirmou os valores das versões anteriores (Anexo F)." },
+    { d: "nov/2026", c: "evt", t: "Submissão à XIV Semana da Física preparada", p: "Artigo resumido, pôster da Etapa 2 e slides, em versões com e sem identificação para avaliação cega." }
+  ];
+  const lab = { rel: "Lançamento", pes: "Pesquisa", evt: "Evento", inf: "Infraestrutura" };
+  const box = document.getElementById("news");
+  const render = f => { box.innerHTML = NEWS.filter(n => f === "all" || n.c === f).map(n => `<article><time>${n.d}</time><div><span class="chip c-${n.c}">${lab[n.c]}</span><h3>${n.t}</h3><p>${n.p}</p></div></article>`).join(""); };
+  document.querySelectorAll(".filters button").forEach(b => b.addEventListener("click", () => { document.querySelectorAll(".filters button").forEach(x => x.classList.toggle("on", x === b)); render(b.dataset.f); }));
+  render("all");
+
+  const G = [["Fase 0 · computacional", 0, 12, "#3ee6c5"], ["Revisão sistemática", 6, 20, "#4fb3ff"], ["Fase 1 · bancada", 12, 24, "#f0a93a"], ["Fase 2 · ex vivo", 22, 36, "#ff8a3d"], ["Fase 3 · in vivo", 34, 44, "#c084fc"], ["Redação e defesa", 40, 48, "#e8f3ef"]];
+  document.getElementById("gantt").innerHTML = G.map(([n, a, z, c]) => `<div>${n}</div><div class="tr"><i style="left:${a / 48 * 100}%;width:${(z - a) / 48 * 100}%;background:${c}"></i></div>`).join("");
+
+  // hero: segmentos de mielina, nós e barras da função de ativação
+  const segs = document.getElementById("segs"), bars = document.getElementById("bars");
+  let s = "", b = "", nodes = [];
+  for (let i = 0; i < 7; i++) { const x = 8 + i * 92; s += `<rect x="${x}" y="222" width="80" height="36" rx="17" fill="url(#my)"/>`; if (i < 6) { const nx = x + 86; nodes.push(nx); s += `<rect class="node" id="n${i}" x="${nx - 5}" y="229" width="10" height="22" rx="3" fill="#2a5a55"/>`; } }
+  [-0.08, -0.34, 1, -0.34, -0.08, -0.02].forEach((v, i) => { const nx = nodes[i]; const h = Math.abs(v) * 70; b += v > 0 ? `<rect x="${nx - 5}" y="${214 - h}" width="10" height="${h}" fill="#3ee6c5" rx="2"/>` : `<rect x="${nx - 5}" y="${214 - h}" width="10" height="${h}" fill="#ff5d5d" opacity=".85" rx="2"/>`; });
+  segs.innerHTML = s; bars.innerHTML = b;
+  // posição do cátodo sobre o nó central (x = 320) — ajusta o grupo
+  const shift = 320 - nodes[2]; segs.setAttribute("transform", `translate(${shift},0)`); bars.setAttribute("transform", `translate(${shift},0)`);
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches; let k = 0;
+  if (!reduce) setInterval(() => { nodes.forEach((_, i) => document.getElementById("n" + i).setAttribute("fill", i === k ? "#3ee6c5" : "#2a5a55")); k = (k + 1) % nodes.length; }, 320);
+
+  // calculadora com o núcleo
+  const M = window.AxonModel, cD = document.getElementById("cD"), cR = document.getElementById("cR"), out = document.getElementById("out"), cmp = document.getElementById("cmp"), cv = document.getElementById("cv");
+  const fmt = (v, d) => v.toFixed(d).replace(".", ",");
+  function draw() {
+    const D = +cD.value, r = +cR.value; document.getElementById("oD").textContent = D + " µm"; document.getElementById("oR").textContent = fmt(r, 2) + " mm";
+    if (!M.inDomain(D, r / 10)) { out.innerHTML = `— <small>fora do domínio verificado (0,3–1,5 mm)</small>`; cmp.textContent = "O núcleo recusa responder fora de 1–16 µm e 0,3–1,5 mm."; }
+    else { const I = M.Ith(D, r / 10) * 1e3, ab = M.Ith(9, r / 10) * 1e3, ad = M.Ith(3, r / 10) * 1e3; out.innerHTML = `${fmt(I, 3)} <small>mA</small>`; cmp.textContent = `Na mesma distância: Aβ(9 µm) ${fmt(ab, 3)} mA · Aδ(3 µm) ${fmt(ad, 3)} mA · razão ${fmt(ad / ab, 2)}× — resultado de modelo, ordem de grandeza.`; }
+    const W = cv.clientWidth, H = cv.clientHeight, dpr = devicePixelRatio || 1; cv.width = W * dpr; cv.height = H * dpr; const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const m = { l: 52, r: 16, t: 18, b: 36 }, X = d => m.l + Math.log10(d) / Math.log10(16) * (W - m.l - m.r), Y = i => m.t + (Math.log10(8) - Math.log10(i)) / (Math.log10(8) - Math.log10(0.05)) * (H - m.t - m.b);
+    x.strokeStyle = "rgba(232,243,239,.12)"; x.fillStyle = "#9fc0bb"; x.font = "12px JetBrains Mono, monospace";
+    [1, 2, 4, 8, 16].forEach(d => { x.beginPath(); x.moveTo(X(d), m.t); x.lineTo(X(d), H - m.b); x.stroke(); x.fillText(d, X(d) - 4, H - m.b + 16); });
+    [0.1, 0.3, 1, 3].forEach(i => { x.beginPath(); x.moveTo(m.l, Y(i)); x.lineTo(W - m.r, Y(i)); x.stroke(); x.fillText(String(i).replace(".", ","), 8, Y(i) + 4); });
+    x.fillText("D (µm)", W - 70, H - 6); x.fillText("mA", 8, 14);
+    const rr = Math.min(1.5, Math.max(0.3, r)); x.strokeStyle = "#3ee6c5"; x.lineWidth = 2.5; x.beginPath();
+    for (let d = 1; d <= 16; d += .25) { const v = M.Ith(d, rr / 10) * 1e3; d === 1 ? x.moveTo(X(d), Y(v)) : x.lineTo(X(d), Y(v)); } x.stroke();
+    [[9, "#4fb3ff"], [3, "#ff8a3d"]].forEach(([d, c]) => { const v = M.Ith(d, rr / 10) * 1e3; x.fillStyle = c; x.beginPath(); x.arc(X(d), Y(v), 6, 0, 7); x.fill(); });
+    if (M.inDomain(D, r / 10)) { const v = M.Ith(D, r / 10) * 1e3; x.strokeStyle = "#fff"; x.lineWidth = 2; x.beginPath(); x.arc(X(D), Y(v), 9, 0, 7); x.stroke(); }
+  }
+  cD.addEventListener("input", draw); cR.addEventListener("input", draw);
+  const ro = new ResizeObserver(draw); ro.observe(cv);
+}
+</script>
+</body>
+</html>

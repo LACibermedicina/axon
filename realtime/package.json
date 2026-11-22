@@ -1,0 +1,9 @@
+{
+  "name": "axon-realtime",
+  "version": "0.1.0-alpha",
+  "private": true,
+  "description": "Sinalização WebRTC e salas de estudo do axon (WebSocket).",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "ws": "8.18.0" }
+}

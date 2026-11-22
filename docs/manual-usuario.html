@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>axon · Manual do Usuário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="doc.css">
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="#inicio"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="#10262d"/><path d="M5 16h4l3-7 4 14 3-9 2 2h6" fill="none" stroke="#3ee6c5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>axon <span style="font-weight:500;color:var(--muted);font-size:14px">Manual do Usuário</span></a>
+  <span class="sp"></span>
+  <input id="q" type="search" placeholder="Buscar no manual…" aria-label="Buscar no manual">
+  <a class="b" href="manual-tecnico.html">Manual técnico</a>
+  <a class="b pri" href="../">Abrir o axon</a>
+</header>
+
+<div class="hero" id="inicio">
+  <div class="in">
+    <div>
+      <h1>Do dermátomo ao canal iônico, numa só tela.</h1>
+      <p>O <b>axon</b> é um ambiente de simulação biofísica multiescala para estudar como TENS, eletroacupuntura, acupressão, taVNS, ultrassom focalizado e outras técnicas recrutam fibras nervosas — e onde estão os limites de segurança do tecido.</p>
+      <p>Este manual mostra cada tela, cada controle e cada número, com a procedência de cada valor.</p>
+      <div class="meta">versão 0.1.0-alpha · 21/11/2026 · base científica: Teixeira LS, <i>Biofísica da Neuromodulação</i>, Ibilce/UNESP, 2026</div>
+    </div>
+    <figure>
+      <svg viewBox="0 0 760 470" role="img" aria-label="Tela principal do axon com as áreas numeradas">
+        <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#123039"/><stop offset="1" stop-color="#08151a"/></linearGradient>
+        <radialGradient id="bodyg" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#7fd6e0" stop-opacity=".55"/><stop offset="1" stop-color="#7fd6e0" stop-opacity=".08"/></radialGradient>
+        <linearGradient id="heat" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#30123b"/><stop offset=".35" stop-color="#2fb5d6"/><stop offset=".5" stop-color="#f2e83a"/><stop offset=".6" stop-color="#e5461f"/><stop offset=".75" stop-color="#2fb5d6"/><stop offset="1" stop-color="#30123b"/></linearGradient></defs>
+        <rect width="760" height="470" rx="14" fill="url(#bg)" stroke="#2a4a52"/>
+        <rect width="760" height="22" rx="10" fill="#06121a"/><circle cx="14" cy="11" r="4.5" fill="#ff5f57"/><circle cx="28" cy="11" r="4.5" fill="#febc2e"/><circle cx="42" cy="11" r="4.5" fill="#28c840"/>
+        <text x="380" y="15" fill="#bff7ee" font-size="11" font-weight="700" text-anchor="middle">axon</text>
+        <g font-size="10"><text x="640" y="15">🇨🇳 🇪🇸 🇬🇧 🇮🇳 🇧🇷</text></g>
+        <rect y="22" width="760" height="14" fill="#3a2e14"/><text x="10" y="32" fill="#ffd28a" font-size="8">⚠ Ferramenta de pesquisa, ensino e modelagem in silico · não é dispositivo médico</text>
+        <rect x="8" y="44" width="150" height="330" rx="9" fill="#13303a" stroke="#28505a"/>
+        <g fill="#cfe" font-size="8"><rect x="16" y="54" width="40" height="13" rx="4" fill="#1e5b55"/><text x="20" y="63">Anatomia</text><text x="66" y="63" fill="#8bb">Biofísica</text><text x="110" y="63" fill="#8bb">Protocolo</text>
+        <rect x="16" y="74" width="134" height="64" rx="6" fill="#18394300" stroke="#2b5560"/><text x="22" y="87" font-weight="700">Dor lombar L5/S1</text><text x="22" y="99" fill="#9bc">• Raízes L5/S1 · DRG</text><text x="22" y="110" fill="#9bc">• Nervo ciático</text><text x="22" y="121" fill="#9bc">• Corno dorsal</text>
+        <rect x="16" y="144" width="134" height="52" rx="6" fill="none" stroke="#2b5560"/><circle cx="25" cy="158" r="3" fill="#4fb3ff"/><text x="32" y="161">Aβ 6–12 µm</text><circle cx="25" cy="172" r="3" fill="#ff8a3d"/><text x="32" y="175">Aδ 1–5 µm</text><circle cx="25" cy="186" r="3" fill="#c084fc"/><text x="32" y="189">C (fora do modelo)</text>
+        <rect x="16" y="202" width="134" height="70" rx="6" fill="none" stroke="#2b5560"/><text x="22" y="215" font-weight="700">Δ²Vₑ = Vₙ₋₁−2Vₙ+Vₙ₊₁</text><rect x="22" y="222" width="120" height="16" rx="3" fill="#0b1d22"/><text x="26" y="233" fill="#8ff3df" font-family="monospace">fₙ &gt; 0 sob o cátodo</text></g>
+        <rect x="602" y="44" width="150" height="330" rx="9" fill="#13303a" stroke="#28505a"/>
+        <g font-size="8" fill="#cfe"><g fill="#1e5b55"><rect x="610" y="54" width="32" height="12" rx="3"/></g><text x="613" y="63">TENS</text><text x="648" y="63" fill="#8bb">EA</text><text x="672" y="63" fill="#8bb">Pressão</text><text x="708" y="63" fill="#8bb">taVNS</text>
+        <g stroke="#2b5560" stroke-width="3" stroke-linecap="round"><path d="M612 88h130M612 112h130M612 136h130M612 160h130"/></g><g stroke="#3ee6c5" stroke-width="3" stroke-linecap="round"><path d="M612 88h70M612 112h28M612 136h44M612 160h60"/></g>
+        <g fill="#3ee6c5"><circle cx="682" cy="88" r="4"/><circle cx="640" cy="112" r="4"/><circle cx="656" cy="136" r="4"/><circle cx="672" cy="160" r="4"/></g>
+        <text x="612" y="82">Frequência</text><text x="612" y="106">Amplitude</text><text x="612" y="130">Largura de pulso</text><text x="612" y="154">Distância r</text>
+        <rect x="610" y="176" width="134" height="72" rx="6" fill="none" stroke="#2b5560"/><text x="616" y="189" font-weight="700">Variações anatômicas</text><text x="616" y="203" fill="#9bc">Tecido adiposo +0,3 mm</text><text x="616" y="216" fill="#9bc">Desmielinização 0,2</text><text x="616" y="229" fill="#9bc">Fibrose 0,0</text>
+        <rect x="610" y="254" width="134" height="80" rx="6" fill="none" stroke="#2b5560"/><text x="616" y="267" font-weight="700">Impacto previsto</text><text x="616" y="281">Seletividade Aδ/Aβ 3,21×</text><rect x="616" y="285" width="120" height="4" rx="2" fill="#24434a"/><rect x="616" y="285" width="77" height="4" rx="2" fill="#3ee6c5"/>
+        <text x="616" y="300">Aβ recrutadas 41 %</text><rect x="616" y="304" width="120" height="4" rx="2" fill="#24434a"/><rect x="616" y="304" width="49" height="4" rx="2" fill="#4fb3ff"/><text x="616" y="320" fill="#ff8b8b">Eficácia: não estimável</text></g>
+        <g transform="translate(240,52)"><ellipse cx="60" cy="40" rx="16" ry="19" fill="url(#bodyg)" stroke="#7fd6e0" stroke-opacity=".5"/><path d="M34 62h52l8 70-12 4-6 60h-10l-6-58-6 58H44l-6-60-12-4z" fill="url(#bodyg)" stroke="#7fd6e0" stroke-opacity=".5"/><path d="M34 66l-18 64M86 66l18 64" stroke="#7fd6e0" stroke-opacity=".35" stroke-width="10" stroke-linecap="round"/>
+          <g stroke-width="1.6" fill="none"><path d="M60 58v90" stroke="#fff2c4"/><path d="M58 140l-6 90M62 140l6 90" stroke="#ffb547"/><path d="M56 40c-6 4-6 20 -2 30" stroke="#4fb3ff"/></g>
+          <g fill="none" stroke-opacity=".7" stroke-width="5"><path d="M38 78h44" stroke="#4fb3ff"/><path d="M38 92h44" stroke="#2f7fd0"/><path d="M38 106h44" stroke="#4fb3ff"/><path d="M38 136h44" stroke="#ffb547"/></g>
+          <circle cx="66" cy="150" r="5" fill="#ffb547"/><circle cx="76" cy="38" r="4" fill="#4fb3ff"/></g>
+        <path d="M318 196 L420 120 M318 206 L420 290" stroke="#3ee6c5" stroke-opacity=".5" stroke-dasharray="4 3"/>
+        <g transform="translate(500,205)"><circle r="82" fill="#e8b48a" fill-opacity=".35" stroke="#e8b48a"/><g fill="#d9705f" fill-opacity=".7" stroke="#f2a08f"><circle cx="-30" cy="-26" r="22"/><circle cx="26" cy="-30" r="20"/><circle cx="0" cy="12" r="24"/><circle cx="-40" cy="28" r="18"/><circle cx="40" cy="26" r="19"/></g>
+          <g fill="#4fb3ff"><circle cx="-34" cy="-30" r="4"/><circle cx="-24" cy="-20" r="3"/><circle cx="4" cy="8" r="4"/><circle cx="30" cy="-34" r="3.5"/><circle cx="44" cy="22" r="3.5"/></g><g fill="#ff8a3d"><circle cx="-26" cy="-34" r="2"/><circle cx="-6" cy="16" r="2"/><circle cx="8" cy="20" r="2"/><circle cx="-40" cy="32" r="2"/><circle cx="36" cy="30" r="2"/><circle cx="22" cy="-26" r="2"/></g>
+          <circle r="88" fill="none" stroke="#9fb3c8" stroke-width="6" stroke-dasharray="380 200"/></g>
+        <rect x="380" y="320" width="160" height="16" rx="4" fill="url(#heat)" opacity=".85"/><text x="460" y="331" text-anchor="middle" font-size="8" fill="#08151a" font-weight="700">Δ²Vₑ ao longo do eixo</text>
+        <rect x="290" y="44" width="200" height="16" rx="8" fill="#0a1a20" stroke="#28505a"/><text x="390" y="55" fill="#cfe" font-size="7.5" text-anchor="middle">− 1 Corpo · 2 Região · 3 Fascículo · 4 Axônio · 5 Membrana +</text>
+        <rect x="172" y="350" width="200" height="86" rx="8" fill="#16343d" stroke="#2f5761"/><circle cx="182" cy="358" r="3" fill="#ff5f57"/><circle cx="192" cy="358" r="3" fill="#febc2e"/><circle cx="202" cy="358" r="3" fill="#28c840"/><text x="272" y="361" fill="#cfe" font-size="8" text-anchor="middle">Curvas de recrutamento</text>
+        <path d="M186 424 C220 424 230 380 270 372 S340 368 360 368" stroke="#4fb3ff" stroke-width="2" fill="none"/><path d="M186 426 C250 426 270 410 300 392 S350 378 362 376" stroke="#ff8a3d" stroke-width="2" fill="none"/>
+        <rect x="386" y="350" width="206" height="86" rx="8" fill="#16343d" stroke="#2f5761"/><text x="489" y="361" fill="#cfe" font-size="8" text-anchor="middle">Fronteiras de segurança</text>
+        <g fill="none" stroke-width="5" stroke-linecap="round"><path d="M398 412a18 18 0 1 1 34 0" stroke="#24434a"/><path d="M398 412a18 18 0 0 1 6-16" stroke="#3ee6a0"/><path d="M446 412a18 18 0 1 1 34 0" stroke="#24434a"/><path d="M446 412a18 18 0 0 1 14-20" stroke="#3ee6a0"/><path d="M494 412a18 18 0 1 1 34 0" stroke="#24434a"/><path d="M542 412a18 18 0 1 1 34 0" stroke="#24434a"/><path d="M542 412a18 18 0 0 1 4-12" stroke="#ffc04d"/></g>
+        <g font-size="6.5" fill="#9bc" text-anchor="middle"><text x="415" y="428">ΔT</text><text x="463" y="428">Shannon k</text><text x="511" y="428">MI</text><text x="559" y="428">Crônica</text></g>
+        <rect x="220" y="442" width="320" height="24" rx="10" fill="#1d3a44" stroke="#3b5d66"/>
+        <g><rect x="232" y="446" width="16" height="16" rx="4" fill="#18a999"/><rect x="256" y="446" width="16" height="16" rx="4" fill="#e39b2a"/><rect x="280" y="446" width="16" height="16" rx="4" fill="#2f7fd0"/><rect x="304" y="446" width="16" height="16" rx="4" fill="#2fae6a"/><rect x="328" y="446" width="16" height="16" rx="4" fill="#8e5bd6"/><rect x="352" y="446" width="16" height="16" rx="4" fill="#d6467a"/><rect x="376" y="446" width="16" height="16" rx="4" fill="#1a9ed0"/><rect x="400" y="446" width="16" height="16" rx="4" fill="#24343c" stroke="#3ee6c5"/><rect x="432" y="446" width="16" height="16" rx="4" fill="#dfe6ea"/></g>
+        <g transform="translate(700,392)"><circle r="16" fill="#7fd6e0"/><ellipse cy="2" rx="11" ry="8" fill="#0e2430"/><circle cx="-4" cy="1" r="3" fill="#3ee6c5"/><circle cx="4" cy="1" r="3" fill="#3ee6c5"/><path d="M-6 30h12l4 24h-20z" fill="#e9f0f2"/><path d="M0-16v-10M-10-12l-8-8M10-12l8-8" stroke="#7fd6e0" stroke-width="3" stroke-linecap="round"/></g>
+        <g font-size="11" font-weight="800" fill="#08151a">
+          <circle cx="160" cy="44" r="10" fill="#ffd36b"/><text x="160" y="48" text-anchor="middle">1</text>
+          <circle cx="282" cy="52" r="10" fill="#ffd36b"/><text x="282" y="56" text-anchor="middle">2</text>
+          <circle cx="232" cy="100" r="10" fill="#ffd36b"/><text x="232" y="104" text-anchor="middle">3</text>
+          <circle cx="590" cy="130" r="10" fill="#ffd36b"/><text x="590" y="134" text-anchor="middle">4</text>
+          <circle cx="598" cy="44" r="10" fill="#ffd36b"/><text x="598" y="48" text-anchor="middle">5</text>
+          <circle cx="172" cy="350" r="10" fill="#ffd36b"/><text x="172" y="354" text-anchor="middle">6</text>
+          <circle cx="592" cy="350" r="10" fill="#ffd36b"/><text x="592" y="354" text-anchor="middle">7</text>
+          <circle cx="220" cy="452" r="10" fill="#ffd36b"/><text x="220" y="456" text-anchor="middle">8</text>
+          <circle cx="726" cy="372" r="10" fill="#ffd36b"/><text x="726" y="376" text-anchor="middle">9</text>
+          <circle cx="740" cy="30" r="10" fill="#ffd36b"/><text x="740" y="34" text-anchor="middle">10</text>
+        </g>
+      </svg>
+    </figure>
+  </div>
+</div>
+
+<div class="wrap">
+<nav class="toc" aria-label="Índice">
+  <div class="grp">Começar</div><a href="#sobre">O que é o axon</a><a href="#acesso">Primeiros passos</a><a href="#tela">Anatomia da tela</a>
+  <div class="grp">Navegar</div><a href="#escalas">Zoom semântico em 5 escalas</a><a href="#janelas">Janelas e Dock</a><a href="#paineis">Painéis laterais</a>
+  <div class="grp">Simular</div><a href="#apps">Os 8 mini-apps</a><a href="#modalidades">Modalidades</a><a href="#integrativa">Medicina integrativa</a><a href="#fluxos">Fluxos de trabalho</a>
+  <div class="grp">Interpretar</div><a href="#procedencia">Etiquetas de procedência</a><a href="#seguranca">4 fronteiras de segurança</a><a href="#limites">O que os números autorizam</a>
+  <div class="grp">Referência</div><a href="#faq">Perguntas frequentes</a><a href="#atalhos">Atalhos</a><a href="#glossario">Glossário</a><a href="#privacidade">Privacidade e suporte</a>
+</nav>
+<main>
+
+<section id="sobre">
+  <h2>O que é o axon — e o que ele não é</h2>
+  <p class="lead">Um laboratório in silico para entender, comparar e ensinar a biofísica da neuromodulação, com resultados reproduzíveis e procedência explícita.</p>
+  <div class="grid2">
+    <div class="card"><h4>✔ É</h4><p>Ferramenta de <b>pesquisa, ensino e modelagem computacional</b>. Implementa o modelo nodal de 41 nós do livro, verificado (resolve corretamente as equações que afirma resolver) e reprodutível com semente 42.</p></div>
+    <div class="card"><h4>✘ Não é</h4><p><b>Dispositivo médico</b>, protocolo clínico prescritivo nem substituto de avaliação profissional. Não aceita dados de pacientes e não calcula dose para pessoas.</p></div>
+  </div>
+  <div class="note warn"><b>Enquadramento permanente.</b> A faixa âmbar no topo da tela nunca some: ela lembra o enquadramento ASME V&amp;V 40 (modelo <i>verificado, não validado</i>) e a Resolução CNS nº 510/2016.</div>
+</section>
+
+<section id="acesso">
+  <h2>Primeiros passos</h2>
+  <ol class="steps">
+    <li><b>Acesse</b> <span class="mono">https://axon.m3d.pro</span> num navegador com WebGL (Chrome, Edge, Firefox ou Safari atuais). Não há instalação.</li>
+    <li><b>Escolha o idioma</b> nas cinco bandeiras do canto superior direito: 🇨🇳 Mandarim, 🇪🇸 Espanhol, 🇬🇧 Inglês, 🇮🇳 Hindi, 🇧🇷 Português. A escolha fica salva neste navegador.</li>
+    <li><b>Observe o indicador</b> ao lado da versão: <span class="mono">API 0.1.0-alpha</span> significa servidor conectado (IA do tradutor e do Axon Bot ativas); <span class="mono">offline</span> significa que tudo roda no seu navegador — o modelo continua completo.</li>
+    <li><b>Clique num ponto pulsante</b> do corpo (por exemplo, L5/S1) ou gire a roda do mouse sobre o palco para descer de escala.</li>
+  </ol>
+  <div class="note ok">Celular ou tablet: os painéis viram blocos empilhados, o Dock rola na horizontal e apenas uma janela fica aberta por vez.</div>
+</section>
+
+<section id="tela">
+  <h2>Anatomia da tela</h2>
+  <p>A ilustração do topo numera as dez áreas fixas do ambiente. Use esta tabela como legenda.</p>
+  <div class="scroll"><table class="stack">
+    <tr><th>#</th><th>Área</th><th>Para que serve</th></tr>
+    <tr><td>1</td><td>Painel esquerdo retrátil</td><td>Anatomia e sintomas, biofísica explicada e protocolo passo a passo — muda com a escala e a intervenção.</td></tr>
+    <tr><td>2</td><td>Régua de escalas</td><td>Salta entre os 5 níveis; <kbd>−</kbd>/<kbd>+</kbd> sobem ou descem um nível.</td></tr>
+    <tr><td>3</td><td>Palco 3D</td><td>Corpo translúcido com dermátomos, nervos, vago, cadeia simpática e acupontos; arraste para girar.</td></tr>
+    <tr><td>4</td><td>Painel direito retrátil</td><td>Intervenção, parâmetros físicos, variações anatômicas e impacto previsto.</td></tr>
+    <tr><td>5</td><td>Seleção de intervenção</td><td>TENS, SCS, EA, pressão, taVNS, LIFU, TI e optoacústica.</td></tr>
+    <tr><td>6</td><td>Janela de recrutamento</td><td>Curvas Aβ e Aδ de referência e ao vivo.</td></tr>
+    <tr><td>7</td><td>Janela de segurança</td><td>Medidores das 4 fronteiras teciduais.</td></tr>
+    <tr><td>8</td><td>Dock</td><td>Abre os 8 mini-apps e os manuais.</td></tr>
+    <tr><td>9</td><td>Axon Bot</td><td>Assistente; clique para conversar, 🔊 para silenciar.</td></tr>
+    <tr><td>10</td><td>Idiomas e estado</td><td>Cinco bandeiras, versão e conexão com a API.</td></tr>
+  </table></div>
+</section>
+
+<section id="escalas">
+  <h2>Zoom semântico: cinco escalas ligadas entre si</h2>
+  <p>Cada nível não é só uma ampliação: ele troca o que é mostrado e o que os painéis explicam. A seleção feita num nível (região, intervenção, calibre) acompanha você nos demais.</p>
+  <figure class="board">
+    <svg viewBox="0 0 800 300" role="img" aria-label="Os cinco níveis de escala, do corpo à membrana">
+      <g font-size="13" fill="#e9f3ef" text-anchor="middle">
+        <g transform="translate(80,120)"><circle r="62" fill="none" stroke="#7fd6e0" stroke-dasharray="3 4"/><ellipse cy="-30" rx="10" ry="12" fill="#7fd6e0" opacity=".5"/><path d="M-16-16h32l4 40-6 2-3 30h-6l-3-28-3 28h-6l-3-30-6-2z" fill="#7fd6e0" opacity=".5"/><path d="M-12 -6h24M-12 4h24" stroke="#4fb3ff" stroke-width="4" opacity=".7"/><circle cx="6" cy="30" r="4" fill="#ffb547"/><text y="88" font-weight="700">1 · Corpo</text><text y="106" font-size="11" fill="#9fc">metros · dermátomos</text></g>
+        <g transform="translate(240,120)"><circle r="62" fill="none" stroke="#7fd6e0" stroke-dasharray="3 4"/><rect x="-44" y="-36" width="88" height="10" fill="#f0c3a8"/><rect x="-44" y="-26" width="88" height="22" fill="#f7e3a3" opacity=".8"/><rect x="-44" y="-4" width="88" height="4" fill="#e8e2d8"/><rect x="-44" y="0" width="88" height="36" fill="#c9545a" opacity=".7"/><rect x="-44" y="14" width="88" height="8" rx="4" fill="#ffb547"/><path d="M0-58v40" stroke="#cfd8dc" stroke-width="2"/><text y="88" font-weight="700">2 · Região</text><text y="106" font-size="11" fill="#9fc">cm · pele → nervo (r)</text></g>
+        <g transform="translate(400,120)"><circle r="62" fill="none" stroke="#7fd6e0" stroke-dasharray="3 4"/><circle r="44" fill="#e8b48a" opacity=".45" stroke="#e8b48a"/><g fill="#d9705f" opacity=".85"><circle cx="-14" cy="-14" r="13"/><circle cx="16" cy="-12" r="11"/><circle cx="0" cy="16" r="13"/></g><g fill="#4fb3ff"><circle cx="-16" cy="-16" r="3"/><circle cx="2" cy="14" r="3"/><circle cx="18" cy="-14" r="3"/></g><g fill="#ff8a3d"><circle cx="-10" cy="-10" r="1.6"/><circle cx="-4" cy="20" r="1.6"/><circle cx="13" cy="-8" r="1.6"/></g><text y="88" font-weight="700">3 · Fascículo</text><text y="106" font-size="11" fill="#9fc">mm · epi/peri/endoneuro</text></g>
+        <g transform="translate(560,120)"><circle r="62" fill="none" stroke="#7fd6e0" stroke-dasharray="3 4"/><g fill="#f3efe6"><rect x="-50" y="-7" width="30" height="14" rx="6"/><rect x="-16" y="-7" width="30" height="14" rx="6"/><rect x="18" y="-7" width="30" height="14" rx="6"/></g><rect x="-20" y="-5" width="4" height="10" fill="#3ee6c5"/><rect x="14" y="-5" width="4" height="10" fill="#3ee6c5"/><rect x="-2" y="-36" width="4" height="26" fill="#3ee6c5"/><rect x="-36" y="-18" width="4" height="8" fill="#ff5d5d"/><rect x="32" y="-18" width="4" height="8" fill="#ff5d5d"/><circle cy="-44" r="4" fill="#fff"/><text y="88" font-weight="700">4 · Axônio</text><text y="106" font-size="11" fill="#9fc">µm · nós de Ranvier</text></g>
+        <g transform="translate(720,120)"><circle r="62" fill="none" stroke="#7fd6e0" stroke-dasharray="3 4"/><g fill="#f1c27d"><circle cx="-40" cy="-14" r="4"/><circle cx="-30" cy="-14" r="4"/><circle cx="-20" cy="-14" r="4"/><circle cx="20" cy="-14" r="4"/><circle cx="30" cy="-14" r="4"/><circle cx="40" cy="-14" r="4"/><circle cx="-40" cy="14" r="4"/><circle cx="-30" cy="14" r="4"/><circle cx="-20" cy="14" r="4"/><circle cx="20" cy="14" r="4"/><circle cx="30" cy="14" r="4"/><circle cx="40" cy="14" r="4"/></g><g fill="#3ec7ff"><rect x="-12" y="-22" width="6" height="44" rx="3"/><rect x="6" y="-22" width="6" height="44" rx="3"/></g><circle cy="-34" r="3" fill="#fff36b"/><circle cy="0" r="3" fill="#fff36b"/><text y="88" font-weight="700">5 · Membrana</text><text y="106" font-size="11" fill="#9fc">nm · NaV, Piezo, TRPV1</text></g>
+        <g stroke="#ffd36b" stroke-width="2" fill="none"><path d="M142 120h36M302 120h36M462 120h36M622 120h36"/></g><g fill="#ffd36b"><path d="M178 115l8 5-8 5zM338 115l8 5-8 5zM498 115l8 5-8 5zM658 115l8 5-8 5z"/></g>
+        <text x="400" y="270" font-size="12" fill="#9fc">roda do mouse: aproxima até o limite do nível e, insistindo, desce para o próximo · clique num ponto pulsante: vai direto ao Nível 2</text>
+      </g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U1.</b> O Motor de Zoom Semântico. Geometria esquemática, fora de escala; as relações d = 0,7·D e L = 100·D do Nível 4 são as do modelo. <span class="tag t-lit">LITERATURA</span></figcaption>
+  <div class="scroll"><table class="stack">
+    <tr><th>Nível</th><th>O que você vê</th><th>O que reage aos controles</th></tr>
+    <tr><td>1 · Corpo</td><td>Dermátomos (esquema didático), ciático, mediano, ulnar, trigêmeo, vago (azul), cadeia simpática (verde), acupontos (rosa)</td><td>Camadas no App 1; seleção de região</td></tr>
+    <tr><td>2 · Região</td><td>Pele, tecido adiposo, fáscia, músculo; feixe neurovascular; dispositivo da intervenção; mapa de calor do campo</td><td>Distância r, tecido adiposo, intervenção</td></tr>
+    <tr><td>3 · Fascículo</td><td>Epineuro, 7 fascículos com perineuro e endoneuro, eletrodo cuff; 182 fibras que acendem quando recrutadas</td><td>Amplitude, r, variações; contagem no rodapé do palco</td></tr>
+    <tr><td>4 · Axônio</td><td>Mielina, nós de Ranvier, cátodo; barras da função de ativação por nó (verde despolariza, vermelho hiperpolariza)</td><td>Calibre D, r</td></tr>
+    <tr><td>5 · Membrana</td><td>Bicamada ≈ 5 nm; NaV1.7/1.8, Piezo1/2, TRPV1, TRAAK/TREK; íons em trânsito</td><td>Didático (sem parâmetros)</td></tr>
+  </table></div>
+</section>
+
+<section id="janelas">
+  <h2>Janelas, Dock e o duplo clique para fechar</h2>
+  <figure class="board">
+    <svg viewBox="0 0 800 220" role="img" aria-label="Anatomia de uma janela">
+      <rect x="40" y="30" width="420" height="160" rx="12" fill="#16343d" stroke="#3ee6c5" stroke-opacity=".6"/>
+      <rect x="40" y="30" width="420" height="30" rx="12" fill="#1c3e48"/><circle cx="60" cy="45" r="7" fill="#ff5f57"/><circle cx="80" cy="45" r="7" fill="#febc2e"/><circle cx="100" cy="45" r="7" fill="#28c840"/>
+      <text x="250" y="50" fill="#e9f3ef" font-size="13" text-anchor="middle" font-weight="700">Preditor de calibre</text>
+      <path d="M445 175l10-10M450 180l5-5" stroke="#9fc" stroke-width="2"/>
+      <g fill="#e9f3ef" font-size="12.5"><text x="500" y="44">● fechar · ● minimizar no Dock · ● maximizar</text><text x="500" y="76">Arraste pela barra de título</text><text x="500" y="108">Redimensione pelo canto ↘</text><text x="500" y="140">Duplo clique FORA de qualquer janela</text><text x="500" y="158">fecha a janela em foco</text><text x="500" y="186">Ponto sob o ícone do Dock = aberta</text></g>
+      <path d="M110 45 C 200 20 400 20 492 40" stroke="#ffd36b" fill="none" stroke-dasharray="3 3"/><path d="M455 172 C470 140 480 110 492 104" stroke="#ffd36b" fill="none" stroke-dasharray="3 3"/>
+      <g fill="#9fc" font-size="12"><text x="60" y="90">Conteúdo do mini-app — gráficos se redesenham</text><text x="60" y="108">automaticamente ao redimensionar.</text></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U2.</b> Cada mini-app é uma janela independente no estilo macOS, sincronizada com o palco e com os painéis.</figcaption>
+</section>
+
+<section id="paineis">
+  <h2>Painéis laterais</h2>
+  <h3>Esquerdo — Anatomia, sintomas &amp; protocolo</h3>
+  <p>Recolha com <kbd>‹</kbd>. As três abas acompanham a escala atual e a intervenção ativa:</p>
+  <div class="grid3">
+    <div class="card"><h4>Anatomia</h4><p>Estruturas da região, fibras predominantes (Aα, Aβ, Aδ, C), sintomas associados (alodinia, hiperalgesia, parestesia, dor referida) e o mecanismo esperado da intervenção — cada linha com etiqueta.</p></div>
+    <div class="card"><h4>Biofísica</h4><p>Equações da escala atual com o significado de cada variável e os alertas metodológicos do Anexo F.</p></div>
+    <div class="card"><h4>Protocolo</h4><p>Roteiro in silico em 7 passos (os já percorridos ficam verdes) e a escada de evidência das Fases 0 a 3.</p></div>
+  </div>
+  <h3>Direito — Parâmetros &amp; IA preditiva</h3>
+  <p>Os controles mudam conforme o agente físico da intervenção:</p>
+  <div class="scroll"><table class="stack">
+    <tr><th>Agente</th><th>Controles</th><th>Faixa</th></tr>
+    <tr><td>Elétrico (TENS, SCS, EA, taVNS, TI)</td><td>frequência, amplitude, largura de pulso, área de contato</td><td>1 Hz–10 kHz · 0,05–5 mA · 20–500 µs · 0,005–10 cm²</td></tr>
+    <tr><td>Mecânico (acupressão)</td><td>pressão, área de contato</td><td>0–400 kPa · 0,1–4 cm²</td></tr>
+    <tr><td>Acústico (LIFU, optoacústica)</td><td>frequência, I<sub>SPTA</sub></td><td>0,2–10 MHz · 0–2000 mW/cm²</td></tr>
+    <tr><td>Todos</td><td>distância r, calibre D</td><td>0,3–3 mm (verificado até 1,5) · 1–16 µm</td></tr>
+  </table></div>
+  <p><b>Variações anatômicas</b> (tecido adiposo, desmielinização, perda de fibras finas, hipertrofia perineural, fibrose) alteram a geometria do modelo e deslocam as curvas. O perfil é anônimo: só aceita números geométricos, nunca dados pessoais. <span class="tag t-hip">HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO</span></p>
+  <p><b>Impacto previsto</b> mostra seletividade Aδ/Aβ, frações recrutadas e margem de Shannon. A linha “Eficácia analgésica” diz deliberadamente <i>não estimável pelo modelo</i>: nenhum número de eficácia clínica é exibido.</p>
+</section>
+
+<section id="apps">
+  <h2>Os oito mini-apps</h2>
+  <div class="grid2">
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#18a999"/><circle cx="20" cy="13" r="4" fill="#fff"/><path d="M14 19h12l-2 10h-8z" fill="#fff"/></svg>1 · Navegador anatômico</h4><p>Liga/desliga dermátomos, nervos, cadeias autonômicas e acupontos; atalhos para as 5 escalas e para as 6 regiões.</p></div>
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#e39b2a"/><path d="M10 30L30 10" stroke="#fff" stroke-width="2.5"/></svg>2 · Estúdio de intervenções</h4><p>Descrição da técnica, função de ativação Δ²Vₑ ao longo da fibra e fichas próprias: banda de frequência da EA, mapa ABVN da taVNS, mecanotransdução da pressão, difração × atenuação do ultrassom.</p></div>
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#2f7fd0"/><path d="M8 30C16 28 18 12 32 10" stroke="#7af7dc" stroke-width="3" fill="none"/></svg>3 · Preditor de calibre</h4><p>Cinco abas: recrutamento, lei de escala, janela de seletividade, mapa calibre × distância e tabela de benchmarks (axon × livro).</p></div>
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#2fae6a"/><path d="M20 8l10 4v8c0 7-5 11-10 13-5-2-10-6-10-13v-8z" fill="#fff"/></svg>4 · Fronteiras de segurança</h4><p>Medidores de ΔT (Pennes 0D), Shannon k, índice mecânico ou pressão, e indicador crônico.</p></div>
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#8e5bd6"/><path d="M6 22c3-8 5 8 8 0s4-10 7 0 4 8 7 0 4-6 6 0" stroke="#fff" stroke-width="2" fill="none"/></svg>5 · Ruído &amp; ressonância estocástica</h4><p>Ajuste σ e veja o sinal subliminar cruzar o limiar; a curva SNR × σ mostra o ótimo intermediário.</p></div>
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#d6467a"/><circle cx="12" cy="12" r="4" fill="#fff"/><circle cx="28" cy="12" r="4" fill="#fff"/><circle cx="20" cy="28" r="4" fill="#ffd36b"/><path d="M12 12l8 16 8-16" stroke="#fff" fill="none"/></svg>6 · Grafos clínico-biofísicos</h4><p>Cadeia Dermátomo/Sintoma → Via → Intervenção → Modelo/Segurança → Efeito. Arraste nós; clique em dois nós para ligá-los.</p></div>
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#1a9ed0"/><circle cx="18" cy="20" r="10" fill="#fff"/><path d="M8 20h20M18 10c-4 6-4 14 0 20M18 10c4 6 4 14 0 20" stroke="#1a9ed0" fill="none"/></svg>7 · Tradutor (5 bandeiras)</h4><p>Interface via dicionários (funciona offline); fichas técnicas livres via IA do servidor. Símbolos, unidades e etiquetas nunca são traduzidos.</p></div>
+    <div class="card"><h4><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#24343c"/><circle cx="20" cy="21" r="8" fill="#bff7ee"/><circle cx="17" cy="20" r="2" fill="#0a5"/><circle cx="23" cy="20" r="2" fill="#0a5"/></svg>8 · Axon Bot, agenda e salas</h4><p>Chat ancorado no livro, cronograma de 48 meses (Diagrama 3) e salas de estudo WebRTC.</p></div>
+  </div>
+</section>
+
+<section id="modalidades">
+  <h2>Modalidades e o que o modelo calcula para cada uma</h2>
+  <div class="scroll"><table class="stack">
+    <tr><th>Modalidade</th><th>Agente</th><th>O axon calcula</th><th>Procedência</th></tr>
+    <tr><td>TENS</td><td>Elétrico, superfície</td><td>Limiares Aβ/Aδ, recrutamento, Shannon</td><td><span class="tag t-mod">MODELO</span></td></tr>
+    <tr><td>SCS / HF10</td><td>Elétrico, epidural</td><td>Idem + aquecimento Joule (0D)</td><td><span class="tag t-der">DERIVADO</span></td></tr>
+    <tr><td>Eletroacupuntura</td><td>Elétrico, percutâneo</td><td>r reduzido, densidade de carga na agulha, banda de frequência</td><td><span class="tag t-lit">LITERATURA</span> <span class="tag t-hip">HIPÓTESE</span></td></tr>
+    <tr><td>Acupressão</td><td>Mecânico</td><td>Fração de mecanorreceptores Aβ (curva ilustrativa)</td><td><span class="tag t-pre">PREMISSA</span></td></tr>
+    <tr><td>taVNS</td><td>Elétrico, auricular</td><td>Limiar Aβ, probabilidade de inervação ABVN por sítio, Shannon</td><td><span class="tag t-lit">LITERATURA</span></td></tr>
+    <tr><td>LIFU</td><td>Acústico</td><td>λ, atenuação, MI, I<sub>SPTA.3</sub>, ΔT</td><td><span class="tag t-der">DERIVADO</span></td></tr>
+    <tr><td>Interferência temporal</td><td>Elétrico, kHz</td><td>Shannon, recrutamento (aproximação de pulso)</td><td><span class="tag t-der">DERIVADO</span></td></tr>
+    <tr><td>Optoacústica</td><td>Acústico, campo próximo</td><td>Escalas de foco (≈ 39,6 µm)</td><td><span class="tag t-lit">LITERATURA</span></td></tr>
+  </table></div>
+</section>
+
+<section id="integrativa">
+  <h2>Medicina integrativa, com a mesma régua biofísica</h2>
+  <h3>Eletroacupuntura</h3>
+  <p>A agulha atravessa pele e fáscia: a fonte fica mais perto do feixe (r menor) e a impedância cutânea deixa de pesar. O preço é a área ativa minúscula — com 0,25 mm de diâmetro e 2 mm expostos, a área é ≈ 0,0157 cm², e a densidade de carga cresce depressa. O medidor de Shannon avisa antes.</p>
+  <div class="note">Frequências baixas (2–10 Hz) e altas (80–100 Hz) associam-se, em estudos pré-clínicos, a neuropeptídeos diferentes <span class="tag t-lit">LITERATURA</span> — Han JS, Trends Neurosci 2003. Eficácia clínica: <span class="tag t-hip">HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO</span>.</div>
+  <h3>Pressão em pontos reflexos</h3>
+  <p>Sem corrente: a deformação da membrana abre canais Piezo2/TRAAK em fibras Aβ, que ativam a inibição segmentar da Teoria do Portão. A fronteira eletroquímica não se aplica; o medidor mostra a pressão contra a ordem de grandeza do limiar de dor à pressão (≈ 300 kPa).</p>
+  <h3>taVNS</h3>
+  <figure class="board">
+    <svg viewBox="0 0 800 260" role="img" aria-label="Pavilhão auricular com inervação do ramo auricular do vago">
+      <g transform="translate(150,130)">
+        <path d="M-10-110 C70-120 110-60 100 0 C92 60 50 70 40 110 C30 140-20 140-30 110 C-40 80-80 60-80 0 C-80-70-50-105-10-110Z" fill="#f0c3a8" opacity=".25" stroke="#f0c3a8"/>
+        <path d="M-20-40 C10-60 50-40 45-10 C42 10 10 12-10 0 C-25-10-30-30-20-40Z" fill="#4fb3ff" opacity=".9"/>
+        <path d="M-25 5 C0 20 40 15 45 40 C48 65 0 70-20 55 C-40 40-40 15-25 5Z" fill="#4fb3ff" opacity=".45"/>
+        <path d="M-70 10 C-75-20-70-40-60-50 L-50-45 C-58-30-60-10-58 10Z" fill="#ffb547" opacity=".55"/>
+        <path d="M-10 110 C0 90 20 90 30 110 C20 135-5 135-10 110Z" fill="#c084fc" opacity=".5"/>
+        <path d="M-30-80 C10-95 60-80 80-40" fill="none" stroke="#4fb3ff" stroke-opacity=".5" stroke-width="10"/>
+      </g>
+      <g font-size="13" fill="#e9f3ef"><circle cx="340" cy="50" r="7" fill="#4fb3ff"/><text x="356" y="55">Cymba conchae — ABVN em 100 % dos espécimes</text>
+        <circle cx="340" cy="84" r="7" fill="#4fb3ff" opacity=".45"/><text x="356" y="89">Cavum conchae — 45 %</text>
+        <circle cx="340" cy="118" r="7" fill="#4fb3ff" opacity=".5"/><text x="356" y="123">Antélice — 73 % · Crus da hélice — 20 %</text>
+        <circle cx="340" cy="152" r="7" fill="#ffb547" opacity=".6"/><text x="356" y="157">Trago — 45 % ABVN; também n. auriculotemporal (V3)</text>
+        <circle cx="340" cy="186" r="7" fill="#c084fc" opacity=".6"/><text x="356" y="191">Lóbulo — sem ABVN (n. auricular magno, C2–C3): sítio sham</text>
+        <text x="340" y="228" fill="#9fc" font-size="12">Peuker ET, Filler TJ. Clin Anat. 2002;15(1):35-7 · [LITERATURA]</text></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U3.</b> Mapa do pavilhão usado pelo Estúdio de intervenções. A cascata ABVN → NTS está documentada <span class="tag t-lit">LITERATURA</span>; os passos para locus coeruleus, rafe, PAG e via colinérgica anti-inflamatória são <span class="tag t-hip">HIPÓTESE</span>. Parâmetros usuais 20–30 Hz, 200–250 µs; o painel alerta sobre bradicardia teórica.</figcaption>
+</section>
+
+<section id="fluxos">
+  <h2>Fluxos de trabalho</h2>
+  <h3>A · Estudo de seletividade (o fluxo de referência)</h3>
+  <figure class="board">
+    <svg viewBox="0 0 800 250" role="img" aria-label="Fluxograma do estudo de seletividade">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+      <g font-size="12.5" fill="#e9f3ef" text-anchor="middle">
+        <rect x="10" y="30" width="130" height="50" rx="10" fill="#1c3e48" stroke="#ffb547"/><text x="75" y="52">Selecionar região</text><text x="75" y="68" fill="#9fc" font-size="11">Nível 1</text>
+        <rect x="170" y="30" width="130" height="50" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="235" y="52">Intervenção</text><text x="235" y="68" fill="#9fc" font-size="11">painel direito</text>
+        <rect x="330" y="30" width="130" height="50" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="395" y="52">r, tₚ, amplitude</text><text x="395" y="68" fill="#9fc" font-size="11">sliders</text>
+        <path d="M530 22 l60 33 -60 33 -60-33z" fill="#1c3e48" stroke="#ffd36b"/><text x="530" y="52">r em</text><text x="530" y="66">0,3–1,5 mm?</text>
+        <rect x="630" y="30" width="150" height="50" rx="10" fill="#3a1d1d" stroke="#ff5d5d"/><text x="705" y="52">Recusa</text><text x="705" y="68" fill="#fbb" font-size="11">fora do domínio</text>
+        <rect x="170" y="150" width="130" height="50" rx="10" fill="#1c3e48" stroke="#4fb3ff"/><text x="235" y="172">Nível 3</text><text x="235" y="188" fill="#9fc" font-size="11">fibras acendem</text>
+        <rect x="330" y="150" width="130" height="50" rx="10" fill="#1c3e48" stroke="#4fb3ff"/><text x="395" y="172">App 3</text><text x="395" y="188" fill="#9fc" font-size="11">curva × referência</text>
+        <path d="M530 142 l60 33 -60 33 -60-33z" fill="#1c3e48" stroke="#ffd36b"/><text x="530" y="172">k &lt; 1,75 e</text><text x="530" y="186">ΔT ≤ 2 °C?</text>
+        <rect x="630" y="150" width="150" height="50" rx="10" fill="#173a2a" stroke="#3ee6a0"/><text x="705" y="172">Registrar</text><text x="705" y="188" fill="#bfe" font-size="11">versão + semente</text>
+        <rect x="10" y="150" width="130" height="50" rx="10" fill="#1c3e48" stroke="#c084fc"/><text x="75" y="172">Variação</text><text x="75" y="188" fill="#9fc" font-size="11">anatômica</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="2" fill="none" marker-end="url(#ar)"><path d="M140 55h28"/><path d="M300 55h28"/><path d="M460 55h8"/><path d="M590 55h38"/><path d="M530 88 V118 H235 V148"/><path d="M300 175h28"/><path d="M460 175h8"/><path d="M590 175h38"/><path d="M530 208 v26 H75 v-32"/><path d="M140 175h28"/></g>
+      <g font-size="11" fill="#ffd36b"><text x="598" y="48">não</text><text x="538" y="108">sim</text><text x="598" y="168">sim</text><text x="538" y="228">não → reduzir amplitude / aumentar área</text></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U4.</b> O fluxo recomendado. Os dois portões (domínio verificado e fronteiras) espelham os portões do Diagrama 9 do livro.</figcaption>
+  <h3>B · Comparar eletroacupuntura com TENS</h3>
+  <ol class="steps"><li>Com TENS, r = 1 mm, anote a seletividade (3,21×) e F<sub>Aβ</sub> a 0,6 mA.</li><li>Troque para EA: r cai para 0,6 mm e a área para 0,0157 cm². A razão cai (a fonte mais próxima discrimina menos) e o medidor de Shannon sobe.</li><li>Abra o App 4 e aumente a amplitude até k = 1,75: esse é o teto conservador para essa agulha.</li></ol>
+  <h3>C · Efeito de uma variação anatômica</h3>
+  <ol class="steps"><li>Aumente “Tecido adiposo” para 0,4 mm: r efetivo = 1,4 mm; limiares sobem e a razão aumenta.</li><li>Aumente “Hipertrofia perineural”: o limiar absoluto sobe, mas a razão Aδ/Aβ <b>não muda</b> — a invariância a ρₑ do §6.1.</li><li>Leve o tecido adiposo a 1,0 mm: r efetivo sai do domínio e o painel exibe a recusa.</li></ol>
+</section>
+
+<section id="procedencia">
+  <h2>Etiquetas de procedência</h2>
+  <p>Nenhum número aparece sem dizer de onde veio. Passe o mouse sobre uma etiqueta para ver a referência.</p>
+  <figure class="board">
+    <svg viewBox="0 0 800 210" role="img" aria-label="Escada de confiança das etiquetas">
+      <g font-size="13" fill="#e9f3ef">
+        <rect x="20" y="150" width="140" height="40" rx="8" fill="#9e2f2f" opacity=".8"/><text x="90" y="175" text-anchor="middle">HIPÓTESE</text>
+        <rect x="170" y="120" width="140" height="70" rx="8" fill="#8a5a10" opacity=".85"/><text x="240" y="160" text-anchor="middle">PREMISSA</text>
+        <rect x="320" y="90" width="140" height="100" rx="8" fill="#0f6f63" opacity=".9"/><text x="390" y="145" text-anchor="middle">DERIVADO</text>
+        <rect x="470" y="60" width="150" height="130" rx="8" fill="#5c2f9e" opacity=".9"/><text x="545" y="120" text-anchor="middle">RESULTADO</text><text x="545" y="138" text-anchor="middle">DE MODELO</text>
+        <rect x="630" y="30" width="150" height="160" rx="8" fill="#1d5d9e"/><text x="705" y="110" text-anchor="middle">LITERATURA</text><text x="705" y="128" text-anchor="middle" font-size="11">referência Vancouver</text>
+        <text x="20" y="40" font-size="12" fill="#9fc">menos firme</text><text x="20" y="56" font-size="11" fill="#9fc">não usar como fato</text><path d="M120 40 H600" stroke="#9fc" stroke-dasharray="4 4"/><text x="610" y="22" font-size="12" fill="#9fc">mais firme</text>
+      </g>
+    </svg>
+  </figure>
+  <div class="scroll"><table class="stack">
+    <tr><th>Etiqueta</th><th>Significado</th><th>Exemplo no axon</th></tr>
+    <tr><td><span class="tag t-lit">LITERATURA</span></td><td>Valor de fonte publicada verificada</td><td>C<sub>m</sub> = 2 µF/cm²; ABVN na cymba = 100 %</td></tr>
+    <tr><td><span class="tag t-mod">RESULTADO DE MODELO · SEMENTE 42</span></td><td>Sai da execução do código, reprodutível</td><td>Razão 3,21 a 1 mm</td></tr>
+    <tr><td><span class="tag t-der">DERIVADO</span></td><td>Conta direta sobre valores de literatura</td><td>150 MHz e 75 dB/cm para foco de 10 µm</td></tr>
+    <tr><td><span class="tag t-pre">PREMISSA</span></td><td>Escolha declarada e justificada</td><td>ρₑ = 300 Ω·cm; V<sub>lim</sub> = 20 mV; fascículo 40/60</td></tr>
+    <tr><td><span class="tag t-hip">HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO</span></td><td>Plausível, não demonstrado</td><td>Eficácia clínica; cascata vagal anti-inflamatória</td></tr>
+  </table></div>
+</section>
+
+<section id="seguranca">
+  <h2>As 4 fronteiras de segurança tecidual</h2>
+  <figure class="board">
+    <svg viewBox="0 0 800 200" role="img" aria-label="Quatro medidores de segurança">
+      <g font-size="12.5" fill="#e9f3ef" text-anchor="middle">
+        <g transform="translate(110,100)"><path d="M-55 30a62 62 0 1 1 110 0" stroke="#2b4a52" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M-55 30a62 62 0 0 1 30-80" stroke="#3ee6a0" stroke-width="12" fill="none" stroke-linecap="round"/><text y="10" font-size="18" font-weight="700">ΔT</text><text y="64">Térmica · ≤ 2 °C</text><text y="82" fill="#9fc" font-size="11">Pennes / ITRUSST · CEM43</text></g>
+        <g transform="translate(300,100)"><path d="M-55 30a62 62 0 1 1 110 0" stroke="#2b4a52" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M-55 30a62 62 0 0 1 70-90" stroke="#ffc04d" stroke-width="12" fill="none" stroke-linecap="round"/><text y="10" font-size="18" font-weight="700">k</text><text y="64">Eletroquímica · k &lt; 1,75</text><text y="82" fill="#9fc" font-size="11">Shannon: log D + log Q</text></g>
+        <g transform="translate(500,100)"><path d="M-55 30a62 62 0 1 1 110 0" stroke="#2b4a52" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M-55 30a62 62 0 0 1 10-55" stroke="#3ee6a0" stroke-width="12" fill="none" stroke-linecap="round"/><text y="10" font-size="18" font-weight="700">MI</text><text y="64">Mecânica · MI ≤ 1,9</text><text y="82" fill="#9fc" font-size="11">I_SPTA.3 ≤ 720 mW/cm²</text></g>
+        <g transform="translate(690,100)"><path d="M-55 30a62 62 0 1 1 110 0" stroke="#2b4a52" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M-55 30a62 62 0 0 1 4-30" stroke="#3ee6a0" stroke-width="12" fill="none" stroke-linecap="round"/><text y="10" font-size="18" font-weight="700">Z/Z₀</text><text y="64">Crônica · impedância</text><text y="82" fill="#9fc" font-size="11">encapsulamento [HIPÓTESE]</text></g>
+      </g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U5.</b> Verde = conservador · âmbar = atenção · vermelho = risco. Os limiares são referências da literatura, não garantias.</figcaption>
+  <div class="note warn"><b>Leia com o contexto.</b> A relação de Shannon foi ajustada a estimulação cortical em animais; aplicá-la a agulha ou nervo periférico é premissa. O limite de 720 mW/cm² descreve a segurança do imageamento diagnóstico, não a fronteira da neuromodulação terapêutica. O modelo térmico 0D ignora a condução e por isso superestima ΔT.</div>
+</section>
+
+<section id="limites">
+  <h2>O que os números autorizam a dizer</h2>
+  <figure class="board">
+    <svg viewBox="0 0 800 230" role="img" aria-label="Função de ativação sob o cátodo">
+      <g transform="translate(40,40)"><circle cx="360" cy="0" r="9" fill="#fff"/><text x="380" y="5" fill="#e9f3ef" font-size="13">cátodo</text>
+        <g fill="#f3efe6"><rect x="0" y="120" width="100" height="26" rx="12"/><rect x="118" y="120" width="100" height="26" rx="12"/><rect x="236" y="120" width="100" height="26" rx="12"/><rect x="384" y="120" width="100" height="26" rx="12"/><rect x="502" y="120" width="100" height="26" rx="12"/><rect x="620" y="120" width="100" height="26" rx="12"/></g>
+        <g fill="#3ee6c5"><rect x="102" y="122" width="14" height="22"/><rect x="220" y="122" width="14" height="22"/><rect x="338" y="122" width="44" height="22" opacity=".3"/><rect x="486" y="122" width="14" height="22"/><rect x="604" y="122" width="14" height="22"/></g>
+        <g><rect x="352" y="40" width="16" height="76" fill="#3ee6c5"/><rect x="220" y="96" width="14" height="20" fill="#ff5d5d"/><rect x="486" y="96" width="14" height="20" fill="#ff5d5d"/><rect x="102" y="108" width="14" height="8" fill="#ff5d5d" opacity=".6"/><rect x="604" y="108" width="14" height="8" fill="#ff5d5d" opacity=".6"/></g>
+        <g font-size="12" fill="#e9f3ef"><text x="0" y="176">mielina (d = 0,7·D)</text><text x="300" y="176">nó central: fₙ &gt; 0 → despolariza</text><text x="540" y="176">vizinhos: fₙ &lt; 0</text><text x="0" y="16" fill="#9fc">Por que Aβ vence Aδ: L = 100·D ⇒ nós mais espaçados “sentem” uma segunda diferença maior do mesmo campo.</text></g></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U6.</b> A função de ativação (Rattay), equivalente à Prancha III do livro.</figcaption>
+  <div class="grid2">
+    <div class="card"><h4>Pode afirmar</h4><p>“O limiar cai com o calibre segundo uma lei de potência com expoente próximo de 1 (1,13).” “A razão Aδ/Aβ nunca se aproxima de 1 no domínio testado.” “Selecionar nociceptores por amplitude não funciona, por razões geométricas.”</p></div>
+    <div class="card"><h4>Não pode afirmar</h4><p>“São necessários 0,78 mA para recrutar metade das Aδ” — é ordem de grandeza de um modelo não validado. Qualquer valor de eficácia analgésica. Qualquer dose para uma pessoa.</p></div>
+  </div>
+  <div class="note">Benchmarks reproduzidos pelo axon (semente 42): α = 1,1266 · razão 3,2077 a 1 mm (2,17 a 0,5 mm; 4,07 a 1,5 mm) · razão de medianas 3,10 (IC 95 % 2,98–3,22) · F<sub>Aδ</sub> = 0,38 % quando F<sub>Aβ</sub> ≤ 10 %. <span class="tag t-mod">RESULTADO DE MODELO · SEMENTE 42</span></div>
+</section>
+
+<section id="faq">
+  <h2>Perguntas frequentes</h2>
+  <details><summary>Por que as curvas “ao vivo” diferem um pouco das de referência?</summary><p>A referência vem do código Python (gerador PCG64 do NumPy, semente 42). O navegador usa outro gerador (mulberry32, semente 42): as amostras diferem, a física não. Os limiares por fibra são idênticos até a 15ª casa.</p></details>
+  <details><summary>Por que as fibras C não aparecem nas curvas?</summary><p>São amielínicas, em feixes de Remak, com condução contínua: o modelo nodal mielinizado não se aplica a elas. O painel esquerdo explica a biofísica específica.</p></details>
+  <details><summary>Por que o axon recusa algumas combinações?</summary><p>Fora de 1–16 µm ou 0,3–1,5 mm o modelo não foi verificado. Responder ali seria extrapolar sem base — a recusa é parte do contrato.</p></details>
+  <details><summary>A IA inventa valores?</summary><p>Não. A IA só traduz, explica e resume. Todo número vem do núcleo, com etiqueta. Respostas da IA sobre efeitos são marcadas como HIPÓTESE.</p></details>
+  <details><summary>Posso usar em aula?</summary><p>Sim — foi desenhado para isso. Para reproduzir um resultado, informe versão e semente (rodapé do App 3).</p></details>
+</section>
+
+<section id="atalhos">
+  <h2>Atalhos e gestos</h2>
+  <div class="scroll"><table class="stack">
+    <tr><th>Gesto</th><th>Efeito</th></tr>
+    <tr><td>Arrastar no palco</td><td>Girar a câmera</td></tr>
+    <tr><td>Roda do mouse / pinça</td><td>Aproximar; insistir no limite troca de nível</td></tr>
+    <tr><td>Clique num ponto pulsante</td><td>Seleciona a região e vai ao Nível 2</td></tr>
+    <tr><td><kbd>−</kbd> / <kbd>+</kbd> na régua</td><td>Sobe / desce um nível</td></tr>
+    <tr><td>Duplo clique fora das janelas</td><td>Fecha a janela em foco</td></tr>
+    <tr><td><kbd>Enter</kbd> no Axon Bot</td><td>Envia a pergunta</td></tr>
+    <tr><td><kbd>Tab</kbd></td><td>Percorre controles (foco visível)</td></tr>
+  </table></div>
+</section>
+
+<section id="glossario">
+  <h2>Glossário</h2>
+  <div class="scroll"><table class="stack">
+    <tr><th>Termo</th><th>Definição</th></tr>
+    <tr><td>Função de ativação</td><td>Segunda diferença espacial do potencial extracelular nos nós; impulsiona a despolarização.</td></tr>
+    <tr><td>Recrutamento inverso</td><td>Fibras grossas são ativadas com menos corrente que as finas.</td></tr>
+    <tr><td>ABVN</td><td>Ramo auricular do nervo vago (nervo de Arnold).</td></tr>
+    <tr><td>NTS</td><td>Núcleo do trato solitário, alvo central das aferências vagais.</td></tr>
+    <tr><td>CEM43</td><td>Minutos equivalentes acumulados a 43 °C (dose térmica).</td></tr>
+    <tr><td>MI</td><td>Índice mecânico: pressão de rarefação derada dividida por √f.</td></tr>
+    <tr><td>Shannon k</td><td>log₁₀(densidade de carga) + log₁₀(carga por fase).</td></tr>
+    <tr><td>V&amp;V</td><td>Verificação (as equações estão bem resolvidas) e validação (as equações descrevem o real).</td></tr>
+    <tr><td>Ressonância estocástica</td><td>Máximo de transferência de um sinal subliminar numa intensidade intermediária de ruído.</td></tr>
+  </table></div>
+</section>
+
+<section id="privacidade">
+  <h2>Privacidade, ética e suporte</h2>
+  <ul>
+    <li><b>LGPD:</b> perfis anatômicos são anônimos por construção; o servidor rejeita campos que não sejam geométricos. Salas de estudo não guardam mensagens.</li>
+    <li><b>IA:</b> só texto de interface e perguntas são enviados aos provedores de IA; nunca dados pessoais.</li>
+    <li><b>Ética:</b> as fases experimentais descritas no livro exigem supervisão credenciada e, com animais, protocolo CEUA aprovado.</li>
+    <li><b>Contato:</b> Lucas da Silva Teixeira · lucas.silva-teixeira@unesp.br · Ibilce/UNESP.</li>
+  </ul>
+</section>
+
+</main>
+</div>
+<footer>axon v0.1.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../site/">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
+<script src="doc.js"></script>
+</body>
+</html>
