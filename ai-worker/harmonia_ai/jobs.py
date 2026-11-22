@@ -14,6 +14,42 @@ from .pipelines.cifra import parse_cifra
 from .theory import detect_key, key_fifths
 
 MEDIA = Path(os.environ.get("MEDIA_ROOT", "/data/media"))
+
+# ------------------------------------------------------------------ progresso
+# Cada job declara suas etapas (chave, rótulo, % ao concluir). O worker instala um "reporter" que grava
+# % / etapa / detalhe no Redis; a API devolve isso e a interface mostra o andamento passo a passo.
+PLANS: dict[str, list[tuple[str, str, int]]] = {
+    "audio_lite": [("prepare", "Preparando o áudio", 10), ("tempo", "Detectando andamento e pulso", 25),
+                   ("melody", "Ouvindo a melodia (altura de cada nota)", 58), ("rhythm", "Encaixando o ritmo nos compassos", 70),
+                   ("chords", "Reconhecendo os acordes", 86), ("assemble", "Montando camadas e tonalidade", 100)],
+    "audio_ml": [("prepare", "Preparando o áudio", 5), ("tempo", "Detectando andamento e pulso", 12),
+                 ("separate", "Separando voz e instrumentos", 38), ("notes", "Detectando as notas (polifonia)", 56),
+                 ("voice", "Transcrevendo a voz", 66), ("lyrics", "Reconhecendo a letra cantada", 78),
+                 ("harmony", "Harmonia e mãos do piano", 90), ("assemble", "Montando camadas e tonalidade", 100)],
+    "image": [("prepare", "Preparando a imagem", 10), ("omr", "Lendo os símbolos da partitura", 70),
+              ("notes", "Convertendo em notas", 85), ("chords", "Reconhecendo os acordes", 100)],
+    "export": [("prepare", "Preparando a partitura", 15), ("render", "Gerando os arquivos", 90), ("done", "Finalizando", 100)],
+}
+_reporter = None
+
+
+def set_reporter(fn) -> None:
+    global _reporter
+    _reporter = fn
+
+
+def step(plan: str, key: str, detail: str = "") -> None:
+    """Marca o INÍCIO da etapa `key` (o % sobe até o fim da etapa anterior)."""
+    if not _reporter:
+        return
+    stages = PLANS[plan]
+    i = next((k for k, s in enumerate(stages) if s[0] == key), 0)
+    pct = stages[i - 1][2] if i else 2
+    try:
+        _reporter({"pct": pct, "stage": key, "label": stages[i][1], "detail": detail, "plan": plan,
+                   "stages": [{"key": k, "label": lbl, "pct": pc} for k, lbl, pc in stages]})
+    except Exception:  # noqa: BLE001 — progresso nunca derruba o job
+        pass
 COLORS = {"melody": "#ff6b9a", "harmony": "#5b8cff", "voice": "#ffb547", "bass": "#36c99a", "omr": "#a77bff"}
 
 
@@ -44,10 +80,12 @@ def _label(p: dict) -> str:
 def job_transcribe_audio_lite(p: dict) -> dict:
     """Modo leve (sem PyTorch): melodia por YIN + acordes por cromagrama + acompanhamento de piano."""
     from .pipelines import lite_audio, ml
+    step("audio_lite", "prepare", "convertendo para mono 22 kHz")
     src = str(MEDIA / p["asset"])
     trim = p.get("trim") or {}
     wav = ml.trim_audio(src, trim.get("start"), trim.get("end"), trim.get("gain_db", 0))
     y = lite_audio.load_audio(wav)
+    step("audio_lite", "tempo", f"{len(y) / lite_audio.SR:.1f} s de áudio")
     num, den = p.get("timeSig", [4, 4])
     bpm_measure = int(num * 4 / den)
     tempo, offset = lite_audio.tempo_and_offset(y)
@@ -56,7 +94,9 @@ def job_transcribe_audio_lite(p: dict) -> dict:
     mode = p.get("mode", "both")
     tag = _label(p)
     layers, chords = [], []
+    step("audio_lite", "melody", f"♩ = {round(tempo)}")
     events = lite_audio.melody_events(y)
+    step("audio_lite", "rhythm", f"{len(events)} notas ouvidas")
     # o tempo 1 do compasso 1 não pode cair depois da primeira nota (senão ela seria descartada)
     first = min([e["start_s"] for e in events], default=offset)
     while first < offset - 0.06:
@@ -69,8 +109,10 @@ def job_transcribe_audio_lite(p: dict) -> dict:
             rhythm.align_lyrics(mel, rhythm.tokenize_lyrics(p["expected_lyrics"]))
         layers.append(_layer("melody", "Melodia transcrita" + tag, mel))
     if mode in ("harmony", "both"):
+        step("audio_lite", "chords", f"{n_measures} compassos")
         chords = lite_audio.chords_by_measure(y, tempo, offset, bpm_measure, n_measures, per_measure=2)
         layers.append(_layer("harmony", "Harmonia estimada" + tag, harmony.voice_chords(chords, bpm_measure, "block"), staff="bass"))
+    step("audio_lite", "assemble", f"{len(mel)} notas na melodia")
     all_notes = [n for l in layers for n in l["notes"]]
     tonic, mode_k = detect_key(all_notes) if all_notes else (0, "major")
     return {"tempo": round(tempo), "timeSig": [num, den], "keySig": key_fifths(tonic, mode_k),
@@ -84,9 +126,11 @@ def job_transcribe_audio(p: dict) -> dict:
     if not _ml_available():
         return job_transcribe_audio_lite(p)
     from .pipelines import ml
+    step("audio_ml", "prepare")
     src = str(MEDIA / p["asset"])
     trim = p.get("trim") or {}
     wav = ml.trim_audio(src, trim.get("start"), trim.get("end"), trim.get("gain_db", 0))
+    step("audio_ml", "tempo")
     mode = p.get("mode", "both")  # melody | harmony | both
     num, den = p.get("timeSig", [4, 4])
     bpm_measure = int(num * 4 / den)
@@ -97,16 +141,20 @@ def job_transcribe_audio(p: dict) -> dict:
     layers, chords, lyrics_check = [], [], None
     stems = {}
     if p.get("separate", True):
+        step("audio_ml", "separate", "Demucs: voz, baixo, bateria e outros")
         stems = ml.separate_stems(wav, str(MEDIA / "stems" / uuid.uuid4().hex))
+    step("audio_ml", "notes", f"♩ = {round(tempo)}")
 
     accomp_src = stems.get("other", wav)
     poly = rhythm.seconds_to_beats(ml.audio_to_note_events(accomp_src), tempo, offset=offset)
     n_measures = _measures_of(poly, bpm_measure)
 
     if stems.get("vocals"):
+        step("audio_ml", "voice", f"{len(poly)} notas no acompanhamento")
         voc = rhythm.seconds_to_beats(ml.vocal_melody_events(stems["vocals"]), tempo, offset=offset)
         if len(voc) >= 4:
             if p.get("lyrics", True):
+                step("audio_ml", "lyrics", f"{len(voc)} notas na voz")
                 words = ml.transcribe_lyrics(stems["vocals"], p.get("language", "pt"))
                 rhythm.align_lyrics(voc, [], timed_words=words, bpm=tempo)
                 if p.get("expected_lyrics"):
@@ -117,6 +165,7 @@ def job_transcribe_audio(p: dict) -> dict:
     if mode in ("melody", "both") and not any(l["kind"] == "voice" for l in layers):
         layers.append(_layer("melody", "Melodia (extraída)", harmony.extract_melody(poly)))
     if mode in ("harmony", "both"):
+        step("audio_ml", "harmony", f"{n_measures} compassos")
         rh, lh = harmony.split_hands(poly)
         if mode == "harmony":
             layers.append(_layer("harmony", "Harmonia — mão direita", rh))
@@ -126,11 +175,12 @@ def job_transcribe_audio(p: dict) -> dict:
         bass = rhythm.seconds_to_beats(ml.audio_to_note_events(stems["bass"]), tempo, offset=offset)
         layers.append(_layer("bass", "Baixo", harmony.extract_melody(bass, min_pitch=0), staff="bass", visible=False))
 
+    step("audio_ml", "assemble", f"{len(layers)} camadas")
     all_notes = [n for l in layers for n in l["notes"]]
     tonic, mode_k = detect_key(all_notes)
     return {"tempo": round(tempo), "timeSig": [num, den], "keySig": key_fifths(tonic, mode_k),
             "key": {"tonic": tonic, "mode": mode_k}, "measures": n_measures, "layers": layers,
-            "chords": chords, "lyricsCheck": lyrics_check,
+            "chords": chords, "lyricsCheck": lyrics_check, "engine": "ml",
             "stems": {k: _rel(v) for k, v in stems.items()}}
 
 
@@ -141,8 +191,12 @@ def _rel(path: str) -> str:
 # ----------------------------------------------------------------- imagem
 def job_transcribe_image(p: dict) -> dict:
     from .pipelines import ml
+    step("image", "prepare")
+    step("image", "omr", "oemer: pautas, claves, cabeças de nota e hastes")
     xml = ml.sheet_image_to_musicxml(str(MEDIA / p["asset"]), p.get("crop"))
+    step("image", "notes")
     parsed = ml.musicxml_to_notes(xml)
+    step("image", "chords", f"{len(parsed['notes'])} notas lidas")
     rh, lh = harmony.split_hands(parsed["notes"])
     layers = [_layer("omr", "Partitura (OMR) — Sol", rh), _layer("omr", "Partitura (OMR) — Fá", lh, staff="bass")]
     num, den = parsed["timeSig"]
@@ -207,6 +261,7 @@ def job_lyrics(p: dict) -> dict:
 # ---------------------------------------------------------------- exportar
 def job_export(p: dict) -> dict:
     score = p["score"]
+    step("export", "prepare")
     solo = [l for l in score["layers"] if l.get("solo")]
     play_layers = solo or [l for l in score["layers"] if not l.get("muted")]
     play_score = {**score, "layers": play_layers}
@@ -215,6 +270,7 @@ def job_export(p: dict) -> dict:
     slug = "".join(c if c.isalnum() else "-" for c in score.get("title", "harmonia")).strip("-").lower() or "harmonia"
     files: dict[str, str] = {}
     fmts = set(p.get("formats", ["mid"]))
+    step("export", "render", ", ".join(sorted(p.get("formats", ["mid"]))).upper())
     midi = score_to_midi(play_score)
     xml = score_to_musicxml(score)
     if "mid" in fmts:
@@ -233,6 +289,7 @@ def job_export(p: dict) -> dict:
             files["wav"] = f"{slug}.wav"
         if "mp3" in fmts:
             wav_to_mp3(wav, str(out_dir / f"{slug}.mp3")); files["mp3"] = f"{slug}.mp3"
+    step("export", "done")
     rel = out_dir.relative_to(MEDIA)
     return {"files": {k: f"/api/media/{rel}/{v}" for k, v in files.items()}}
 

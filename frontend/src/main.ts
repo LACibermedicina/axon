@@ -26,9 +26,10 @@ import * as audio from "./core/audio";
 import { mountDeskScore } from "./modules/deskscore";
 import { mountVisualizer } from "./modules/visualizer";
 import { playerBar } from "./modules/playerbar";
+import { mountTaskHub } from "./modules/taskhub";
 import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.7.0-alpha";
+const VERSION = "0.7.1-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1220, innerWidth - 24 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 16, y: 44, mount: mountScoreEditor },
@@ -358,6 +359,7 @@ async function boot() {
   app.append(...mobileShell());
   watchI18n(winLayer);
   mountAvatar();
+  mountTaskHub();
   addEventListener("layoutchange", (e: any) => toast(e.detail === "mobile" ? "📱 Layout para celular ativado" : "🖥 Layout desktop ativado", "info", 2200));
   addEventListener("open-app", (e: any) => open(e.detail));
   addEventListener("harmonia:action", (e: any) => { if (e.detail === "open-layers") panels.reveal("layers"); });

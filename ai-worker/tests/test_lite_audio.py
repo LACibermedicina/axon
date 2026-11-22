@@ -56,3 +56,23 @@ def test_job_lite_end_to_end(monkeypatch):
     pitches = [n["pitch"] for n in r["layers"][0]["notes"]]
     assert pitches[:4] == [60, 64, 67, 72]
     assert r["measures"] >= 1
+
+
+def test_job_reports_progress(monkeypatch):
+    """O job informa as etapas com % crescente — a interface mostra o andamento passo a passo."""
+    mel, acc = song()
+    media = tempfile.mkdtemp()
+    write_wav(mel, os.path.join(media, "a.wav"))
+    monkeypatch.setattr(jobs, "MEDIA", __import__("pathlib").Path(media))
+    monkeypatch.setattr(jobs, "_ml_available", lambda: False)
+    seen = []
+    jobs.set_reporter(lambda info: seen.append(info))
+    try:
+        jobs.job_transcribe_audio({"asset": "a.wav", "mode": "both", "tempo": 120})
+    finally:
+        jobs.set_reporter(None)
+    keys = [s["stage"] for s in seen]
+    assert keys == ["prepare", "tempo", "melody", "rhythm", "chords", "assemble"]
+    pcts = [s["pct"] for s in seen]
+    assert pcts == sorted(pcts) and pcts[-1] < 100 and all(s["stages"] for s in seen)
+    assert "notas ouvidas" in seen[3]["detail"]

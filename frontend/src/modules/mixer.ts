@@ -22,7 +22,7 @@ export function mountMixer(body: HTMLElement) {
     if (!requireLogin()) return;
     busy(exp, true, "Renderizando…");
     try {
-      const r = await runJob("export", { score: store.score, formats: server });
+      const r = await runJob("export", { score: store.score, formats: server }, (_s, info) => busy(exp, true, `${info.label} · ${Math.round(info.pct)}%`), { label: `Exportação — ${store.score.title}` });
       links.replaceChildren(...Object.entries(r.files).map(([k, u]) => h("a", { class: "chip", href: u as string, download: "" }, "⇩ " + k.toUpperCase())));
       toast("Arquivos prontos para download", "ok");
     } catch (e: any) { toast(e.message, "error"); }

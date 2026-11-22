@@ -40,7 +40,11 @@ def test_flow():
     # async export enfileirado
     j = c.post("/api/jobs", json={"type": "export", "payload": {"score": score, "formats": ["mid"]}}, headers=h).json()
     assert j["status"] == "queued"
-    assert c.get(f"/api/jobs/{j['id']}", headers=h).json()["status"] == "queued"
+    st = c.get(f"/api/jobs/{j['id']}", headers=h).json()
+    assert st["status"] == "queued" and st["queuePos"] >= 1 and st["workerAlive"] is False
+    media._r.hset(f"harmonia:job:{j['id']}", mapping={"status": "running", "started": "1", "progress": '{"pct": 40, "stage": "melody", "label": "Ouvindo a melodia"}'})
+    st = c.get(f"/api/jobs/{j['id']}", headers=h).json()
+    assert st["progress"]["pct"] == 40 and st["elapsed"] > 0
     # publicar + biblioteca + link
     pub = c.post(f"/api/compositions/{cid}/publish", json={"visibility": "public", "featured": True}, headers=h).json()
     lib = c.get("/api/library/public").json()

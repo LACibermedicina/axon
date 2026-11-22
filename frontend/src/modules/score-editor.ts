@@ -1074,7 +1074,8 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
               const up = await upload("recording", blob, "voz.webm");
               store.mutate(() => { const l = store.score.layers.find((x) => x.id === layer.id); if (l) l.audio = up.path; }, "upload");
               toast("Transcrevendo a voz gravada em notas…", "info");
-              const r = await runJob("transcribe_audio", { asset: up.path, mode: prefs.captureMode === "both" ? "both" : "melody", separate: false, lyrics: false, tempo: s.tempo, timeSig: s.timeSig });
+              const r = await runJob("transcribe_audio", { asset: up.path, mode: prefs.captureMode === "both" ? "both" : "melody", separate: false, lyrics: false, tempo: s.tempo, timeSig: s.timeSig },
+                undefined, { label: `Voz gravada — c.${from + 1}–${from + nMeas}`, open: () => win.focus() });
               const off = from * bpm;
               store.mutate((sc) => {
                 for (const nl of r.layers || []) {

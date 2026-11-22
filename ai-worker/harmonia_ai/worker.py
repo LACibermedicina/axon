@@ -11,6 +11,7 @@ import traceback
 
 import redis
 
+from . import jobs
 from .jobs import HANDLERS
 
 log = logging.getLogger("harmonia.worker")
@@ -37,19 +38,35 @@ def _set(job_id: str, **fields):
                                              "status": fields.get("status")}))
 
 
+def _friendly(e: Exception) -> str:
+    """Mensagem de erro compreensível (sem rastros técnicos) para a interface."""
+    m = str(e) or type(e).__name__
+    low = m.lower()
+    if "no such file" in low or "filenotfound" in low:
+        return "Arquivo não encontrado no servidor — envie o áudio/imagem de novo."
+    if "ffmpeg" in low or "decode" in low or "format" in low:
+        return "Não consegui ler este arquivo de áudio. Tente MP3 ou WAV, ou grave de novo."
+    if "memory" in low:
+        return "O servidor ficou sem memória para este trecho — recorte um pedaço menor (até ~60 s)."
+    return f"Falha ao processar: {m[:200]}"
+
+
 def main():
     log.info("worker pronto — handlers: %s", ", ".join(HANDLERS))
     while RUNNING:
+        r.set("harmonia:worker:alive", str(time.time()), ex=30)  # a API avisa se o processador parar
         item = r.blpop("harmonia:jobs", timeout=5)
         if not item:
             continue
         job = json.loads(item[1])
         jid, kind = job["id"], job["type"]
         t0 = time.time()
-        _set(jid, status="running")
+        _set(jid, status="running", started=str(t0))
+        # progresso por etapa (%, rótulo, detalhe) — lido pela API e mostrado no ícone de tarefas
+        jobs.set_reporter(lambda info, _j=jid: _set(_j, status="running", progress=info))
         try:
             result = HANDLERS[kind](job["payload"])
-            _set(jid, status="done", result=result, seconds=round(time.time() - t0, 2))
+            _set(jid, status="done", result=result, seconds=round(time.time() - t0, 2), progress={"pct": 100, "stage": "done", "label": "Concluído"})
             log.info("job %s (%s) ok em %.1fs", jid, kind, time.time() - t0)
         except ModuleNotFoundError as e:
             log.warning("job %s (%s) requer IA completa: %s", jid, kind, e)
@@ -57,7 +74,9 @@ def main():
                  "Ela exige a IA completa (AI_ML=1, ≥ 8 GB de RAM). Cifra, harmonização, edição e exportação seguem disponíveis.")
         except Exception as e:  # noqa: BLE001
             log.error("job %s falhou: %s", jid, traceback.format_exc())
-            _set(jid, status="error", error=str(e))
+            _set(jid, status="error", error=_friendly(e))
+        finally:
+            jobs.set_reporter(None)
 
 
 if __name__ == "__main__":

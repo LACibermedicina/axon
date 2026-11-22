@@ -991,3 +991,48 @@ body:not(.mobile) .rail-pinned .btn .tb-lb { font-size: 10px; }
 body:not(.mobile) .rail-pinned .btn .tb-ic svg { width: 20px; height: 20px; }
 body:not(.mobile) .rail-pinned .btn { gap: 2px; padding: 4px 3px; letter-spacing: 0; }
 body:not(.mobile) .rail-pinned .btn .tb-lb { font-size: 9.5px; }
+
+/* ===================================================== v0.7.1 — tarefas de IA com % e etapas */
+.taskhub { position: fixed; left: 16px; bottom: 18px; z-index: 9300; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.th-fab { position: relative; width: 72px; height: 72px; border: 0; border-radius: 50%; padding: 0; cursor: pointer; background: radial-gradient(circle at 35% 28%, #ffffff, #efeaff 60%, #d9cffb);
+  box-shadow: 0 10px 24px rgba(40, 10, 90, .35), inset 0 -4px 0 rgba(90, 53, 214, .18), inset 0 3px 0 rgba(255, 255, 255, .9); transition: transform .2s; }
+.th-fab:hover { transform: scale(1.06) rotate(-3deg); }
+.th-ring { position: absolute; inset: 0; }
+.th-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.th-track { fill: none; stroke: rgba(124, 92, 255, .14); stroke-width: 6; }
+.th-bar { fill: none; stroke: url(#thg); stroke-width: 6; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(255, 111, 174, .6)); }
+.taskhub.busy .th-ring svg { animation: thspin 2.6s linear infinite; }
+@keyframes thspin { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
+.taskhub.busy .th-ring { animation: none; }
+.taskhub.busy .th-ring svg .th-bar { animation: thglow 1.4s ease-in-out infinite; }
+@keyframes thglow { 50% { stroke-width: 7.5; } }
+.taskhub.ok .th-bar { stroke: #1dd75b; } .taskhub.err .th-bar { stroke: #e5322d; }
+.th-face { position: absolute; left: 50%; top: 9px; width: 34px; height: 34px; margin-left: -17px; }
+.th-face svg { width: 34px; height: 34px; display: block; }
+.taskhub.busy .th-face { animation: thbob 1.2s ease-in-out infinite; }
+@keyframes thbob { 0%, 100% { transform: translateY(0) scale(1); } 45% { transform: translateY(-3px) scale(1.06, .95); } 60% { transform: translateY(1px) scale(.97, 1.04); } }
+.th-pct { position: absolute; left: 0; right: 0; bottom: 9px; font-size: 12px; font-weight: 900; color: #4b2fc4; text-align: center; font-variant-numeric: tabular-nums; }
+.taskhub.ok .th-pct { color: #0b8a3e; } .taskhub.err .th-pct { color: #c42b26; }
+.th-badge { position: absolute; right: -2px; top: -2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #ff4d7d; color: #fff; font: 800 11px/20px system-ui; font-style: normal; }
+.th-panel { width: 340px; max-height: min(70vh, 560px); overflow-y: auto; background: #fff; border-radius: 20px; padding: 10px; box-shadow: 0 22px 54px rgba(30, 10, 80, .38);
+  border: 3px solid #ece5ff; animation: flyin .3s cubic-bezier(.2, 1.4, .4, 1); transform-origin: left bottom; }
+.th-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 8px; } .th-head b { flex: 1; font-size: 15px; } .th-head small { color: var(--ink2); }
+.th-card { border: 1px solid var(--line); border-radius: 14px; padding: 10px; margin-bottom: 8px; background: #fcfbff; }
+.th-card header { display: flex; align-items: center; gap: 8px; } .th-card header > div { flex: 1; min-width: 0; }
+.th-card header b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .th-card header small { color: var(--ink2); font-size: 11px; }
+.th-mini svg { width: 32px; height: 32px; display: block; }
+.th-progress { height: 8px; border-radius: 4px; background: #eee9fb; overflow: hidden; margin: 8px 0; }
+.th-progress i { display: block; height: 100%; background: linear-gradient(90deg, #ffd36e, #ff6fae, #7c5cff); background-size: 200% 100%; animation: thstripe 2s linear infinite; border-radius: 4px; transition: width .4s; }
+.th-card.done .th-progress i { background: #1dd75b; animation: none; } .th-card.error .th-progress i { background: #e5322d; animation: none; }
+@keyframes thstripe { to { background-position: -200% 0; } }
+.th-steps { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.th-steps li { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: #9a93b8; }
+.th-steps li b { font-weight: 600; display: block; } .th-steps li small { display: block; color: var(--accent); font-size: 11px; margin-top: 1px; }
+.th-dot { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800; background: #f0edf9; color: #9a93b8; }
+.th-steps li.done { color: var(--ink); } .th-steps li.done .th-dot { background: #1dd75b; color: #fff; }
+.th-steps li.cur { color: var(--ink); } .th-steps li.cur .th-dot { background: conic-gradient(var(--accent) 0 30%, #e6dfff 30%); animation: thspin 1s linear infinite; }
+.th-steps li.bad .th-dot { background: #e5322d; color: #fff; }
+.th-result { padding: 8px 10px; border-radius: 12px; background: #eafbf0; margin-bottom: 6px; font-size: 12.5px; } .th-result p { margin: 0 0 6px; }
+.th-result.err { background: #fdecec; }
+body.mobile .taskhub { left: 10px; bottom: calc(var(--tabbar) + 60px); }
+body.mobile .th-fab { width: 58px; height: 58px; } body.mobile .th-face { top: 6px; } body.mobile .th-panel { width: calc(100vw - 20px); }

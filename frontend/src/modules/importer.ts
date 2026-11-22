@@ -25,9 +25,11 @@ async function placeAudio(c: Clip, startBeat: number) {
   if (!currentUser) { toast("Trecho colocado na partitura como camada 🎙. Entre na conta para transformá-lo em notas.", "info", 6000); return; }
   toast(`Trecho no compasso ${m0 + 1}. Transcrevendo em notas…`, "info", 4000);
   try {
-    const up = await upload("audio", wav, c.name.replace(/\.\w+$/, "") + "-trecho.wav");
+    const task = startTask("transcribe_audio", `Trecho na partitura — ${c.name}`);
+    const up = await upload("audio", wav, c.name.replace(/\.\w+$/, "") + "-trecho.wav", task);
     store.mutate(() => { const l = store.score.layers.find((x) => x.id === rec.id); if (l) l.audio = up.path; }, "upload");
-    const r = await runJob("transcribe_audio", { asset: up.path, source_name: c.name, mode: c.mode, separate: c.separate, lyrics: c.lyrics, tempo: s.tempo, timeSig: s.timeSig });
+    const r = await runJob("transcribe_audio", { asset: up.path, source_name: c.name, mode: c.mode, separate: c.separate, lyrics: c.lyrics, tempo: s.tempo, timeSig: s.timeSig },
+      undefined, { task, open: () => dispatchEvent(new CustomEvent("open-app", { detail: "compose" })) });
     const made: string[] = [];
     store.mutate((sc) => {
       for (const nl of r.layers || []) {
@@ -44,6 +46,7 @@ async function placeAudio(c: Clip, startBeat: number) {
   } catch (e: any) { toast("Gravação colocada; transcrição indisponível: " + e.message, "warn", 6000); }
 }
 import { prefs } from "../core/prefs";
+import { startTask } from "../core/tasks";
 
 export function mountImporter(body: HTMLElement) {
   body.classList.add("importer");
@@ -85,7 +88,7 @@ function deliver(r: any, what: string, openCompose = true) {
     dispatchEvent(new CustomEvent("open-app", { detail: "compose" }));
     dispatchEvent(new CustomEvent("open-app", { detail: "layers" }));
   }
-  const names = store.score.layers.filter((l) => ids.includes(l.id)).map((l) => `${l.name} (${l.notes.length} notas)`);
+  const names = store.score.layers.filter((l) => ids.includes(l.id)).map((l) => l.kind === "recording" ? `🎙 ${l.name}` : `${l.name} (${l.notes.length} notas)`);
   if (!ids.length) toast(`${what}: nenhuma nota reconhecida. Tente recortar um trecho mais limpo ou ajustar o ganho.`, "warn", 7000);
   else toast(`${what} → ${ids.length} camada(s) na Composição: ${names.join(" · ")}`, "ok", 7000);
   if (r.notice) setTimeout(() => toast(r.notice, "info", 9000), 600);
@@ -258,11 +261,12 @@ function audioPane() {
     busy(go, true, "Enviando trecho…");
     try {
       const wav = await audio.trimToWav(buf, a, b, +gain.value);
-      const up = await upload("audio", wav, (file?.name || "audio").replace(/\.\w+$/, "") + "-trecho.wav");
+      const task = startTask("transcribe_audio", `Transcrição — ${file?.name ?? "áudio"}`);
+      const up = await upload("audio", wav, (file?.name || "audio").replace(/\.\w+$/, "") + "-trecho.wav", task);
       busy(go, true, "IA ouvindo e transcrevendo… (pode levar alguns minutos)");
       const r = await runJob("transcribe_audio", { asset: up.path, source_name: file?.name, mode: mode.value, separate: sep.checked, lyrics: lyr.checked,
         expected_lyrics: expected.value || undefined, tempo: tempo.value ? +tempo.value : undefined, timeSig: store.score.timeSig },
-        (st) => busy(go, true, st === "running" ? "Transcrevendo…" : "Na fila…"));
+        (_st, info) => busy(go, true, `${info.label} · ${Math.round(info.pct)}%`), { task, open: () => dispatchEvent(new CustomEvent("open-app", { detail: "visualizer" })), retry: () => go.click() });
       // a faixa original entra junto como camada 🎙 (para comparar com a transcrição no visualizador)
       const spb = 60 / (r.tempo || store.score.tempo);
       const bpm = beatsPerMeasure(store.score);
@@ -350,9 +354,11 @@ function imagePane() {
       c.translate(-crop.x * sw, -crop.y * sh); c.translate(sw / 2, sh / 2); c.rotate((rot * Math.PI) / 180);
       c.drawImage(img, -img.width / 2, -img.height / 2);
       const blob: Blob = await new Promise((r) => full.toBlob((b) => r(b!), "image/png"));
-      const up = await upload("image", blob, "partitura.png");
+      const task = startTask("transcribe_image", `Leitura — ${file?.name ?? "partitura"}`);
+      const up = await upload("image", blob, "partitura.png", task);
       busy(go, true, "Lendo a partitura…");
-      const r = await runJob("transcribe_image", { asset: up.path }, (s) => busy(go, true, s === "running" ? "Reconhecendo símbolos…" : "Na fila…"));
+      const r = await runJob("transcribe_image", { asset: up.path }, (_s, info) => busy(go, true, `${info.label} · ${Math.round(info.pct)}%`),
+        { task, open: () => dispatchEvent(new CustomEvent("open-app", { detail: "compose" })), retry: () => go.click() });
       if (prefs.captureMode === "melody") { r.layers = (r.layers || []).filter((l: any) => l.staff !== "bass"); r.chords = []; }
       deliver(r, "Leitura da partitura");
     } catch (e: any) { toast(e.message, "error"); }

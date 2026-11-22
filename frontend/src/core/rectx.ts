@@ -5,6 +5,7 @@ import { Layer, beatsPerMeasure, uid } from "./types";
 import * as audio from "./audio";
 import { runJob, upload, requireLogin } from "./api";
 import { toast } from "./ui";
+import { startTask } from "./tasks";
 
 /** Trecho da partitura (em tempos) coberto pela gravação. */
 export function recordingSpan(l: Layer, durSec?: number) {
@@ -35,9 +36,11 @@ export async function transcribeRecording(l: Layer, opts: { measures?: number[];
   toast(`Transcrevendo ${label} de “${l.name}”…`, "info", 4000);
   try {
     const wav = await audio.trimToWav(buf, t0, t1, 0);
-    const up = await upload("audio", wav, `${l.name.replace(/[^\w-]+/g, "-")}-${Math.round(t0 * 10)}.wav`);
+    const task = startTask("transcribe_audio", `Gravação — ${l.name} (${label})`);
+    const up = await upload("audio", wav, `${l.name.replace(/[^\w-]+/g, "-")}-${Math.round(t0 * 10)}.wav`, task);
     if (!l.audio && !opts.measures) store.mutate(() => (l.audio = up.path), "upload");
-    const r = await runJob("transcribe_audio", { asset: up.path, source_name: l.name, mode: opts.mode || "melody", separate: false, lyrics: opts.lyrics ?? true, tempo: s.tempo, timeSig: s.timeSig });
+    const r = await runJob("transcribe_audio", { asset: up.path, source_name: l.name, mode: opts.mode || "melody", separate: false, lyrics: opts.lyrics ?? true, tempo: s.tempo, timeSig: s.timeSig },
+      undefined, { task, open: () => dispatchEvent(new CustomEvent("open-app", { detail: "compose" })), retry: () => transcribeRecording(l, opts) });
     const made: string[] = [];
     store.mutate((sc) => {
       if (!l.link) l.link = uid();

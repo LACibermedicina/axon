@@ -2,6 +2,22 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.7.1-alpha] — 2026-11-22
+
+### Adicionado — transcrições com feedback e % de evolução
+- **Ícone de tarefas de IA** (canto inferior esquerdo): anel de progresso animado com **% no centro** e personagem 3D da etapa. Clique para o **detalhamento do processo**: etapas concluídas ✓, etapa atual com detalhe ao vivo (ex.: "42 notas ouvidas", "♩ = 96"), próximas etapas, tempo decorrido e **estimativa do que falta**. Várias tarefas ao mesmo tempo, com contador.
+- Etapas reais informadas pelo processador de IA:
+  - áudio (modo leve): preparar áudio → andamento e pulso → ouvir a melodia → encaixar o ritmo → acordes → montar camadas;
+  - áudio (IA completa): + separar voz e instrumentos, polifonia, voz e letra cantada;
+  - imagem: preparar → ler símbolos → converter em notas → acordes; exportação: preparar → gerar arquivos → finalizar.
+- **Envio com %** (o upload também aparece como etapa) e **posição na fila**; se o processador de IA estiver parado, a tarefa avisa em vez de esperar em silêncio.
+- **Resumo ao terminar**: notas, camadas, andamento, tonalidade, compassos e modo (leve/completo), com **Ver resultado**. Em caso de erro, mensagem clara (arquivo ilegível, sem memória, arquivo ausente…) e **↻ Tentar de novo**.
+- Os botões ✨ Transcrever / Ler partitura / Exportar mostram a etapa e o % enquanto trabalham.
+
+### Corrigido
+- Transcrições que ficavam "Na fila…" sem retorno quando o processador de IA estava parado: agora há aviso e notificação.
+- Erros técnicos do processador viram mensagens compreensíveis.
+
 ## [0.7.0-alpha] — 2026-11-22
 
 ### Alterado — interface enxuta, sem controles repetidos

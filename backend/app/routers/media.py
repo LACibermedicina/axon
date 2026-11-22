@@ -102,7 +102,17 @@ def job_status(jid: str, user: User = Depends(current_user)):
     if not h or h.get("owner") != str(user.id):
         raise HTTPException(404, "Job não encontrado")
     out = {"id": jid, "status": h.get("status"), "type": h.get("type")}
-    for k in ("result", "error", "seconds"):
+    for k in ("result", "error", "seconds", "progress"):
         if k in h:
             out[k] = json.loads(h[k]) if k != "error" else h[k]
+    if h.get("started"):
+        out["elapsed"] = round(__import__("time").time() - float(h["started"]), 1)
+    if out["status"] == "queued":
+        # posição na fila e se o processador de IA está ativo (feedback em vez de espera muda)
+        try:
+            queue = rds().lrange("harmonia:jobs", 0, 200)
+            out["queuePos"] = next((i + 1 for i, item in enumerate(queue) if f'"{jid}"' in item), 0)
+        except Exception:  # noqa: BLE001
+            out["queuePos"] = 0
+        out["workerAlive"] = bool(rds().exists("harmonia:worker:alive"))
     return out
