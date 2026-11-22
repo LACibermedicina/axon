@@ -1,5 +1,6 @@
 // Gestor de camadas: visibilidade, mudo, solo, bloqueio, cor, volume, pauta, reordenar (drag & drop),
 // mesclar, duplicar, transpor, transcrever gravações e alinhar letra.
+import { transcribeRecording } from "../core/rectx";
 import { store, newLayer } from "../core/store";
 import { Layer, LayerKind, LayerGroup, uid } from "../core/types";
 import { h, toast, tip } from "../core/ui";
@@ -71,7 +72,9 @@ export function mountLayers(body: HTMLElement) {
       h("option", { value: "up" }, "Transpor +1 st"), h("option", { value: "down" }, "Transpor −1 st"),
       h("option", { value: "oct+" }, "Oitava acima"), h("option", { value: "oct-" }, "Oitava abaixo"),
       h("option", { value: "melody" }, "Extrair melodia desta camada"),
-      l.kind === "recording" ? h("option", { value: "transcribe" }, "Transcrever gravação → notas") : null,
+      l.kind === "recording" ? h("option", { value: "transcribe" }, "✨ Transcrever toda a gravação → notas") : null,
+      l.kind === "recording" ? h("option", { value: "transcribe-both" }, "✨ Transcrever gravação (melodia + harmonia)") : null,
+      l.kind === "recording" && store.selectedMeasures.size ? h("option", { value: "transcribe-sel" }, "✨ Transcrever só os compassos selecionados") : null,
       h("option", { value: "clear-lyrics" }, "Limpar letra"),
       ...(store.score.layerGroups || []).filter((g) => g.id !== l.group).map((g) => h("option", { value: "group:" + g.id }, "Mover para grupo: " + g.name)),
       l.group ? h("option", { value: "ungroup" }, "Tirar do grupo") : null,
@@ -88,6 +91,8 @@ export function mountLayers(body: HTMLElement) {
       if (v.startsWith("group:")) store.mutate(() => (l.group = v.slice(6)), "layer");
       if (v === "ungroup") store.mutate(() => (l.group = undefined), "layer");
       if (v === "transcribe") await transcribeRecording(l);
+      if (v === "transcribe-both") await transcribeRecording(l, { mode: "both" });
+      if (v === "transcribe-sel") await transcribeRecording(l, { measures: [...store.selectedMeasures] });
     });
     return sel;
   }
@@ -96,24 +101,6 @@ export function mountLayers(body: HTMLElement) {
     if (!l.notes.length) return true;
     const ok = window.confirm(`Excluir "${l.name}" com ${l.notes.length} notas? (Pode desfazer com ⌘Z)`);
     return ok;
-  }
-
-  async function transcribeRecording(l: Layer) {
-    if (!requireLogin()) return;
-    if (!l.audio) { toast("A gravação ainda está sendo enviada…", "warn"); return; }
-    const s = store.score; const bpm = (s.timeSig[0] * 4) / s.timeSig[1];
-    toast("Transcrevendo gravação com IA…");
-    try {
-      const r = await runJob("transcribe_audio", { asset: l.audio, mode: "melody", separate: false, lyrics: true, tempo: s.tempo, timeSig: s.timeSig });
-      const offBeats = (l.measures?.[0] ?? 0) * bpm;
-      store.mutate((sc) => {
-        for (const nl of r.layers) {
-          nl.notes.forEach((n: any) => (n.start += offBeats));
-          sc.layers.push({ ...newLayer(nl.kind, `${nl.name} (c.${(l.measures?.[0] ?? 0) + 1})`, nl.staff), ...nl, name: `${nl.name} (c.${(l.measures?.[0] ?? 0) + 1})` });
-        }
-      }, "merge");
-      toast("Trecho transcrito e encaixado nos compassos gravados", "ok");
-    } catch (e: any) { toast(e.message, "error"); }
   }
 
   function merge() {

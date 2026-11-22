@@ -2,6 +2,18 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.6.1-alpha] — 2026-11-22
+
+### Adicionado
+- **Transcrever qualquer gravação** da plataforma — feita no editor (● Gravar, gravar trecho, nova voz), solta do Importar ou faixa original de uma transcrição.
+- **Duplo clique no bloco gravado** (na partitura) abre as opções: ▶ ouvir toda a gravação ou só o compasso (selecionado ou clicado) no player universal; ✨ transcrever **toda a gravação** ou **só o(s) compasso(s)**; 🎹 melodia + harmonia; vincular/desvincular 🔗; trancar 🔒; silenciar; ver no visualizador; apagar.
+- As notas entram exatamente na posição da gravação e ficam **vinculadas** a ela (mover o bloco move as notas).
+- Painel de Camadas (menu ⋯ da gravação): transcrever toda a gravação, com melodia + harmonia ou só os compassos selecionados.
+
+### Corrigido
+- Duplo clique em cifras e anotações na partitura não era reconhecido em alguns navegadores.
+- Gravações feitas no editor agora guardam a duração e aparecem como bloco contínuo, arrastável.
+
 ## [0.6.0-alpha] — 2026-11-22
 
 ### Adicionado

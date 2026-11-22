@@ -119,6 +119,13 @@ async function loadBuffer(url: string) {
   audioCache.set(url, buf); return buf;
 }
 
+/** Áudio decodificado de uma camada de gravação (blob local ou mídia já enviada). */
+export function layerBuffer(l: Layer): Promise<AudioBuffer> {
+  const url = l.audioUrl || (l.audio ? `/api/media/${l.audio}` : "");
+  if (!url) return Promise.reject(new Error("gravação sem áudio"));
+  return loadBuffer(url);
+}
+
 export function audibleLayers(s: Score): Layer[] {
   const solo = s.layers.filter((l) => l.solo);
   return (solo.length ? solo : s.layers.filter((l) => !l.muted));

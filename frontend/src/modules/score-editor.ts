@@ -9,6 +9,7 @@ import * as audio from "../core/audio";
 import { currentUser, runJob, upload } from "../core/api";
 import { t } from "../core/i18n";
 import { prefs } from "../core/prefs";
+import { transcribeRecording, recordingSpan } from "../core/rectx";
 import type { Win } from "../core/wm";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -468,14 +469,14 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
           const linked = !!l.link && !l.unlinked && s.layers.some((x) => x.link === l.link && x.id !== l.id);
           lg.append(svg("rect", { x: x0, y: sys.trebleY + 44, width: Math.max(8, x1 - x0), height: 16, rx: 8, class: "rec-clip", fill: `url(#pat-${l.id})`, stroke: l.color, "data-rec": l.id }),
             svg("text", { x: x0 + 6, y: sys.trebleY + 56, class: "rec-label", "data-rec": l.id }, (linked ? "🔗 " : "🎙 ") + l.name),
-            svg("title", {}, `${l.name} — arraste para mover${linked ? " (as notas vinculadas acompanham)" : ""}`));
+            svg("title", {}, `${l.name} — arraste para mover${linked ? " (as notas vinculadas acompanham)" : ""} · duplo clique: opções (ouvir, transcrever…)`));
         }
         continue;
       }
       if (l.kind === "recording") {
         for (const m of l.measures || []) if (m >= sys.firstMeasure && m < sys.firstMeasure + sys.nMeasures) {
           const rx = sys.left + (m - sys.firstMeasure) * mW;
-          lg.append(svg("rect", { x: rx + 4, y: sys.trebleY + 44, width: mW - 8, height: 16, rx: 8, class: "rec-clip", fill: `url(#pat-${l.id})`, stroke: l.color }), svg("text", { x: rx + 10, y: sys.trebleY + 56, class: "rec-label" }, "🎙 " + l.name));
+          lg.append(svg("rect", { x: rx + 4, y: sys.trebleY + 44, width: mW - 8, height: 16, rx: 8, class: "rec-clip", fill: `url(#pat-${l.id})`, stroke: l.color, "data-rec": l.id }), svg("text", { x: rx + 10, y: sys.trebleY + 56, class: "rec-label", "data-rec": l.id }, "🎙 " + l.name));
         }
         continue;
       }
@@ -591,6 +592,10 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   // ------------------------------------------------------ interações
   let drag: null | { kind: "move" | "resize"; ids: string[]; startX: number; startY: number; orig: Map<string, { start: number; pitch: number; dur: number }>; moved: boolean; dup: boolean } = null;
 
+  let lastRecDown = { id: "", t: 0 };
+  let lastDown = { key: "", t: 0 };
+  /** Segundo toque no mesmo alvo em até 400 ms = duplo clique. */
+  const isDbl = (key: string) => { const now = performance.now(), d = lastDown.key === key && now - lastDown.t < 400; lastDown = { key, t: now }; return d; };
   paper.addEventListener("pointerdown", (ev) => {
     canvas.focus();
     const t0 = ev.target as Element;
@@ -602,7 +607,13 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const annEl = t0.closest<SVGGElement>(".annotation");
 
     const recId = (t0 as SVGElement).dataset?.rec;
-    if (recId) { dragRecording(recId, ev); return; }
+    if (recId) {
+      // duplo clique detectado à mão (pointerdown não informa a contagem de cliques em todos os navegadores)
+      const now = performance.now(), dbl = lastRecDown.id === recId && now - lastRecDown.t < 400;
+      lastRecDown = { id: recId, t: now };
+      if (dbl) recMenu(recId, loc); else dragRecording(recId, ev);
+      return;
+    }
     const ins = t0.closest<SVGElement>("[data-insert]")?.dataset.insert;
     if (ins !== undefined) {
       const at = +ins;
@@ -624,8 +635,8 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       }
       store.emit("selection"); return;
     }
-    if (chordM !== undefined && (tool === "chord" || ev.detail === 2)) { editChords(+chordM, loc); return; }
-    if (annEl) { if (ev.detail === 2) editAnnotation(annEl.dataset.ann!, loc); else dragAnnotation(annEl.dataset.ann!, ev); return; }
+    if (chordM !== undefined && (tool === "chord" || isDbl("chord" + chordM))) { editChords(+chordM, loc); return; }
+    if (annEl) { if (isDbl("ann" + annEl.dataset.ann)) editAnnotation(annEl.dataset.ann!, loc); else dragAnnotation(annEl.dataset.ann!, ev); return; }
     if (tool === "annotate") { addAnnotation(loc); return; }
 
     if (noteEl) {
@@ -778,6 +789,45 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     }
   });
 
+  /** Duplo clique no bloco gravado: ouvir e transcrever (toda a gravação ou só o compasso), vínculo, cadeado… */
+  function recMenu(id: string, loc: ReturnType<typeof locate>) {
+    const l = store.score.layers.find((x) => x.id === id); if (!l) return;
+    canvas.querySelector(".rec-menu")?.remove();
+    const span = recordingSpan(l);
+    const bpm = beatsPerMeasure(store.score);
+    const inRec = (m: number) => (m + 1) * bpm > span.b0 && m * bpm < span.b1;
+    const sel = [...store.selectedMeasures].filter(inRec).sort((a, b) => a - b);
+    const ms = sel.length ? sel : [loc.measure];
+    const msLabel = ms.length > 1 ? `compassos ${ms[0] + 1}–${ms[ms.length - 1] + 1}` : `compasso ${ms[0] + 1}`;
+    const spbS = 60 / store.score.tempo;
+    const close = () => { menu.remove(); removeEventListener("pointerdown", outside, true); };
+    const outside = (e: Event) => { if (!menu.contains(e.target as Node)) close(); };
+    const item = (icon: string, label: string, hint: string, fn: () => void, disabled = false) => h("button", { class: "rm-item", disabled, onclick: () => { close(); fn(); } },
+      h("span", { class: "rm-ic" }, icon), h("span", {}, h("b", {}, label), h("small", {}, hint)));
+    const mates = store.score.layers.filter((x) => x.id !== l.id && l.link && x.link === l.link);
+    const listen = (fromBeat: number, toBeat: number, what: string) => audio.layerBuffer(l).then((buf) => audio.playBuffer(buf, {
+      from: Math.max(0, fromBeat * spbS - (l.audioOffset || 0)), to: Math.min(buf.duration, toBeat * spbS - (l.audioOffset || 0)),
+      source: { id: "rec-" + l.id, label: `${l.name} — ${what}`, icon: "🎙", focus: () => win.focus() } })).catch(() => toast("Áudio da gravação indisponível", "error"));
+    const menu = h("div", { class: "rec-menu", role: "menu", "aria-label": "Opções da gravação", style: { left: Math.min(loc.px, canvas.clientWidth - 290) + "px", top: loc.sys.trebleY + 66 + "px" } },
+      h("header", {}, h("b", {}, "🎙 " + l.name), h("small", {}, `${span.dur.toFixed(1)} s · compassos ${Math.floor(span.b0 / bpm) + 1}–${Math.floor((span.b1 - 1e-6) / bpm) + 1}`)),
+      item("▶", "Ouvir toda a gravação", "no player universal", () => listen(span.b0, span.b1, "toda a gravação")),
+      item("▶", `Ouvir só o ${msLabel}`, sel.length ? "compassos selecionados" : "compasso clicado", () => listen(Math.max(span.b0, ms[0] * bpm), Math.min(span.b1, (ms[ms.length - 1] + 1) * bpm), msLabel)),
+      h("hr"),
+      item("✨", "Transcrever toda a gravação", "melodia → notas vinculadas 🔗", () => transcribeRecording(l)),
+      item("✨", `Transcrever só o ${msLabel}`, "notas entram exatamente nesses compassos", () => transcribeRecording(l, { measures: ms })),
+      item("🎹", "Transcrever melodia + harmonia", "toda a gravação, com acordes", () => transcribeRecording(l, { mode: "both" })),
+      h("hr"),
+      mates.length ? item(l.unlinked ? "🔗" : "⛓", l.unlinked ? "Vincular às notas" : "Desvincular das notas", mates.map((m) => m.name).join(", "), () => store.mutate(() => [l, ...mates].forEach((x) => (x.unlinked = !l.unlinked)), "layer")) : "",
+      item(l.locked ? "🔓" : "🔒", l.locked ? "Destrancar" : "Trancar", "impede mover ou apagar", () => store.mutate(() => (l.locked = !l.locked), "layer")),
+      item(l.muted ? "🔈" : "🔇", l.muted ? "Ativar som" : "Silenciar", "na reprodução e na mesa", () => { store.mutate(() => (l.muted = !l.muted), "layer"); audio.liveMix(store.score); }),
+      item("👁", "Ver no visualizador", "piano vertical ou pauta", () => dispatchEvent(new CustomEvent("open-app", { detail: "visualizer" }))),
+      item("🗑", "Apagar gravação", l.locked ? "trancada" : "as notas transcritas ficam", () => { if (confirm(`Apagar a gravação "${l.name}"?`)) store.mutate((sc) => (sc.layers = sc.layers.filter((x) => x.id !== l.id)), "layer"); }, l.locked));
+    canvas.append(menu);
+    setTimeout(() => addEventListener("pointerdown", outside, true), 0);
+    (menu.querySelector(".rm-item") as HTMLElement)?.focus();
+    menu.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+  }
+
   /** Arrasta o clipe de gravação no tempo; camadas vinculadas 🔗 (não trancadas) acompanham. */
   function dragRecording(id: string, ev: PointerEvent) {
     const l = store.score.layers.find((x) => x.id === id); if (!l) return;
@@ -787,6 +837,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     if (lockedMate) { toast(`A camada vinculada "${lockedMate.name}" está trancada 🔒 — destranque ou desvincule ⛓ para mover`, "warn", 4500); return; }
     store.selectedLayer = id;
     const spbS = 60 / store.score.tempo, bpm = beatsPerMeasure(store.score);
+    if (!l.audioDur) l.audioDur = recordingSpan(l).dur; // gravações antigas: duração pelos compassos
     const sx = ev.clientX, off0 = l.audioOffset || 0;
     const notes0 = new Map(mates().flatMap((m) => m.notes.map((n) => [n.id, n.start] as [string, number])));
     let applied = 0, first = true;
@@ -983,7 +1034,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       audio.stop(); playhead = -1; drawPlayhead();
       busy(btn, false);
       const url = URL.createObjectURL(blob);
-      const layer = { ...newLayer("recording", `Gravação c.${from + 1}–${to}`), audioUrl: url, audioOffset: from * bpm * spb, measures: sel };
+      const layer = { ...newLayer("recording", `Gravação c.${from + 1}–${to}`), audioUrl: url, audioOffset: from * bpm * spb, audioDur: (to - from) * bpm * spb, measures: sel };
       store.mutate((sc) => sc.layers.push(layer), "record");
       toast("Gravação adicionada como camada. Use 'Transcrever' no gestor de camadas para virar notas.", "ok", 5200);
       if (currentUser) {
@@ -1016,7 +1067,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
           btn.classList.remove("recording"); btn.innerHTML = label;
           const nMeas = Math.max(1, Math.ceil(secs / spb / bpm));
           const measures = Array.from({ length: nMeas }, (_, i) => from + i);
-          const layer = { ...newLayer("recording", `Voz gravada c.${from + 1}–${from + nMeas}`), audioUrl: URL.createObjectURL(blob), audioOffset: from * bpm * spb, measures };
+          const layer = { ...newLayer("recording", `Voz gravada c.${from + 1}–${from + nMeas}`), audioUrl: URL.createObjectURL(blob), audioOffset: from * bpm * spb, audioDur: secs, measures };
           store.mutate((sc) => { sc.layers.push(layer); sc.measures = Math.max(sc.measures, from + nMeas); store.selectedLayer = layer.id; }, "record");
           toast(`Nova voz gravada (${nMeas} compasso${nMeas > 1 ? "s" : ""}) numa camada própria`, "ok", 5000);
           if (currentUser) {

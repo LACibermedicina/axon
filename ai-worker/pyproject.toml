@@ -1,6 +1,6 @@
 [project]
 name = "harmonia-ai"
-version = "0.6.0a0"
+version = "0.6.1a0"
 requires-python = ">=3.10"
 dependencies = []
 [tool.setuptools.packages.find]
