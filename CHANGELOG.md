@@ -2,6 +2,16 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.5.1-alpha] — 2026-11-21
+
+### Corrigido — IA
+- **Gemini sobrecarregado (HTTP 503)**: modelos reserva por provedor. Se o modelo principal (`GEMINI_MODEL`, ex.: `gemini-flash-latest`) estiver sobrecarregado, indisponível (404) ou no limite (429), tenta `GEMINI_FALLBACK_MODELS` (padrão `gemini-2.5-flash,gemini-2.5-flash-lite`) com a mesma chave antes de passar para a próxima.
+- **OpenRouter "resposta vazia"**: modelos gratuitos de raciocínio só preenchiam o campo `reasoning` e o teste usava poucos tokens; agora o texto é lido também de `reasoning` e o diagnóstico usa 256 tokens.
+
+### Adicionado
+- **Pollinations** como provedor nativo (`https://gen.pollinations.ai/v1/chat/completions`, compatível com OpenAI): `POLLINATIONS_API_KEY` (chave `sk_` do enter.pollinations.ai), `POLLINATIONS_MODEL` (padrão `openai`), `POLLINATIONS_FALLBACK_MODELS` e `AI_POLLINATIONS_ANON` (uso anônimo gratuito como última reserva; ligado por padrão, `false` desliga).
+- Variáveis novas aceitas no .env/GitHub, na coleta das outras apps e na sincronização: `POLLINATIONS_API_KEY`, `POLLINATIONS_MODEL`, `GEMINI_FALLBACK_MODELS`, `POLLINATIONS_FALLBACK_MODELS`, `AI_POLLINATIONS_ANON`.
+
 ## [0.5.0-alpha] — 2026-11-21
 
 ### Alterado — credenciais de IA: o .env do GitHub é a base

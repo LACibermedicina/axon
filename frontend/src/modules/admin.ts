@@ -19,8 +19,8 @@ export function mountAdmin(body: HTMLElement) {
       ["openrouter", "OpenRouter (modelos :free)", "https://openrouter.ai/keys"], ["cerebras", "Cerebras (grátis)", "https://cloud.cerebras.ai"],
       ["mistral", "Mistral (plano Experiment)", "https://console.mistral.ai/api-keys"], ["anthropic", "Anthropic Claude", "https://console.anthropic.com/settings/keys"],
       ["openai", "OpenAI", "https://platform.openai.com/api-keys"], ["deepseek", "DeepSeek", "https://platform.deepseek.com/api_keys"],
-      ["xai", "xAI Grok", "https://console.x.ai"], ["together", "Together AI", "https://api.together.ai/settings/api-keys"], ["huggingface", "Hugging Face (grátis)", "https://huggingface.co/settings/tokens"], ["__custom", "➕ Outra IA (compatível com OpenAI)", ""]];
-    const SRC: Record<string, string> = { painel: "🔐 painel", env: "📄 .env / GitHub", "": "—" };
+      ["xai", "xAI Grok", "https://console.x.ai"], ["together", "Together AI", "https://api.together.ai/settings/api-keys"], ["huggingface", "Hugging Face (grátis)", "https://huggingface.co/settings/tokens"], ["pollinations", "Pollinations (grátis; sk_ do enter.pollinations.ai)", "https://enter.pollinations.ai"], ["__custom", "➕ Outra IA (compatível com OpenAI)", ""]];
+    const SRC: Record<string, string> = { painel: "🔐 painel", env: "📄 .env / GitHub", anon: "🌐 anônimo (grátis)", "": "—" };
     const src = (x: string) => SRC[x] ?? (x?.startsWith("apps:") ? "🔗 app " + x.slice(5).replace(/\+/g, ", ") : x || "—");
     /** Lista das chaves do provedor na ordem de prioridade, com o resultado do último teste. */
     const candList = (cs: any[] = []) => cs.length > 1 || cs.some((c) => c.source !== "env") ? h("ul", { class: "cand-list" }, ...cs.map((c) =>

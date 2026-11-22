@@ -23,6 +23,9 @@ def keys(monkeypatch, tmp_path):
             llm.PROVIDERS.pop(name)
     for p in llm.PROVIDERS.values():
         p.failures, p.paused_until, p.last_error, p.db_key, p.db_model, p._cands = 0, 0.0, "", "", "", None
+    for k in ("GEMINI_MODEL", "GEMINI_FALLBACK_MODELS", "POLLINATIONS_API_KEY", "AI_POLLINATIONS_ANON", "GROQ_API_KEY"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("AI_POLLINATIONS_ANON", "false")  # testes sem rede
 
 
 def run(c):
@@ -98,3 +101,35 @@ def test_priority_env_then_apps_then_panel(monkeypatch, tmp_path):
     assert g.key_source == "apps:gusto"
     st = {x["name"]: x for x in llm.status()}["groq"]
     assert [c["source"] for c in st["candidates"]] == ["env", "apps:gusto", "painel"] and st["candidates"][0]["verified"] is False
+
+
+def test_gemini_fallback_model_and_pollinations_anon(monkeypatch):
+    import httpx
+    monkeypatch.setenv("AI_PROVIDERS", "gemini,pollinations")
+    monkeypatch.setenv("GEMINI_API_KEY", "AQ.teste-gemini-000000001")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-flash-latest")
+    monkeypatch.setenv("GEMINI_FALLBACK_MODELS", "gemini-2.5-flash")
+    tried = []
+
+    async def fake_model(p, client, system, user, mt, key, model):
+        tried.append((p.name, model, key))
+        if model == "gemini-flash-latest":
+            raise httpx.HTTPStatusError("x", request=httpx.Request("POST", "https://x"), response=httpx.Response(503))
+        return "ok"
+
+    monkeypatch.setattr(llm, "_call_model", fake_model)
+    text, prov = run(llm.complete_ex("s", "u"))
+    assert prov == "gemini" and [m for _, m, _ in tried] == ["gemini-flash-latest", "gemini-2.5-flash"]
+    # Pollinations entra mesmo sem chave (uso anônimo, padrão ligado), em último lugar
+    monkeypatch.delenv("AI_POLLINATIONS_ANON")
+    pol = llm.PROVIDERS["pollinations"]
+    assert [c.source for c in pol.candidates()] == ["anon"]
+    monkeypatch.setenv("AI_POLLINATIONS_ANON", "false")
+    assert pol.candidates() == []
+    monkeypatch.setenv("POLLINATIONS_API_KEY", "sk_teste_pollinations_01")
+    assert [c.source for c in pol.candidates()] == ["env"]
+
+
+def test_reasoning_only_reply():
+    assert llm._text_of({"content": None, "reasoning": "ok"}) == "ok"
+    assert llm._text_of({"content": [{"type": "text", "text": "olá"}]}) == "olá"

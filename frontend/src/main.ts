@@ -26,7 +26,7 @@ import * as audio from "./core/audio";
 import { mountDeskScore } from "./modules/deskscore";
 import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.5.0-alpha";
+const VERSION = "0.5.1-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1180, innerWidth - 40 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 30, y: 44, mount: mountScoreEditor },

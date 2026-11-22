@@ -76,6 +76,11 @@ jobs:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_FALLBACK_MODELS: ${{ vars.GEMINI_FALLBACK_MODELS }}
+          POLLINATIONS_MODEL: ${{ vars.POLLINATIONS_MODEL }}
+          AI_POLLINATIONS_ANON: ${{ vars.AI_POLLINATIONS_ANON }}
           AI_PROVIDERS: ${{ vars.AI_PROVIDERS }}
         run: bash infra/scripts/ci-sync-ai-env.sh
 

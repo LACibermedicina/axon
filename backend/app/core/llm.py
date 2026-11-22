@@ -29,9 +29,10 @@ import httpx
 from fastapi import HTTPException
 
 log = logging.getLogger("harmonia.llm")
-DEFAULT_ORDER = "anthropic,openai,groq,gemini,github,cerebras,mistral,openrouter,deepseek,xai,together,huggingface"
+DEFAULT_ORDER = "anthropic,openai,groq,gemini,github,cerebras,mistral,openrouter,pollinations,deepseek,xai,together,huggingface"
 AI_DIR = os.getenv("AI_DATA_DIR", "/data/ai")
-SOURCE_RANK = {"env": 0, "apps": 1, "painel": 2}
+SOURCE_RANK = {"env": 0, "apps": 1, "painel": 2, "anon": 3}
+RETRY_MODEL = {404, 429, 500, 502, 503, 504}  # erros em que vale tentar o modelo reserva do mesmo provedor
 
 
 @dataclass
@@ -53,6 +54,8 @@ class Cand:
 
     @property
     def hint(self) -> str:
+        if not self.key:
+            return "sem chave"
         return ("••••" + self.key[-4:]) if len(self.key) > 8 else "••••"
 
 
@@ -138,6 +141,9 @@ class Provider:
     free: bool = False
     db_key: str = ""                   # cadastrada no painel (reserva: só entra se env/apps faltarem ou falharem)
     db_model: str = ""
+    fallback_env: str = ""             # modelos reserva (lista separada por vírgula), ex.: GEMINI_FALLBACK_MODELS
+    default_fallbacks: str = ""
+    anon_env: str = ""                 # provedor que aceita uso anônimo (sem chave), ex.: AI_POLLINATIONS_ANON
     source: str = "env"
     custom: bool = False
     failures: int = 0
@@ -162,11 +168,13 @@ class Provider:
                 want.append((f"apps:{app}", v))
         if self.db_key:                              # 3. painel
             want.append(("painel", self.db_key))
+        if self.anon_env and pool_env(self.anon_env).lower() not in ("0", "false", "no", "nao", "não", "off"):  # padrão: ligado
+            want.append(("anon", ""))                # 4. uso anônimo gratuito (limitado), por último
         st = _load_status().get(self.name, {})
         out, seen = [], set()
         for src, v in want:
             c = Cand(src, v)
-            if c.fid in seen:
+            if c.fid in seen and src != "anon":
                 continue
             seen.add(c.fid)
             c = self._cands.setdefault(c.fid, c)
@@ -201,6 +209,18 @@ class Provider:
         a = self.active
         return a.source if a else ""
 
+    @property
+    def models(self) -> list[str]:
+        """Modelo principal + reservas (tentadas quando o principal está sobrecarregado/indisponível)."""
+        extra = [m.strip() for m in (pool_env(self.fallback_env) if self.fallback_env else "").split(",") if m.strip()] if self.fallback_env else []
+        if not extra and self.default_fallbacks:
+            extra = [m.strip() for m in self.default_fallbacks.split(",") if m.strip()]
+        out = []
+        for m in [self.model, *extra]:
+            if m and m not in out:
+                out.append(m)
+        return out
+
 
 PROVIDERS: dict[str, Provider] = {p.name: p for p in [
     Provider("anthropic", "Anthropic Claude", ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"), "AI_MODEL", "claude-sonnet-4-5", "anthropic"),
@@ -209,7 +229,7 @@ PROVIDERS: dict[str, Provider] = {p.name: p for p in [
     Provider("groq", "Groq (gratuito)", ("GROQ_API_KEY",), "GROQ_MODEL", "llama-3.3-70b-versatile", "openai",
              "https://api.groq.com/openai/v1/chat/completions", free=True),
     Provider("gemini", "Google Gemini (gratuito)", ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_AI_API_KEY"), "GEMINI_MODEL",
-             "gemini-2.5-flash", "gemini", free=True),
+             "gemini-2.5-flash", "gemini", free=True, fallback_env="GEMINI_FALLBACK_MODELS", default_fallbacks="gemini-2.5-flash,gemini-2.5-flash-lite"),
     Provider("github", "GitHub Models (gratuito)", ("GITHUB_MODELS_TOKEN", "GH_MODELS_TOKEN"), "GITHUB_MODELS_MODEL",
              "openai/gpt-4.1-mini", "openai", "https://models.github.ai/inference/chat/completions", free=True),
     Provider("cerebras", "Cerebras (gratuito)", ("CEREBRAS_API_KEY",), "CEREBRAS_MODEL", "llama3.1-8b", "openai",
@@ -218,6 +238,9 @@ PROVIDERS: dict[str, Provider] = {p.name: p for p in [
              "https://api.mistral.ai/v1/chat/completions", free=True),
     Provider("openrouter", "OpenRouter (modelos :free)", ("OPENROUTER_API_KEY",), "OPENROUTER_MODEL", "openrouter/free", "openai",
              "https://openrouter.ai/api/v1/chat/completions", free=True),
+    Provider("pollinations", "Pollinations (gratuito)", ("POLLINATIONS_API_KEY", "POLLINATIONS_TOKEN"), "POLLINATIONS_MODEL", "openai", "openai",
+             "https://gen.pollinations.ai/v1/chat/completions", free=True, fallback_env="POLLINATIONS_FALLBACK_MODELS",
+             default_fallbacks="openai-fast,mistral", anon_env="AI_POLLINATIONS_ANON"),
     Provider("deepseek", "DeepSeek", ("DEEPSEEK_API_KEY",), "DEEPSEEK_MODEL", "deepseek-chat", "openai",
              "https://api.deepseek.com/chat/completions"),
     Provider("xai", "xAI Grok", ("XAI_API_KEY", "GROK_API_KEY"), "XAI_MODEL", "grok-3-mini", "openai",
@@ -284,28 +307,50 @@ def chain() -> list[Provider]:
 
 
 async def _call(p: Provider, client: httpx.AsyncClient, system: str, user: str, max_tokens: int, key: str | None = None) -> str:
-    key = key or p.key
+    """Chama o provedor; se o modelo principal estiver sobrecarregado/indisponível, tenta os modelos reserva."""
+    key = p.key if key is None else key
+    models = p.models or [p.model]
+    for i, model in enumerate(models):
+        try:
+            return await _call_model(p, client, system, user, max_tokens, key, model)
+        except httpx.HTTPStatusError as e:
+            if e.response is None or e.response.status_code not in RETRY_MODEL or i == len(models) - 1:
+                raise
+            log.info("IA %s: modelo %s indisponível (HTTP %s) — tentando %s", p.name, model, e.response.status_code, models[i + 1])
+    raise RuntimeError("sem modelo")
+
+
+def _text_of(msg: dict) -> str:
+    """Conteúdo da resposta (alguns modelos gratuitos de raciocínio só preenchem 'reasoning')."""
+    c = msg.get("content")
+    if isinstance(c, list):
+        c = "".join(x.get("text", "") for x in c if isinstance(x, dict))
+    return (c or "").strip() or (msg.get("reasoning") or msg.get("reasoning_content") or "").strip()
+
+
+async def _call_model(p: Provider, client: httpx.AsyncClient, system: str, user: str, max_tokens: int, key: str, model: str) -> str:
     if p.kind == "anthropic":
         r = await client.post("https://api.anthropic.com/v1/messages",
                               headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
-                              json={"model": p.model, "max_tokens": max_tokens, "system": system,
+                              json={"model": model, "max_tokens": max_tokens, "system": system,
                                     "messages": [{"role": "user", "content": user}]})
         r.raise_for_status()
         return "".join(b.get("text", "") for b in r.json().get("content", []))
     if p.kind == "openai":
-        headers = {"Authorization": f"Bearer {key}"}
+        headers = {"Authorization": f"Bearer {key}"} if key else {}
         if p.name == "openrouter":
             headers |= {"HTTP-Referer": os.getenv("PUBLIC_BASE_URL", "https://harmonia.m3d.pro"), "X-Title": "harmonIA"}
         if p.name == "github":
             headers |= {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
-        r = await client.post(p.url, headers=headers,
-                              json={"model": p.model, "max_tokens": max_tokens, "temperature": 0.3,
-                                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]})
+        body = {"model": model, "max_tokens": max_tokens, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+        if p.name != "pollinations":
+            body["temperature"] = 0.3
+        r = await client.post(p.url, headers=headers, json=body)
         r.raise_for_status()
-        msg = r.json()["choices"][0]["message"]
-        return msg.get("content") or ""
+        ch = (r.json().get("choices") or [{}])[0]
+        return _text_of(ch.get("message") or {})
     if p.kind == "gemini":
-        r = await client.post(f"https://generativelanguage.googleapis.com/v1beta/models/{p.model}:generateContent",
+        r = await client.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                               headers={"x-goog-api-key": key},
                               json={"systemInstruction": {"parts": [{"text": system}]},
                                     "contents": [{"role": "user", "parts": [{"text": user}]}],
@@ -429,7 +474,7 @@ async def diagnose(names: list[str] | None = None, timeout: float = 20, refresh:
         t0 = time.time()
         r = {"source": c.source, "hint": c.hint}
         try:
-            text = await _call(p, client, "Você é um teste de conectividade. Responda apenas: ok", "teste", 16, key=c.key)
+            text = await _call(p, client, "Você é um teste de conectividade. Responda apenas: ok", "teste", 256, key=c.key)
             ms = int((time.time() - t0) * 1000)
             if not text.strip():
                 r |= {"ok": False, "ms": ms, "detail": "resposta vazia"}
@@ -448,7 +493,8 @@ async def diagnose(names: list[str] | None = None, timeout: float = 20, refresh:
 
     async def one(p: Provider, client: httpx.AsyncClient) -> dict:
         cs = p.candidates()
-        base = {"name": p.name, "label": p.label, "model": p.model, "free": p.free}
+        ms = p.models
+        base = {"name": p.name, "label": p.label, "model": ms[0] + (f" (reserva: {', '.join(ms[1:])})" if len(ms) > 1 else ""), "free": p.free}
         if not cs:
             return base | {"ok": False, "state": "sem_chave", "keySource": "", "detail": "sem chave cadastrada", "candidates": []}
         rs = list(await asyncio.gather(*(test(p, c, client) for c in cs)))
