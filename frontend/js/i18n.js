@@ -2,6 +2,8 @@
 (function (g) {
   const D = {
     pt: {
+      sim: "Simulação", cases: "Casos clínicos", monitor: "Monitor do paciente", network: "Rede fisiológica",
+      vessels: "Vasos", muscles: "Músculos",
       skin: "Pele (translúcida)", skeleton: "Esqueleto", organs: "Órgãos", updates: "Atualizações", newVersion: "Nova versão disponível", reload: "Recarregar",
       disclaimer: "Ferramenta de pesquisa, ensino e modelagem in silico (ASME V&V 40 · Res. CNS 510/2016). Não é dispositivo médico nem protocolo clínico.",
       leftTitle: "Anatomia, sintomas & protocolo", rightTitle: "Parâmetros & IA preditiva",
@@ -14,12 +16,14 @@
       app1: "Navegador anatômico", app2: "Estúdio de intervenções", app3: "Preditor de calibre", app4: "Fronteiras de segurança", app5: "Ruído & RE", app6: "Grafos clínico-biofísicos", app7: "Tradutor", app8: "Axon Bot & agenda",
       recruitment: "Curvas de recrutamento", safety: "Fronteiras de segurança tecidual", temperature: "Temperatura", charge: "Densidade de carga", mi: "Índice mecânico", chronic: "Crônica",
       ask: "Pergunte ao Axon Bot…", send: "Enviar", mute: "Silenciar", offline: "modo offline", online: "IA conectada",
-      layers: "Camadas", dermatomes: "Dermátomos", nerves: "Nervos periféricos", autonomic: "Cadeias autonômicas", acupoints: "Pontos reflexos / acupontos",
+      reflex: "Pontos reflexos", layers: "Camadas", dermatomes: "Dermátomos", nerves: "Nervos periféricos", autonomic: "Cadeias autonômicas", acupoints: "Pontos reflexos / acupontos",
       symptoms: "Sintomas associados", fibers: "Fibras predominantes", mechanism: "Mecanismo esperado", run: "Executar", reset: "Restaurar", step: "Passo",
       scaling: "Lei de escala", window: "Janela de seletividade", map: "Mapa calibre × distância", sr: "Ressonância estocástica", schedule: "Cronograma 48 meses", rooms: "Salas de estudo",
       provenance: "Procedência", version: "versão", seed: "semente"
     },
     en: {
+      sim: "Simulation", cases: "Clinical cases", monitor: "Patient monitor", network: "Physiological network",
+      vessels: "Vessels", muscles: "Muscles",
       skin: "Skin (translucent)", skeleton: "Skeleton", organs: "Organs", updates: "Updates", newVersion: "New version available", reload: "Reload",
       disclaimer: "Research, teaching and in silico modelling tool (ASME V&V 40 · CNS Res. 510/2016). Not a medical device or clinical protocol.",
       leftTitle: "Anatomy, symptoms & protocol", rightTitle: "Parameters & predictive AI",
@@ -32,12 +36,14 @@
       app1: "Anatomical navigator", app2: "Intervention studio", app3: "Diameter predictor", app4: "Safety frontiers", app5: "Noise & SR", app6: "Clinical-biophysical graphs", app7: "Translator", app8: "Axon Bot & schedule",
       recruitment: "Recruitment curves", safety: "Tissue safety boundaries", temperature: "Temperature", charge: "Charge density", mi: "Mechanical index", chronic: "Chronic",
       ask: "Ask Axon Bot…", send: "Send", mute: "Mute", offline: "offline mode", online: "AI connected",
-      layers: "Layers", dermatomes: "Dermatomes", nerves: "Peripheral nerves", autonomic: "Autonomic chains", acupoints: "Reflex points / acupoints",
+      reflex: "Reflex points", layers: "Layers", dermatomes: "Dermatomes", nerves: "Peripheral nerves", autonomic: "Autonomic chains", acupoints: "Reflex points / acupoints",
       symptoms: "Associated symptoms", fibers: "Predominant fibres", mechanism: "Expected mechanism", run: "Run", reset: "Reset", step: "Step",
       scaling: "Scaling law", window: "Selectivity window", map: "Diameter × distance map", sr: "Stochastic resonance", schedule: "48-month schedule", rooms: "Study rooms",
       provenance: "Provenance", version: "version", seed: "seed"
     },
     es: {
+      sim: "Simulación", cases: "Casos clínicos", monitor: "Monitor del paciente", network: "Red fisiológica",
+      vessels: "Vasos", muscles: "Músculos",
       skin: "Piel (translúcida)", skeleton: "Esqueleto", organs: "Órganos", updates: "Actualizaciones", newVersion: "Nueva versión disponible", reload: "Recargar",
       disclaimer: "Herramienta de investigación, enseñanza y modelado in silico (ASME V&V 40 · Res. CNS 510/2016). No es un dispositivo médico ni un protocolo clínico.",
       leftTitle: "Anatomía, síntomas y protocolo", rightTitle: "Parámetros e IA predictiva",
@@ -50,12 +56,14 @@
       app1: "Navegador anatómico", app2: "Estudio de intervenciones", app3: "Predictor de calibre", app4: "Fronteras de seguridad", app5: "Ruido y RE", app6: "Grafos clínico-biofísicos", app7: "Traductor", app8: "Axon Bot y agenda",
       recruitment: "Curvas de reclutamiento", safety: "Fronteras de seguridad tisular", temperature: "Temperatura", charge: "Densidad de carga", mi: "Índice mecánico", chronic: "Crónica",
       ask: "Pregunta al Axon Bot…", send: "Enviar", mute: "Silenciar", offline: "modo sin conexión", online: "IA conectada",
-      layers: "Capas", dermatomes: "Dermatomas", nerves: "Nervios periféricos", autonomic: "Cadenas autonómicas", acupoints: "Puntos reflejos / acupuntos",
+      reflex: "Puntos reflejos", layers: "Capas", dermatomes: "Dermatomas", nerves: "Nervios periféricos", autonomic: "Cadenas autonómicas", acupoints: "Puntos reflejos / acupuntos",
       symptoms: "Síntomas asociados", fibers: "Fibras predominantes", mechanism: "Mecanismo esperado", run: "Ejecutar", reset: "Restaurar", step: "Paso",
       scaling: "Ley de escala", window: "Ventana de selectividad", map: "Mapa calibre × distancia", sr: "Resonancia estocástica", schedule: "Cronograma 48 meses", rooms: "Salas de estudio",
       provenance: "Procedencia", version: "versión", seed: "semilla"
     },
     zh: {
+      sim: "模拟", cases: "临床病例", monitor: "患者监护", network: "生理网络",
+      vessels: "血管", muscles: "肌肉",
       skin: "皮肤（半透明）", skeleton: "骨骼", organs: "器官", updates: "更新", newVersion: "有新版本", reload: "重新加载",
       disclaimer: "科研、教学与计算机模拟（in silico）工具（ASME V&V 40 · CNS 第510/2016号决议）。非医疗器械，亦非临床方案。",
       leftTitle: "解剖、症状与方案", rightTitle: "参数与预测性 AI",
@@ -68,12 +76,14 @@
       app1: "解剖导航", app2: "干预工作室", app3: "直径预测器", app4: "安全边界", app5: "噪声与随机共振", app6: "临床-生物物理图谱", app7: "翻译器", app8: "Axon 机器人与日程",
       recruitment: "募集曲线", safety: "组织安全边界", temperature: "温度", charge: "电荷密度", mi: "机械指数", chronic: "慢性",
       ask: "向 Axon 机器人提问…", send: "发送", mute: "静音", offline: "离线模式", online: "AI 已连接",
-      layers: "图层", dermatomes: "皮节", nerves: "周围神经", autonomic: "自主神经链", acupoints: "反射点 / 穴位",
+      reflex: "反射点", layers: "图层", dermatomes: "皮节", nerves: "周围神经", autonomic: "自主神经链", acupoints: "反射点 / 穴位",
       symptoms: "相关症状", fibers: "主要纤维", mechanism: "预期机制", run: "运行", reset: "重置", step: "步骤",
       scaling: "标度律", window: "选择性窗口", map: "直径 × 距离图", sr: "随机共振", schedule: "48 个月进度", rooms: "学习室",
       provenance: "来源", version: "版本", seed: "随机种子"
     },
     hi: {
+      sim: "सिमुलेशन", cases: "नैदानिक मामले", monitor: "रोगी मॉनिटर", network: "शारीरिक नेटवर्क",
+      vessels: "रक्त वाहिकाएँ", muscles: "मांसपेशियाँ",
       skin: "त्वचा (पारभासी)", skeleton: "कंकाल", organs: "अंग", updates: "अपडेट", newVersion: "नया संस्करण उपलब्ध", reload: "पुनः लोड करें",
       disclaimer: "अनुसंधान, शिक्षण और इन-सिलिको मॉडलिंग उपकरण (ASME V&V 40 · CNS संकल्प 510/2016)। यह चिकित्सा उपकरण या नैदानिक प्रोटोकॉल नहीं है।",
       leftTitle: "शरीर रचना, लक्षण और प्रोटोकॉल", rightTitle: "मापदंड और पूर्वानुमानी AI",
@@ -86,7 +96,7 @@
       app1: "शारीरिक नेविगेटर", app2: "हस्तक्षेप स्टूडियो", app3: "व्यास पूर्वानुमानक", app4: "सुरक्षा सीमाएँ", app5: "शोर और SR", app6: "नैदानिक-जैवभौतिक ग्राफ", app7: "अनुवादक", app8: "Axon बॉट और कार्यक्रम",
       recruitment: "भर्ती वक्र", safety: "ऊतक सुरक्षा सीमाएँ", temperature: "तापमान", charge: "आवेश घनत्व", mi: "यांत्रिक सूचकांक", chronic: "दीर्घकालिक",
       ask: "Axon बॉट से पूछें…", send: "भेजें", mute: "मौन करें", offline: "ऑफ़लाइन मोड", online: "AI जुड़ा है",
-      layers: "परतें", dermatomes: "डर्मेटोम", nerves: "परिधीय तंत्रिकाएँ", autonomic: "स्वायत्त शृंखलाएँ", acupoints: "प्रतिवर्त बिंदु / एक्यूपॉइंट",
+      reflex: "रिफ्लेक्स बिंदु", layers: "परतें", dermatomes: "डर्मेटोम", nerves: "परिधीय तंत्रिकाएँ", autonomic: "स्वायत्त शृंखलाएँ", acupoints: "प्रतिवर्त बिंदु / एक्यूपॉइंट",
       symptoms: "संबद्ध लक्षण", fibers: "प्रमुख तंतु", mechanism: "अपेक्षित क्रियाविधि", run: "चलाएँ", reset: "रीसेट", step: "चरण",
       scaling: "स्केलिंग नियम", window: "चयनात्मकता खिड़की", map: "व्यास × दूरी मानचित्र", sr: "स्टोकेस्टिक अनुनाद", schedule: "48 माह कार्यक्रम", rooms: "अध्ययन कक्ष",
       provenance: "उद्गम", version: "संस्करण", seed: "बीज"

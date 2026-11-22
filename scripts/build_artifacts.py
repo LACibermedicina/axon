@@ -21,3 +21,17 @@ for src, name in [("docs/manual-usuario.html", "manual-usuario.html"), ("docs/ma
     p = root / src
     if p.exists():
         (out / name).write_text(inline(p), encoding="utf-8"); print(out / name)
+# pacote anatômico para artefatos (que não servem .bin): base64 em .txt + manifesto apontando para eles
+src_an = root / "frontend" / "anatomy"
+if (src_an / "anatomy.json").exists():
+    import base64, shutil
+    dst = out / "anatomy"; dst.mkdir(exist_ok=True)
+    man = json.loads((src_an / "anatomy.json").read_text(encoding="utf-8"))
+    for k, layer in man["layers"].items():
+        b = (src_an / pathlib.Path(layer["file"]).name)
+        if b.suffix == ".bin":
+            (dst / (b.stem + ".b64.txt")).write_text(base64.b64encode(b.read_bytes()).decode())
+            layer["file"] = f"anatomy/{b.stem}.b64.txt"
+    (dst / "anatomy.json").write_text(json.dumps(man, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    if (src_an / "LICENSE.txt").exists(): shutil.copy(src_an / "LICENSE.txt", dst / "LICENSE.txt")
+    print(dst)

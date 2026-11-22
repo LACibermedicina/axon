@@ -12,7 +12,7 @@
 <body>
 <header class="menubar">
   <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
-  <button class="pill" id="verPill" title="Versão e registro de alterações">v…</button><span class="pill" id="apiPill">offline</span>
+  <button class="pill" id="simBtn" onclick="AxonSim.toggle()" title="Modo Simulação: instrumento + caso clínico + monitor">▶ Simulação</button><button class="pill" id="verPill" title="Versão e registro de alterações">v…</button><span class="pill" id="apiPill">offline</span>
   <div class="brand">axon <small>axon.m3d.pro</small></div>
   <span class="sp"></span>
   <div class="flags" id="flags" role="group" aria-label="Idioma"></div>
@@ -30,6 +30,8 @@
 
   <section class="stage" id="stage" aria-label="Palco 3D multiescala">
     <div class="gl"></div><div class="labels"></div><div class="stage-fade"></div>
+    <div class="anat-status" hidden></div>
+    <div class="credit">Anatomia 3D: BodyParts3D © DBCLS · CC BY-SA 2.1 JP · trajetos nervosos periféricos: premissa didática</div>
     <nav class="scalebar" id="scalebar" aria-label="Escala"></nav>
     <div class="hint">arraste: girar · roda: zoom semântico · clique: selecionar</div>
     <div class="legend"><span class="fib"><i style="background:#4fb3ff"></i>Aβ</span><span class="fib"><i style="background:#ff8a3d"></i>Aδ</span><span class="fib"><i style="background:#ffb547"></i>nervos</span><span class="fib"><i style="background:#4fb3ff"></i>vago</span><span class="fib"><i style="background:#6ee7a8"></i>simpático</span><span class="fib"><i style="background:#ff5fa2"></i>acupontos</span><span id="fstat"></span></div>
@@ -56,6 +58,10 @@
 <script src="js/textures.js"></script>
 <script src="js/stage3d.js"></script>
 <script src="js/app.js"></script>
+<script src="js/cases.js"></script>
+<script src="js/physio.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/reflexui.js"></script>
 <script>{ try { AxonApp.init(); } catch (e) { console.error(e); document.body.insertAdjacentHTML("beforeend", '<div class="warnbox" style="position:fixed;top:80px;left:20px;z-index:99">Falha ao iniciar o palco 3D: ' + e.message + '</div>'); } }</script>
 </body>
 </html>

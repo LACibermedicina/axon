@@ -23,7 +23,7 @@
       <h1>Do dermátomo ao canal iônico, numa só tela.</h1>
       <p>O <b>axon</b> é um ambiente de simulação biofísica multiescala para estudar como TENS, eletroacupuntura, acupressão, taVNS, ultrassom focalizado e outras técnicas recrutam fibras nervosas — e onde estão os limites de segurança do tecido.</p>
       <p>Este manual mostra cada tela, cada controle e cada número, com a procedência de cada valor.</p>
-      <div class="meta">versão 0.2.0-alpha · 22/11/2026 · base científica: Teixeira LS, <i>Biofísica da Neuromodulação</i>, Ibilce/UNESP, 2026</div>
+      <div class="meta">versão 0.3.0-alpha · 22/11/2026 · base científica: Teixeira LS, <i>Biofísica da Neuromodulação</i>, Ibilce/UNESP, 2026</div>
     </div>
     <figure>
       <svg viewBox="0 0 760 470" role="img" aria-label="Tela principal do axon com as áreas numeradas">
@@ -87,7 +87,7 @@
 <nav class="toc" aria-label="Índice">
   <div class="grp">Começar</div><a href="#sobre">O que é o axon</a><a href="#acesso">Primeiros passos</a><a href="#tela">Anatomia da tela</a>
   <div class="grp">Navegar</div><a href="#escalas">Zoom semântico em 5 escalas</a><a href="#janelas">Janelas e Dock</a><a href="#paineis">Painéis laterais</a>
-  <div class="grp">Simular</div><a href="#apps">Os 8 mini-apps</a><a href="#modalidades">Modalidades</a><a href="#integrativa">Medicina integrativa</a><a href="#fluxos">Fluxos de trabalho</a>
+  <div class="grp">Simular</div><a href="#apps">Os 8 mini-apps</a><a href="#simulacao">Modo Simulação</a><a href="#modalidades">Modalidades</a><a href="#integrativa">Medicina integrativa</a><a href="#reflexos">Pontos reflexos e camadas</a><a href="#fluxos">Fluxos de trabalho</a>
   <div class="grp">Interpretar</div><a href="#procedencia">Etiquetas de procedência</a><a href="#seguranca">4 fronteiras de segurança</a><a href="#limites">O que os números autorizam</a>
   <div class="grp">Referência</div><a href="#faq">Perguntas frequentes</a><a href="#atalhos">Atalhos</a><a href="#glossario">Glossário</a><a href="#versao">Versão e atualizações</a><a href="#privacidade">Privacidade e suporte</a>
 </nav>
@@ -148,10 +148,10 @@
       </g>
     </svg>
   </figure>
-  <figcaption><b>Prancha U1.</b> O Motor de Zoom Semântico. Geometria esquemática, fora de escala; as relações d = 0,7·D e L = 100·D do Nível 4 são as do modelo. <span class="tag t-lit">LITERATURA</span></figcaption>
+  <figcaption><b>Prancha U1.</b> O Motor de Zoom Semântico. Na barra de escala, cada nível tem um ícone próprio; ao passar o mouse aparece uma ficha com a escala física, o que se vê, o modelo e os dados por trás (com etiqueta de procedência) e o que se pode fazer naquele nível. Geometria esquemática, fora de escala; as relações d = 0,7·D e L = 100·D do Nível 4 são as do modelo. <span class="tag t-lit">LITERATURA</span></figcaption>
   <div class="scroll"><table class="stack">
     <tr><th>Nível</th><th>O que você vê</th><th>O que reage aos controles</th></tr>
-    <tr><td>1 · Corpo</td><td>Pele translúcida com os 30 dermátomos (V1–S5) — clique na pele para identificar o dermátomo; esqueleto completo; encéfalo, coração, pulmões, rins; medula com 29 pares de raízes e gânglios; plexos braquial e lombossacral; 16 nervos nomeados; vago (azul) com ramo auricular; tronco simpático (verde); acupontos (rosa)</td><td>Camadas no App 1 (pele, dermátomos, esqueleto, órgãos, nervos, autonômico, acupontos); seleção de região</td></tr>
+    <tr><td>1 · Corpo</td><td><b>Anatomia real (BodyParts3D, 930 estruturas)</b> — clique em qualquer osso, órgão, músculo ou vaso para ver o nome e o ID FMA. Pele translúcida com os 30 dermátomos (V1–S5) — clique na pele para identificar o dermátomo; esqueleto completo; encéfalo, coração, pulmões, rins; medula com 29 pares de raízes e gânglios; plexos braquial e lombossacral; 16 nervos nomeados; vago (azul) com ramo auricular; tronco simpático (verde); acupontos (rosa)</td><td>Camadas no App 1 (pele, dermátomos, esqueleto, órgãos, nervos, autonômico, acupontos); seleção de região</td></tr>
     <tr><td>2 · Região</td><td>Epiderme com poros e pelos, derme com papilas e capilares, lóbulos de gordura, fáscia, músculo estriado; nervo com corte histológico, artéria e veias; dispositivo realista da técnica; campo em cascas coloridas; a pele afunda com a pressão</td><td>Distância r, tecido adiposo, intervenção, amplitude, pressão</td></tr>
     <tr><td>3 · Fascículo</td><td>Epineuro com colágeno e vasos, 8 fascículos com perineuro em lamelas, ~300 fibras; na ponta, o corte histológico das mesmas fibras; eletrodo cuff de platina e silicone; brilho da função de ativação</td><td>Amplitude, r, variações; contagem no rodapé do palco</td></tr>
     <tr><td>4 · Axônio</td><td>Mielina com lamelas e afunilamento paranodal, nós de Ranvier com canais NaV agrupados, núcleo da célula de Schwann, neurofilamentos e mitocôndrias; impulso saltando de nó em nó; barras da função de ativação</td><td>Calibre D, r</td></tr>
@@ -211,6 +211,42 @@
   </div>
 </section>
 
+<section id="simulacao">
+  <h2>Modo Simulação: aplique o instrumento e acompanhe o paciente</h2>
+  <p class="lead">Escolha um caso clínico, pegue o instrumento, clique no ponto do corpo e veja, no monitor, a resposta hipotética do paciente.</p>
+  <figure class="board">
+    <svg viewBox="0 0 800 230" role="img" aria-label="Os passos do Modo Simulação">
+      <g font-size="12.5" fill="#e9f3ef" text-anchor="middle">
+        <g transform="translate(70,90)"><rect x="-58" y="-45" width="116" height="90" rx="14" fill="#1c3e48" stroke="#ffb547"/><text y="-14" font-weight="700">1 · Caso</text><text y="6" font-size="11" fill="#9fc">origem da dor</text><text y="22" font-size="11" fill="#9fc">propostas</text></g>
+        <g transform="translate(220,90)"><rect x="-58" y="-45" width="116" height="90" rx="14" fill="#1c3e48" stroke="#ff8a3d"/><text y="-14" font-weight="700">2 · Instrumento</text><text y="6" font-size="11" fill="#9fc">TENS · agulha</text><text y="22" font-size="11" fill="#9fc">pressão · auricular</text></g>
+        <g transform="translate(370,90)"><rect x="-58" y="-45" width="116" height="90" rx="14" fill="#1c3e48" stroke="#3ee6c5"/><text y="-14" font-weight="700">3 · Aplicar</text><text y="6" font-size="11" fill="#9fc">clique na pele</text><text y="22" font-size="11" fill="#9fc">ou no órgão</text></g>
+        <g transform="translate(520,90)"><rect x="-58" y="-45" width="116" height="90" rx="14" fill="#1c3e48" stroke="#4fb3ff"/><text y="-14" font-weight="700">4 · Sessão</text><text y="6" font-size="11" fill="#9fc">monitor ao vivo</text><text y="22" font-size="11" fill="#9fc">reflexos no corpo</text></g>
+        <g transform="translate(680,90)"><rect x="-68" y="-45" width="136" height="90" rx="14" fill="#173a2a" stroke="#3ee6a0"/><text y="-14" font-weight="700">5 · Desfecho</text><text y="6" font-size="11" fill="#bfe">hipotético</text><text y="22" font-size="11" fill="#bfe">pontos e medalhas</text></g>
+        <text x="400" y="200" font-size="12" fill="#9fc">cada passo concluído é marcado sozinho no “Passo a passo” e soma 10 pontos</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="2"><path d="M128 90h32M278 90h32M428 90h32M578 90h34"/></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U7.</b> O fluxo do Modo Simulação.</figcaption>
+  <ol class="steps">
+    <li><b>Entre no modo</b> pelo botão <b>▶ Simulação</b> no topo ou pelo ícone de controle de jogo no Dock. Abrem-se três janelas: <i>Simulação</i> (caso, passo a passo, desfecho, importar), <i>Monitor do paciente</i> e <i>Rede fisiológica</i>; o painel esquerdo recolhe para dar espaço.</li>
+    <li><b>Escolha o caso</b> na lista. As condições do caso (por exemplo, tecido adiposo ou desmielinização) já são aplicadas às variações anatômicas do painel direito. Para seguir a sugestão, clique em <b>Carregar proposta</b>: instrumento e parâmetros são ajustados.</li>
+    <li><b>Selecione o instrumento</b> na bandeja do palco. Para a agulha, ajuste a profundidade em mm.</li>
+    <li><b>Clique no alvo</b>: na pele (o dermátomo é identificado), na orelha (taVNS) ou num órgão. O instrumento aparece no corpo e uma linha mostra o nervo mais próximo; o monitor indica o nome do nervo e a distância em mm.</li>
+    <li><b>Inicie a sessão</b> no monitor. Acompanhe EVA, FC, VFC, condutância e as frações de fibras. Se fibras motoras (Aα) forem recrutadas, um pulso amarelo marca a contração; Aδ demais provocam o reflexo de retirada (pulso vermelho) e aumentam a dor.</li>
+    <li><b>Avalie o desfecho</b> na aba Desfecho: a faixa provável da EVA após 1 e 5 sessões, a chance de reduzir a dor em 30 % ou mais, a comparação entre as propostas e quais ramificações fisiológicas mais pesaram.</li>
+  </ol>
+  <div class="grid2">
+    <div class="card"><h4>Pontuação</h4><p>+10 por passo concluído · até +200 pela redução da dor · +50 se ficar dentro das fronteiras · +30 se Aδ &lt; 5 %. Penalidades: retirada −15, Shannon ≥ 1,75 −25, bradicardia −30.</p></div>
+    <div class="card"><h4>Medalhas</h4><p>Redução ≥ 30 % · Dentro das fronteiras · Seletivo (Aδ &lt; 5 %) · Protocolo completo.</p></div>
+  </div>
+  <h3>Importar um caso</h3>
+  <p>Na aba <b>Importar</b>, escolha um arquivo JSON ou cole o texto; <b>Carregar modelo</b> traz um exemplo para editar. O axon valida o caso e recusa campos de identificação pessoal. Descreva a origem da dor (nociceptiva, neuropática, nociplástica ou mista), os dermátomos, os componentes inflamatório e de sensibilização, a FC e a VFC basais, as condições que alteram a anatomia e as propostas terapêuticas.</p>
+  <div class="note warn"><b>Leia o monitor como ensino, não como prognóstico.</b> O recrutamento de fibras vem do modelo verificado; o que acontece depois (portão medular, opioides endógenos, modulação descendente, via anti-inflamatória vagal, tônus autonômico) segue relações descritas na literatura, mas com pesos hipotéticos. O próprio aplicativo mostra a etiqueta <span class="tag t-hip">HIPÓTESE</span> nesses números.</div>
+  <h3>Ramificação dos axônios no feixe</h3>
+  <p>No Nível 3, os axônios coloridos que cruzam de um fascículo a outro mostram o <b>plexo intrafascicular</b>; o ramo que sai do tronco leva um conjunto identificado de fibras (o rótulo informa quantas Aβ e Aδ e de quais fascículos). No Nível 4, um <b>colateral</b> nasce num nó de Ranvier. Ligue ou desligue as ramificações no App 1.</p>
+</section>
+
 <section id="modalidades">
   <h2>Modalidades e o que o modelo calcula para cada uma</h2>
   <div class="scroll"><table class="stack">
@@ -253,6 +289,69 @@
     </svg>
   </figure>
   <figcaption><b>Prancha U3.</b> Mapa do pavilhão usado pelo Estúdio de intervenções. A cascata ABVN → NTS está documentada <span class="tag t-lit">LITERATURA</span>; os passos para locus coeruleus, rafe, PAG e via colinérgica anti-inflamatória são <span class="tag t-hip">HIPÓTESE</span>. Parâmetros usuais 20–30 Hz, 200–250 µs; o painel alerta sobre bradicardia teórica.</figcaption>
+</section>
+
+<section id="reflexos">
+  <h2>Pontos reflexos: cores, associações em camadas e visibilidade</h2>
+  <p class="lead">Vinte pontos sobre a pele real, em quatro famílias com cor própria. Clicar num ponto acende, em cada camada do corpo, os elementos ligados a ele — dermátomo, nervo, músculo, órgão — e desenha linhas até eles.</p>
+  <figure class="board">
+    <svg viewBox="0 0 800 400" role="img" aria-label="Tela do app com o ponto ST36 selecionado, a tíbia anterior em laranja, o nervo em ciano e a janela Pontos reflexos">
+      <defs><linearGradient id="rxsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0c3a8" stop-opacity=".8"/><stop offset="1" stop-color="#e7a58c" stop-opacity=".65"/></linearGradient></defs>
+      <rect x="6" y="6" width="788" height="388" rx="14" fill="#0b1a1f" stroke="#2c4a52"/>
+      <rect x="6" y="6" width="788" height="26" rx="14" fill="#10262c"/><g fill="#ff5f57"><circle cx="24" cy="19" r="5"/></g><circle cx="40" cy="19" r="5" fill="#febc2e"/><circle cx="56" cy="19" r="5" fill="#28c840"/><text x="400" y="23" text-anchor="middle" font-size="12" fill="#e9f3ef" font-weight="700">axon</text>
+      <g transform="translate(120,44)"><rect width="330" height="28" rx="14" fill="#10262c" stroke="#2c4a52"/>
+        <g font-size="10.5" fill="#9fc"><rect x="4" y="4" width="96" height="20" rx="10" fill="#1d5a50"/><circle cx="18" cy="14" r="7" fill="#3ee6c5"/><text x="30" y="18" fill="#fff">1 Corpo</text><circle cx="118" cy="14" r="7" fill="#ffb36b"/><text x="130" y="18">2 Região</text><circle cx="184" cy="14" r="7" fill="#ffd34d"/><text x="196" y="18">3</text><circle cx="222" cy="14" r="7" fill="#4fb3ff"/><text x="234" y="18">4</text><circle cx="262" cy="14" r="7" fill="#c084fc"/><text x="274" y="18">5</text></g></g>
+      <!-- pernas -->
+      <g transform="translate(250,90)">
+        <path d="M-60 0 C-62 60-58 120-50 170 C-46 200-48 240-44 270 L-20 270 C-18 240-14 200-10 170 C-4 120 0 60-2 0Z" fill="url(#rxsk)" stroke="#f0c3a8" stroke-opacity=".5"/>
+        <path d="M10 0 C8 60 12 120 18 170 C22 200 20 240 24 270 L48 270 C52 240 50 200 54 170 C62 120 64 60 62 0Z" fill="url(#rxsk)" stroke="#f0c3a8" stroke-opacity=".5"/>
+        <ellipse cx="-32" cy="150" rx="16" ry="14" fill="#e9eef0" opacity=".7"/><ellipse cx="34" cy="150" rx="16" ry="14" fill="#e9eef0" opacity=".7"/>
+        <path d="M-42 175 C-46 210-44 245-38 262 L-30 262 C-28 240-28 205-30 175Z" fill="#ff7a2f" opacity=".95"/>
+        <path d="M-52 160 C-58 200-50 240-46 266" stroke="#3ee6e0" stroke-width="3" fill="none"/>
+        <path d="M-60 120 L-18 120 L-16 210 L-58 210Z" fill="#ffd34d" opacity=".18"/>
+        <circle cx="-36" cy="182" r="7" fill="#ff5fa2" stroke="#fff" stroke-width="1.5"/><circle cx="-36" cy="182" r="13" fill="none" stroke="#ff5fa2" stroke-width="2"/>
+        <path d="M-36 182 Q-44 170 -50 178" stroke="#3ee6e0" stroke-width="2" fill="none"/><circle cx="-50" cy="178" r="3" fill="#3ee6e0"/>
+        <path d="M-36 182 Q-30 200 -35 220" stroke="#ff7a2f" stroke-width="2" fill="none"/><circle cx="-35" cy="220" r="3" fill="#ff7a2f"/>
+        <circle cx="-54" cy="166" r="5" fill="#ff5fa2" opacity=".8"/><circle cx="-22" cy="250" r="5" fill="#ff5fa2" opacity=".8"/>
+        <g font-size="10.5" fill="#ffc2dc"><rect x="-28" y="168" width="40" height="15" rx="6" fill="#0b1a1f" stroke="#ff5fa2"/><text x="-8" y="179" text-anchor="middle">ST36</text></g>
+      </g>
+      <!-- janela -->
+      <g transform="translate(470,48)"><rect width="310" height="334" rx="12" fill="#10262c" stroke="#2c4a52"/><circle cx="16" cy="14" r="4.5" fill="#ff5f57"/><circle cx="30" cy="14" r="4.5" fill="#febc2e"/><circle cx="44" cy="14" r="4.5" fill="#28c840"/><text x="155" y="18" text-anchor="middle" font-size="11.5" fill="#e9f3ef" font-weight="700">Pontos reflexos</text>
+        <g font-size="10.5" fill="#e9f3ef">
+          <text x="14" y="44" font-weight="700">Visibilidade por categoria</text>
+          <g transform="translate(14,54)"><rect width="10" height="10" rx="2" fill="#3ee6c5"/><circle cx="22" cy="5" r="5" fill="#ff5fa2"/><text x="32" y="9">Acupontos (OMS 2008)</text><text x="276" y="9" text-anchor="end" fill="#9fc">10</text></g>
+          <g transform="translate(14,72)"><rect width="10" height="10" rx="2" fill="#3ee6c5"/><circle cx="22" cy="5" r="5" fill="#5ab8ff"/><text x="32" y="9">Auriculares (ABVN)</text><text x="276" y="9" text-anchor="end" fill="#9fc">2</text></g>
+          <g transform="translate(14,90)"><rect width="10" height="10" rx="2" fill="#3ee6c5"/><circle cx="22" cy="5" r="5" fill="#ff9a3d"/><text x="32" y="9">Pontos-gatilho miofasciais</text><text x="276" y="9" text-anchor="end" fill="#9fc">3</text></g>
+          <g transform="translate(14,108)"><rect width="10" height="10" rx="2" fill="none" stroke="#9fc"/><circle cx="22" cy="5" r="5" fill="#b48cff"/><text x="32" y="9" fill="#9fc">Zonas de Head (desligada)</text><text x="276" y="9" text-anchor="end" fill="#9fc">5</text></g>
+          <text x="14" y="142" font-weight="700">Associações em camadas</text>
+          <g transform="translate(14,152)"><circle cx="5" cy="5" r="5" fill="#ffd34d"/><text x="14" y="9">Dermátomo</text><circle cx="105" cy="5" r="5" fill="#3ee6e0"/><text x="114" y="9">Nervo</text><circle cx="175" cy="5" r="5" fill="#ff7a2f"/><text x="184" y="9">Músculo</text><circle cx="245" cy="5" r="5" fill="#c06bff"/><text x="254" y="9">Órgão</text></g>
+          <text x="14" y="182">Opacidade da pele</text><rect x="14" y="188" width="282" height="4" rx="2" fill="#2c4a52"/><rect x="14" y="188" width="110" height="4" rx="2" fill="#3ee6c5"/><circle cx="124" cy="190" r="6" fill="#3ee6c5"/><text x="296" y="182" text-anchor="end" fill="#9fc">40 %</text>
+          <rect x="14" y="206" width="282" height="118" rx="8" fill="#0b1a1f" stroke="#ff5fa2"/><text x="26" y="224" font-weight="700">ST36 · Zusanli</text>
+          <circle cx="30" cy="242" r="4" fill="#ffd34d"/><text x="40" y="246" fill="#9fc">Segmento</text><text x="130" y="246">L4–L5 (mapa: L5)</text>
+          <circle cx="30" cy="260" r="4" fill="#3ee6e0"/><text x="40" y="264" fill="#9fc">Nervo</text><text x="130" y="264">Fibular comum (dir.)</text>
+          <circle cx="30" cy="278" r="4" fill="#ff7a2f"/><text x="40" y="282" fill="#9fc">Músculo</text><text x="130" y="282">tibial anterior direito</text>
+          <rect x="26" y="294" width="74" height="14" rx="4" fill="#173a2a"/><text x="63" y="304" text-anchor="middle" font-size="9" fill="#bfe">LITERATURA</text><rect x="106" y="294" width="64" height="14" rx="4" fill="#3a2f12"/><text x="138" y="304" text-anchor="middle" font-size="9" fill="#ffe7a3">PREMISSA</text><rect x="176" y="294" width="106" height="14" rx="4" fill="#3a1f2a"/><text x="229" y="304" text-anchor="middle" font-size="9" fill="#ffc2dc">HIPÓTESE (MTC)</text>
+        </g></g>
+      <g font-size="11" fill="#ffd36b"><path d="M330 280 L466 300" stroke="#ffd36b" stroke-dasharray="3 3"/><text x="300" y="380" text-anchor="middle">a cor do ponto diz a família; as cores das linhas dizem a camada</text></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha U4.</b> Estrutura da tela com ST36 selecionado: o músculo tibial anterior em laranja, o nervo fibular comum em ciano, a faixa do dermátomo em dourado e a ficha na janela "Pontos reflexos".</figcaption>
+  <div class="scroll"><table class="stack">
+    <tr><th>Cor</th><th>Família</th><th>Pontos</th><th>O que é evidenciado</th><th>Procedência</th></tr>
+    <tr><td><span style="color:#ff5fa2">●</span> rosa</td><td>Acupontos</td><td>LI4, PC6, HT7, ST36, SP6, GB34, LR3, BL40, GV20, CV12</td><td>Dermátomo, nervo subjacente, músculo/osso do local</td><td><span class="tag t-lit">LITERATURA</span> localização OMS 2008 · meridiano <span class="tag t-hip">HIPÓTESE</span></td></tr>
+    <tr><td><span style="color:#5ab8ff">●</span> azul</td><td>Auriculares</td><td>Cymba conchae (ABVN), lóbulo (sham)</td><td>Ramo auricular do vago, coração</td><td><span class="tag t-lit">LITERATURA</span> Peuker &amp; Filler 2002</td></tr>
+    <tr><td><span style="color:#ff9a3d">●</span> laranja</td><td>Pontos-gatilho</td><td>Trapézio superior, glúteo médio, quadrado lombar</td><td>Músculo, plexo, área de dor referida</td><td><span class="tag t-lit">LITERATURA</span> Travell &amp; Simons 1999</td></tr>
+    <tr><td><span style="color:#b48cff">◆</span> lilás</td><td>Zonas de Head</td><td>Coração, estômago, vesícula, rim, apêndice</td><td>Faixa segmentar inteira na pele, órgão e tronco simpático</td><td><span class="tag t-lit">LITERATURA</span> Head 1893</td></tr>
+  </table></div>
+  <h3>Como usar</h3>
+  <ol class="steps">
+    <li>No Nível 1, abra o ícone <b>Pontos reflexos</b> no Dock (ou o botão no app Anatomia). Os pontos aparecem com um halo pulsante e um rótulo; pontos do lado oposto ao da câmera ficam esmaecidos.</li>
+    <li>Clique num ponto no corpo ou num botão da lista. Pela lista, a câmera aproxima e se vira para o ponto; <b>⤢ Corpo inteiro</b> volta ao enquadramento geral.</li>
+    <li>Leia a ficha: segmento da literatura e dermátomo do mapa do app (quando diferem, os dois aparecem), nervo modelado, músculos com ID FMA, órgão, dor referida e a referência.</li>
+    <li>Use as caixas de categoria para mostrar só uma família, <b>Evidenciar elementos associados</b> para ligar ou desligar cores e linhas, e <b>Revelar a camada</b> para que músculos, nervos ou órgãos apareçam sozinhos. A pele passa a 40 % enquanto há uma estrutura interna colorida e volta ao limpar; o controle de opacidade ajusta à mão.</li>
+    <li>No Modo Simulação, os pontos continuam visíveis como alvo: aplique o instrumento sobre eles para ver o recrutamento naquele local.</li>
+  </ol>
+  <div class="note warn">Os pontos são localizações de referência projetadas sobre um único corpo e servem para ensino. A correspondência com meridianos é a da tradição chinesa e não é mostrada como relação anatômica. Nada aqui indica onde ou como tratar um paciente.</div>
 </section>
 
 <section id="fluxos">
@@ -406,7 +505,7 @@
 
 </main>
 </div>
-<footer>axon v0.2.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../site/">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
+<footer>axon v0.3.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../site/">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
 <script src="doc.js"></script>
 </body>
 </html>

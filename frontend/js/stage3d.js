@@ -93,19 +93,19 @@
     const pal = PAL.map(c => V3(c.r, c.g, c.b));
     return new T.ShaderMaterial({
       transparent: true, depthWrite: false, side: T.DoubleSide,
-      uniforms: { pal: { value: pal }, dermOn: { value: 1 }, sel: { value: -1 }, t: { value: 0 }, nmap: { value: ptex("skin", [1, 1]).normalMap } },
-      vertexShader: `attribute float derm; uniform vec3 pal[30]; uniform float sel;
+      uniforms: { pal: { value: pal }, dermOn: { value: 1 }, sel: { value: -1 }, selHi: { value: -1 }, alphaK: { value: 1 }, selK: { value: 1 }, selCol: { value: V3(1, .95, .7) }, t: { value: 0 }, nmap: { value: ptex("skin", [1, 1]).normalMap } },
+      vertexShader: `attribute float derm; uniform vec3 pal[30]; uniform float sel; uniform float selHi;
         varying vec3 vN; varying vec3 vV; varying vec3 vC; varying float vS; varying vec2 vUv;
         void main(){ int k=int(derm+.5); vec3 c=vec3(0.);
           for(int i=0;i<30;i++){ if(i==k) c=pal[i]; }
-          vC=c; vS=abs(derm-sel)<.5?1.:0.; vUv=uv;
+          vC=c; vS=(sel>-.5&&derm>sel-.5&&derm<max(sel,selHi)+.5)?1.:0.; vUv=uv;
           vec4 mv=modelViewMatrix*vec4(position,1.); vV=-mv.xyz; vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*mv; }`,
-      fragmentShader: `uniform float dermOn; uniform float t; uniform sampler2D nmap; varying vec3 vN; varying vec3 vV; varying vec3 vC; varying float vS; varying vec2 vUv;
+      fragmentShader: `uniform float dermOn; uniform float alphaK; uniform float selK; uniform vec3 selCol; uniform float t; uniform sampler2D nmap; varying vec3 vN; varying vec3 vV; varying vec3 vC; varying float vS; varying vec2 vUv;
         void main(){ vec3 nb=texture2D(nmap,vUv*vec2(6.,14.)).xyz*2.-1.; vec3 N=normalize(vN+nb*.18); vec3 V=normalize(vV);
           float f=pow(1.-abs(dot(N,V)),2.4); vec3 skin=vec3(.86,.62,.52); vec3 c=mix(skin,vC,dermOn*.62);
           float spec=pow(max(dot(reflect(-V,N),normalize(vec3(.4,.8,.6))),0.),24.)*.35;
-          c=c*(.42+.9*f)+spec; c+=vS*vec3(1.,.95,.7)*(.35+.25*sin(t*4.));
-          gl_FragColor=vec4(c, .16+.6*f+vS*.25); }`
+          c=c*(.42+.9*f)+spec; c+=vS*selK*selCol*(.35+.25*sin(t*4.));
+          gl_FragColor=vec4(c, (.16+.6*f)*alphaK+vS*selK*.25); }`
     });
   }
 
@@ -116,8 +116,10 @@
     const ring = new T.Mesh(new T.RingGeometry(.045, .056, 40), new T.MeshBasicMaterial({ color, transparent: true, opacity: .7, side: T.DoubleSide, depthWrite: false }));
     ring.position.copy(m.position); group.add(ring);
     S.anim.push(t => { const s = 1 + .4 * Math.sin(t * 3 + pos[1] * 5); ring.scale.set(s, s, s); ring.lookAt(camera.position); });
-    if (text) label(group, pos, text, color === 0x5ab8ff ? "blue" : "");
+    const lb = text ? label(group, pos, text, color === 0x5ab8ff ? "blue" : "") : null;
+    S.hotReg = S.hotReg || {}; S.hotReg[region] = { m, ring, lb };
   }
+  function moveHotspot(region, pos) { const h = S.hotReg && S.hotReg[region]; if (!h) return; h.m.position.set(...pos); h.ring.position.set(...pos); const L = S.labels.find(l => l.el === h.lb); if (L) L.pos.set(...pos); }
 
   // ======================================================== Nível 1 — corpo inteiro
   function buildBody() {
@@ -238,7 +240,178 @@
     hotspot(G, [.56, .3, .07], "median", 0x6ee7a8, "C6–C8 · mediano");
     hotspot(G, [-.2, .6, .17], "visceral", 0xc084fc, "T4–T6 · dor referida");
     hotspot(G, [-.19, -1.18, .09], "acupoint", 0xff5fa2, "ST36");
+    loadAnatomy(G, L);
     return G;
+  }
+
+  // ======================================================== anatomia real (BodyParts3D, CC BY-SA 2.1 JP)
+  const LAYER_FILES = { skin: "skin", skeleton: "bone", organs: "organs", vessels: "vessels", muscles: "muscles" };
+  function organColor(n) {
+    if (/gyrus|gyri|cerebr|white matter|thalamus|callosum|hippocamp|insula|amygdala|brain|pons|medulla|midbrain|peduncle|cerebell|colliculus|fornix/i.test(n)) return 0xe8a9ae;
+    if (/heart/i.test(n)) return 0xb3263a; if (/lung/i.test(n)) return 0xf0a3ad; if (/liver/i.test(n)) return 0x8a3324; if (/kidney/i.test(n)) return 0x8e2c35;
+    if (/stomach|esophag|intestin|duoden|jejun|ileum|colon|cecum|appendix|rectum/i.test(n)) return 0xe0a58b; if (/spleen/i.test(n)) return 0x6d1f3a; if (/pancrea/i.test(n)) return 0xe7c08f;
+    if (/trachea|bronch|larynx/i.test(n)) return 0xd8c6c0; if (/bladder|gland|prostate/i.test(n)) return 0xd99c8f; if (/eyeball/i.test(n)) return 0xf2f2f2; return 0xd9a38f;
+  }
+  function partColor(layer, n, i) {
+    const c = new T.Color();
+    if (layer === "bone") return /disk|cartilage/i.test(n) ? c.set(0xa9d2df) : c.set(COL.bone).offsetHSL(0, 0, ((i * 37) % 9 - 4) * .006);
+    if (layer === "muscles") return c.set(0xa3333b).offsetHSL(((i * 13) % 7 - 3) * .006, 0, ((i * 29) % 11 - 5) * .01);
+    if (layer === "vessels") return c.set(/vein|vena|venous|sinus/i.test(n) ? 0x3c4ea8 : 0xc22a36);
+    if (layer === "organs") return c.set(organColor(n));
+    return c.set(0xe7b39c);
+  }
+  function b64(t) { const s2 = atob(t.trim()), u = new Uint8Array(s2.length); for (let i = 0; i < s2.length; i++) u[i] = s2.charCodeAt(i); return u.buffer; }
+  async function loadLayer(man, key) {
+    const info = man.layers[LAYER_FILES[key]]; if (!info) return null;
+    const buf = await fetch(info.file).then(r => { if (!r.ok) throw new Error(r.status); return /\.txt$/.test(info.file) ? r.text().then(b64) : r.arrayBuffer(); });
+    const lo = man.lo, sp = man.span; let nv = 0, ni = 0; info.parts.forEach(p => { nv += p.nv; ni += p.ni; });
+    const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), pid = new Float32Array(nv), derm = new Float32Array(nv), idx = new Uint32Array(ni);
+    let v0 = 0, i0 = 0; const c = new T.Color();
+    info.parts.forEach((p, k) => {
+      const q = new Int16Array(buf, p.vo, p.nv * 3);
+      for (let j = 0; j < p.nv * 3; j++) { const a = j % 3; pos[v0 * 3 + j] = lo[a] + (q[j] + 32767) / 65534 * sp[a]; }
+      c.copy(partColor(key === "skeleton" ? "bone" : key, p.name, k));
+      for (let j = 0; j < p.nv; j++) { col[(v0 + j) * 3] = c.r; col[(v0 + j) * 3 + 1] = c.g; col[(v0 + j) * 3 + 2] = c.b; pid[v0 + j] = k; }
+      if (p.do !== undefined) { const d = new Uint8Array(buf, p.do, p.nv); for (let j = 0; j < p.nv; j++) derm[v0 + j] = d[j]; }
+      const ix = new Uint32Array(buf, p.io, p.ni); for (let j = 0; j < p.ni; j++) idx[i0 + j] = ix[j] + v0;
+      p.v0 = v0; p.i0 = i0; v0 += p.nv; i0 += p.ni;
+    });
+    const gm = new T.BufferGeometry(); gm.setAttribute("position", new T.BufferAttribute(pos, 3)); gm.setAttribute("color", new T.BufferAttribute(col, 3)); gm.setAttribute("pid", new T.BufferAttribute(pid, 1));
+    if (key === "skin") gm.setAttribute("derm", new T.BufferAttribute(derm, 1));
+    gm.setIndex(new T.BufferAttribute(idx, 1)); gm.computeVertexNormals(); gm.computeBoundingSphere();
+    let mat;
+    if (key === "skin") mat = realSkinMaterial();
+    else if (key === "organs") mat = phys(0xffffff, { vertexColors: true, roughness: .42, clearcoat: .7, clearcoatRoughness: .3, transparent: true, opacity: .88 });
+    else if (key === "muscles") mat = phys(0xffffff, { vertexColors: true, roughness: .5, clearcoat: .55, clearcoatRoughness: .35 });
+    else if (key === "vessels") mat = phys(0xffffff, { vertexColors: true, roughness: .3, clearcoat: .9 });
+    else mat = phys(0xffffff, { vertexColors: true, roughness: .62, clearcoat: .25 });
+    const mesh = new T.Mesh(gm, mat); mesh.userData = { layer: key, parts: info.parts }; if (key === "skin") mesh.renderOrder = 10;
+    return mesh;
+  }
+  function realSkinMaterial() {
+    const m = skinMaterial();
+    m.vertexShader = m.vertexShader.replace("varying vec2 vUv;", "varying vec2 vUv; varying vec3 vP;").replace("vUv=uv;", "vUv=uv; vP=position;");
+    m.fragmentShader = m.fragmentShader.replace("varying vec2 vUv;", "varying vec2 vUv; varying vec3 vP;").replace("texture2D(nmap,vUv*vec2(6.,14.))", "texture2D(nmap,vP.xy*vec2(7.,7.)+vP.zz*3.)");
+    return m;
+  }
+  async function loadAnatomy(G, L) {
+    const status = host.querySelector(".anat-status");
+    const say = t => { if (status) { status.textContent = t; status.hidden = !t; } };
+    let man; try { man = await fetch("anatomy/anatomy.json").then(r => { if (!r.ok) throw 0; return r.json(); }); } catch (e) { say(""); return; } // sem pacote: mantém o corpo procedural
+    S.anat = man;
+    say("Carregando anatomia BodyParts3D: pele e esqueleto…");
+    try {
+      const skin = await loadLayer(man, "skin"), bone = await loadLayer(man, "skeleton");
+      const clear = g2 => { while (g2.children.length) { const c = g2.children.pop(); c.geometry && c.geometry.dispose(); } };
+      clear(L.skin); clear(L.skeleton); clear(L.organs); clear(L.nerves); clear(L.autonomic); clear(L.acupoints);
+      L.skin.add(skin); L.skeleton.add(bone); S.skin = skin.material; S.skinMeshes = [skin]; S.anatMeshes = [skin, bone];
+      // nervos ancorados nos ossos reais
+      const NMc = { nerve: nerveMat(), root: nerveMat(COL.nerve, .3), cord: phys(0xfff1cc, { emissive: 0xffe0a0, emissiveIntensity: .35, clearcoat: .8 }), vagus: nerveMat(COL.vagus, .7), symp: nerveMat(COL.symp, .6) };
+      man.nerves.forEach(n => { const m = tube(n.p, n.r, NMc[n.kind] || NMc.nerve, Math.max(8, n.p.length * 8), 6); m.userData.nerve = n.name; (n.kind === "vagus" || n.kind === "symp" ? L.autonomic : L.nerves).add(m);
+        if (n.kind === "root") { const g2 = new T.Mesh(new T.SphereGeometry(.008, 8, 8), phys(0xffe08a, { emissive: 0xffc65c, emissiveIntensity: .6 })); g2.position.set(...n.p[n.p.length - 1]); g2.scale.set(1.4, 1, 1); L.nerves.add(g2); } });
+      Object.entries(man.hotspots || {}).forEach(([k, p]) => moveHotspot(k, p));
+      buildReflex(L.acupoints, man);
+      if (S.hotReg && S.hotReg.acupoint) { const h = S.hotReg.acupoint; h.m.visible = h.ring.visible = false; if (h.lb) h.lb.dataset.hidden = "1"; S.hot = S.hot.filter(x => x !== h.m); }
+      say("Carregando órgãos e vasos…");
+      const org = await loadLayer(man, "organs"); L.organs.add(org); S.anatMeshes.push(org); S.meshByLayer = { skin, skeleton: bone, organs: org };
+      if (!L.vessels) { L.vessels = new T.Group(); L.vessels.name = "vessels"; L.vessels.visible = false; G.add(L.vessels); }
+      const ves = await loadLayer(man, "vessels"); L.vessels.add(ves); S.anatMeshes.push(ves); S.meshByLayer.vessels = ves;
+      if (!L.muscles) { L.muscles = new T.Group(); L.muscles.name = "muscles"; L.muscles.visible = false; G.add(L.muscles); }
+      say(""); S.anatReady = true; if (S.rxSel) applyReflex(S.rxSel);
+      document.dispatchEvent(new CustomEvent("axon:anatomy", { detail: { parts: Object.values(man.layers).reduce((a, l) => a + l.parts.length, 0) } }));
+    } catch (e) { console.warn("anatomia BodyParts3D indisponível:", e); say(""); }
+  }
+  const nerveEnd = (man, name) => { const n = man.nerves.find(x => x.name === name); return n ? n.p[n.p.length - 1] : null; };
+  const nerveAt = (man, name, t) => { const n = man.nerves.find(x => x.name === name); return n ? n.p[Math.min(n.p.length - 1, Math.round(t * (n.p.length - 1)))] : null; };
+  async function ensureMuscles() {
+    if (!S.anat || S.musclesLoaded) return; S.musclesLoaded = true; const status = host.querySelector(".anat-status");
+    if (status) { status.textContent = "Carregando 457 músculos…"; status.hidden = false; }
+    try { const m = await loadLayer(S.anat, "muscles"); S.layers.muscles.add(m); S.anatMeshes.push(m); S.meshByLayer.muscles = m; S.musclesReady = true; if (S.rxSel) applyReflex(S.rxSel); } catch (e) { S.musclesLoaded = false; }
+    if (status) status.hidden = true;
+  }
+
+  // ======================================================== Pontos reflexos: categorias por cor + associações reveladas em camadas
+  const RX_CAT = { acu: { label: "Acupontos (OMS 2008)", color: 0xff5fa2 }, aur: { label: "Auriculares (ABVN)", color: 0x5ab8ff }, tp: { label: "Pontos-gatilho miofasciais", color: 0xff9a3d }, head: { label: "Zonas de Head (víscera → pele)", color: 0xb48cff } };
+  const RX_ASSOC = { derm: 0xffd34d, nerve: 0x3ee6e0, muscle: 0xff7a2f, organ: 0xc06bff };
+  const hexCss = c => "#" + c.toString(16).padStart(6, "0");
+  const lin = hex => new T.Color(hex).convertSRGBToLinear(); // cores de identificação fiéis à legenda (saída sRGB)
+  function buildReflex(G, man) {
+    S.rx = { list: man.reflex || [], markers: [], cat: { acu: true, aur: true, tp: true, head: true }, assoc: true, reveal: true, links: new T.Group() };
+    G.add(S.rx.links);
+    S.rx.list.forEach(r => {
+      const col = lin(RX_CAT[r.cat].color), grp = new T.Group(); grp.position.set(...r.p);
+      const core = new T.Mesh(r.cat === "head" ? new T.OctahedronGeometry(.024) : new T.SphereGeometry(r.cat === "tp" ? .02 : .016, 16, 12), glow(col, .95)); core.userData.reflex = r.id; grp.add(core);
+      const halo = new T.Mesh(new T.RingGeometry(.026, .034, 32), new T.MeshBasicMaterial({ color: col, transparent: true, opacity: .75, side: T.DoubleSide, depthWrite: false, depthTest: false })); halo.renderOrder = 20; grp.add(halo);
+      const hit = new T.Mesh(new T.SphereGeometry(.04, 8, 6), new T.MeshBasicMaterial({ visible: false })); hit.userData.reflex = r.id; grp.add(hit);
+      core.material.depthTest = false; core.material.blending = T.NormalBlending; core.renderOrder = 21;
+      G.add(grp); const lb = label(G, r.p, r.id.replace("HEAD_", "Head·"), "rx rx-" + r.cat); S.labels[S.labels.length - 1].n = V3(...r.n);
+      const k = { r, grp, core, halo, hit, lb, ph: Math.random() * 6 }; S.rx.markers.push(k);
+    });
+    S.anim.push(t => { if (!S.rx || !G.visible) return; const gs = 2.1 * Math.max(.28, Math.min(1.2, cam.dist / fitDist(VIEWS[1].R))); S.rx.markers.forEach(k => { k.grp.scale.setScalar(gs); const on = S.rxSel && S.rxSel.id === k.r.id, sc = on ? 1.6 + .35 * Math.sin(t * 5) : 1 + .25 * Math.sin(t * 2.4 + k.ph); k.halo.scale.setScalar(sc); k.halo.lookAt(camera.position); k.core.scale.setScalar(on ? 1.5 : 1);
+      const face = tmp2.copy(camera.position).sub(k.grp.position).dot(V3(...k.r.n)) > 0 || on; k.core.material.opacity = face ? .95 : .22; k.halo.material.opacity = face ? .75 : .12; }); });
+    rxVisibility();
+  }
+  function rxVisibility() {
+    if (!S.rx) return;
+    S.rx.markers.forEach(k => { const v = S.rx.cat[k.r.cat]; k.grp.visible = v; k.lb.dataset.hidden = v ? "" : "1"; });
+    S.rx.links.visible = S.rx.assoc; syncLabels();
+  }
+  function partsOf(layer, names) {
+    const mesh = S.meshByLayer && S.meshByLayer[layer]; if (!mesh || !names.length) return [];
+    return mesh.userData.parts.map((p, k) => ({ p, k })).filter(({ p }) => names.includes(p.name)).map(o => ({ mesh, ...o }));
+  }
+  function paintPart(mesh, p, k, color) {
+    const ca = mesh.geometry.attributes.color, c = color != null ? lin(color) : partColor(mesh.userData.layer === "skeleton" ? "bone" : mesh.userData.layer, p.name, k);
+    for (let j = p.v0; j < p.v0 + p.nv; j++) ca.setXYZ(j, c.r, c.g, c.b); ca.needsUpdate = true;
+  }
+  function overlayPart(mesh, p, color) { // silhueta colorida da parte, visível através da pele
+    const pa = mesh.geometry.attributes.position.array, ix = mesh.geometry.index.array, pos = pa.slice(p.v0 * 3, (p.v0 + p.nv) * 3), id = new Uint32Array(p.ni);
+    for (let j = 0; j < p.ni; j++) id[j] = ix[p.i0 + j] - p.v0;
+    const gm = new T.BufferGeometry(); gm.setAttribute("position", new T.BufferAttribute(pos, 3)); gm.setIndex(new T.BufferAttribute(id, 1)); gm.computeVertexNormals();
+    const c = lin(color), m = new T.Mesh(gm, new T.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: .45, transparent: true, opacity: .82, depthWrite: false })); m.renderOrder = 18; return m;
+  }
+  function centroid(mesh, p) { const pa = mesh.geometry.attributes.position, c = V3(0, 0, 0), st = Math.max(1, Math.floor(p.nv / 200)); let n = 0; for (let j = p.v0; j < p.v0 + p.nv; j += st) { c.x += pa.getX(j); c.y += pa.getY(j); c.z += pa.getZ(j); n++; } return c.multiplyScalar(1 / n); }
+  function clearReflex() {
+    const R = S.rxPaint || []; R.forEach(({ mesh, p, k }) => paintPart(mesh, p, k, null)); S.rxPaint = [];
+    (S.rxNerve || []).forEach(m => { m.material = m.userData.mat0; }); S.rxNerve = [];
+    if (S.rx) { while (S.rx.links.children.length) { const c = S.rx.links.children.pop(); c.geometry.dispose(); c.material.dispose(); } }
+    if (S.skin) { S.skin.uniforms.sel.value = -1; S.skin.uniforms.selHi.value = -1; S.skin.uniforms.selK.value = 1; S.skin.uniforms.selCol.value.set(1, .95, .7); }
+    (S.rxShown || []).forEach(n => { if (S.layers[n]) S.layers[n].visible = false; }); S.rxShown = [];
+    if (S.rxAlpha0 != null && S.skin) { S.skin.uniforms.alphaK.value = S.rxAlpha0; S.rxAlpha0 = null; }
+  }
+  function segRange(seg) { const m = (seg || "").match(/([VCTLS]\d)(?:\s*[–-]\s*([VCTLS]\d))?/); if (!m) return null; const ix = c => DERM.findIndex(d => d === c || d.startsWith(c)); const a = ix(m[1]), b = m[2] ? ix(m[2]) : a; return a < 0 ? null : [a, b < 0 ? a : b]; }
+  function showLayer(n) { if (!S.layers[n] || S.layers[n].visible) return; S.layers[n].visible = true; (S.rxShown = S.rxShown || []).push(n); }
+  function applyReflex(r) {
+    clearReflex(); S.rxSel = r; if (!r) { document.dispatchEvent(new CustomEvent("axon:reflex", { detail: null })); return; }
+    const P = V3(...r.p), out = { point: r, derm: null, nerve: null, muscles: [], organs: [] }, links = S.rx.links, assoc = S.rx.assoc, reveal = S.rx.reveal;
+    const link = (q, col) => { if (!assoc) return; const mid = P.clone().lerp(q, .5).add(V3(0, .04, 0)); const m = tube([P, mid, q], .0024, glow(lin(col), .9), 20, 5); m.material.blending = T.NormalBlending; m.material.depthTest = false; m.renderOrder = 19; links.add(m);
+      const dot = new T.Mesh(new T.SphereGeometry(.009, 12, 10), glow(lin(col), .95)); dot.position.copy(q); dot.material.blending = T.NormalBlending; dot.material.depthTest = false; dot.renderOrder = 19; links.add(dot); };
+    // dermátomo / faixa segmentar (zonas de Head usam a faixa inteira)
+    const rg = segRange(r.cat === "head" ? r.seg : r.derm);
+    if (rg && S.skin && assoc) { S.skin.uniforms.sel.value = rg[0]; S.skin.uniforms.selHi.value = rg[1]; S.skin.uniforms.selCol.value.set(1, .83, .3); out.derm = DERM[rg[0]] + (rg[1] !== rg[0] ? "–" + DERM[rg[1]] : ""); }
+    // nervo
+    if (r.nerve) { const tubes = [...S.layers.nerves.children, ...S.layers.autonomic.children].filter(m => m.userData.nerve === r.nerve);
+      if (tubes.length) { out.nerve = r.nerve; if (assoc) { if (reveal) showLayer(/simpático|vago|Vago/i.test(r.nerve) ? "autonomic" : "nerves"); const hm = glow(lin(RX_ASSOC.nerve), 1); hm.blending = T.NormalBlending; tubes.forEach(m => { m.userData.mat0 = m.userData.mat0 || m.material; m.material = hm; S.rxNerve.push(m); });
+        const nn = S.anat.nerves.find(n => n.name === r.nerve); let best = null; nn.p.forEach(q => { const v = V3(...q), d = v.distanceTo(P); if (!best || d < best.d) best = { d, v }; }); link(best.v, RX_ASSOC.nerve); } } }
+    // músculos e órgãos (recolore a faixa de vértices de cada parte)
+    [["muscles", r.muscles, RX_ASSOC.muscle, "muscles"], ["organs", r.organs, RX_ASSOC.organ, "organs"], ["skeleton", r.muscles, RX_ASSOC.muscle, null]].forEach(([layer, names, col, key]) => {
+      if (layer === "muscles" && names.length && !S.musclesReady) { if (assoc && reveal) { showLayer("muscles"); ensureMuscles(); } if (key) out[key] = names.map(n => ({ name: n, pending: true })); return; }
+      partsOf(layer, names).forEach(o => { if (key) out[key].push({ name: o.p.pt || o.p.name, fma: o.p.fma }); else out.muscles.push({ name: o.p.pt || o.p.name, fma: o.p.fma });
+        if (!assoc) return; paintPart(o.mesh, o.p, o.k, col); (S.rxPaint = S.rxPaint || []).push(o); if (reveal) showLayer(layer); links.add(overlayPart(o.mesh, o.p, col)); link(centroid(o.mesh, o.p), col); });
+    });
+    // camadas internas reveladas: a pele fica translúcida para que as cores apareçam (restaurado ao limpar)
+    if (assoc && reveal && S.skin && (S.rxPaint || []).length && S.skin.uniforms.alphaK.value > .5) { S.rxAlpha0 = S.skin.uniforms.alphaK.value; S.skin.uniforms.alphaK.value = .4; }
+    if (S.skin) S.skin.uniforms.selK.value = (S.rxPaint || []).length ? .6 : 1;
+    document.dispatchEvent(new CustomEvent("axon:reflex", { detail: out }));
+    return out;
+  }
+  function focusOn(p, nrm, R = .5) { if (S.level !== 1) setLevel(1, true); const n = V3(...(nrm || [0, 0, 1])).normalize(); cam.target.set(...p);
+    let th = Math.atan2(n.x, n.z); if (Math.hypot(n.x, n.z) < .3) th = cam.theta; while (th - cam.theta > Math.PI) th -= 2 * Math.PI; while (cam.theta - th > Math.PI) th += 2 * Math.PI;
+    S.focusR = R; cam.goal = { d: fitDist(R), phi: Math.max(.35, Math.min(2.2, Math.acos(Math.max(-1, Math.min(1, n.y))) * .6 + 1.45 * .4)), th }; }
+  function rxPick(ray) {
+    if (!S.rx || !S.layers.acupoints || !S.layers.acupoints.visible) return null;
+    const hits = ray.intersectObjects(S.rx.markers.filter(k => k.grp.visible).map(k => k.hit))[0];
+    return hits ? S.rx.list.find(r => r.id === hits.object.userData.reflex) : null;
   }
 
   // ======================================================== Nível 2 — região (tecidos estratificados)
@@ -357,10 +530,41 @@
     for (const dx of [-.22, .22]) { const ring = new T.Mesh(new T.TorusGeometry(1.08, .025, 12, 80, Math.PI * 1.75), metal(0xe3e6e8, .15)); ring.rotation.y = Math.PI / 2; ring.position.x = dx; cuff.add(ring); }
     cuff.add(tube([[0, 1.15, 0], [0, 1.5, .2], [.5, 1.9, .5], [1.4, 2.1, .7]], .04, phys(0xeef4f6, { transparent: true, opacity: .85, clearcoat: 1 }), 30, 10));
     cuff.position.x = -.8; G.add(cuff); label(G, [-.8, 1.25, 0], "Eletrodo cuff (Pt + silicone)");
+    buildBranching(G, f, Lx);
     const sl = new T.CylinderGeometry(1.03, 1.03, Lx, 96, 80, true); sl.rotateZ(Math.PI / 2);
     sl.setAttribute("color", new T.Float32BufferAttribute(new Float32Array(sl.attributes.position.count * 3), 3));
     S.sleeve = new T.Mesh(sl, new T.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .4, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); G.add(S.sleeve);
     return G;
+  }
+  /* Ramificação específica dos axônios no feixe: (1) plexo intrafascicular — axônios trocam de
+   * fascículo ao longo do tronco (Sunderland); (2) ramo colateral — um subconjunto de fibras de
+   * fascículos específicos converge e deixa o tronco num ramo próprio com epineuro e perineuro.
+   * Trajetos ilustrativos [PREMISSA didática]; composição do ramo derivada da amostra do Nível 3. */
+  function buildBranching(G, f, Lx) {
+    const B = new T.Group(); B.name = "branching"; G.add(B); S.branchGroup = B;
+    const rng = g.AxonModel.mulberry32(7);
+    // (1) trocas entre fascículos
+    const pairs = [[0, 1], [0, 3], [2, 6], [4, 3], [1, 5], [6, 7], [2, 0]];
+    pairs.forEach(([a, b], k) => { const A = f.fasc[a], Bf = f.fasc[b];
+      for (let j = 0; j < 3; j++) { const x0 = -1.4 + rng() * .6, x1 = x0 + .9 + rng() * .6, oy = (rng() - .5) * A[2], oz = (rng() - .5) * A[2], py = (rng() - .5) * Bf[2], pz = (rng() - .5) * Bf[2];
+        const pts = [[-Lx / 2, A[0] + oy, A[1] + oz], [x0, A[0] + oy, A[1] + oz], [(x0 + x1) / 2, (A[0] + Bf[0]) / 2 + oy * .5, (A[1] + Bf[1]) / 2 + oz * .5], [x1, Bf[0] + py, Bf[1] + pz], [Lx / 2, Bf[0] + py, Bf[1] + pz]];
+        const isA = rng() < .5; B.add(tube(pts, .007, phys(isA ? 0x7fd0ff : 0xffb07a, { emissive: isA ? 0x2a6aa0 : 0x8a4010, emissiveIntensity: .6, clearcoat: .8 }), 50, 5)); } });
+    // (2) ramo colateral saindo do tronco
+    const xb = .55, dir = V3(.55, .62, .55).normalize(), len = 1.6, base = V3(xb, .35, .55), rb = .32;
+    const axis = new T.Quaternion().setFromUnitVectors(V3(0, 1, 0), dir);
+    const brEpi = new T.Mesh(new T.CylinderGeometry(rb, rb * .85, len, 48, 1, true), phys(0xecd2b8, { tex: "collagen", rep: [3, 2], transparent: true, opacity: .55, side: T.DoubleSide, depthWrite: false }));
+    brEpi.quaternion.copy(axis); brEpi.position.copy(base.clone().add(dir.clone().multiplyScalar(len / 2))); B.add(brEpi);
+    const brPer = new T.Mesh(new T.CylinderGeometry(rb * .62, rb * .55, len * .98, 40, 1, true), glass(0xc0566c, .35, { clearcoat: .9 })); brPer.quaternion.copy(axis); brPer.position.copy(brEpi.position); B.add(brPer);
+    const src = [1, 5, 0];   // fascículos de origem
+    const picks = f.fibers.filter(fb => src.includes(fb.f)).filter((_, i) => i % 3 === 0).slice(0, 34);
+    let nA = 0, nD = 0;
+    picks.forEach((fb, i) => { const a = rng() * 6.283, rr = Math.sqrt(rng()) * rb * .5, end = base.clone().add(dir.clone().multiplyScalar(len)).add(V3(Math.cos(a) * rr, 0, Math.sin(a) * rr).applyQuaternion(axis));
+      const mid = V3(xb - .25, fb.y * .6 + .2, fb.z * .6 + .25), exit = base.clone().add(dir.clone().multiplyScalar(.15)).add(V3(Math.cos(a) * rr * .8, 0, Math.sin(a) * rr * .8));
+      fb.isA ? nA++ : nD++;
+      B.add(tube([[-Lx / 2, fb.y, fb.z], [xb - .9, fb.y, fb.z], mid, exit, end], fb.D * .0011 + .004, phys(fb.isA ? 0x4fb3ff : 0xff8a3d, { emissive: fb.isA ? 0x1d4f80 : 0x7a3510, emissiveIntensity: .7, clearcoat: .8 }), 60, 5)); });
+    S.branchComp = { nA, nD, from: src.map(i => i + 1) };
+    label(G, base.clone().add(dir.clone().multiplyScalar(len * .9)), `Ramo colateral · ${nA} Aβ + ${nD} Aδ dos fascículos ${src.map(i => i + 1).join(", ")}`);
+    label(G, [-.6, -1.12, .4], "Plexo intrafascicular: axônios trocam de fascículo (Sunderland)", "small");
   }
   function updateFascicle() {
     if (!S.built[3]) return; const M = g.AxonModel, p = S.params, f = fascLayout(), I = p.I, Tg = S.T; let nA = 0, nD = 0, rA = 0, rD = 0;
@@ -409,6 +613,13 @@
         for (let k = 0; k < 60; k++) { const a = rnd() * 6.283, qq = new T.Quaternion().setFromAxisAngle(V3(1, 0, 0), a); m4.compose(V3(xn + (rnd() - .5) * gap, Math.cos(a) * (r + .06), Math.sin(a) * (r + .06)), qq, V3(1, 1, 1)); mv.setMatrixAt(k, m4); } G.add(mv);
         const bar = new T.Mesh(new T.BoxGeometry(.06, 1, .06), glow(0x3ee6c5, .9)); bar.position.set(xn, 1.0, 0); G.add(bar); S.fbars.push(bar); }
     }
+    // colateral axonal: os ramos de axônios mielinizados emergem nos nós de Ranvier
+    if (S.nodes[2]) { const xn = S.nodes[2].position.x, d = V3(.5, .86, 0).normalize(), L2 = 1.3, rc = r * .55;
+      const q2 = new T.Quaternion().setFromUnitVectors(V3(0, 1, 0), d), c0 = V3(xn, r * .6, 0);
+      const cax = new T.Mesh(new T.CylinderGeometry(rc, rc, L2 + .3, 24), glass(0xffd39b, .55, { emissive: 0x4a2a00, emissiveIntensity: .3 })); cax.quaternion.copy(q2); cax.position.copy(c0.clone().add(d.clone().multiplyScalar((L2 + .3) / 2))); G.add(cax);
+      const cmy = new T.Mesh(new T.CylinderGeometry(rc * 1.45, rc * 1.45, L2 * .7, 32), myM); cmy.quaternion.copy(q2); cmy.position.copy(c0.clone().add(d.clone().multiplyScalar(.3 + L2 * .35 + .1))); G.add(cmy);
+      const cnode = new T.Mesh(new T.CylinderGeometry(rc + .004, rc + .004, .06, 24), phys(0x2fd6b5, { emissive: 0x3ee6c5, emissiveIntensity: .6 })); cnode.quaternion.copy(q2); cnode.position.copy(c0.clone().add(d.clone().multiplyScalar(.22))); G.add(cnode);
+      label(G, c0.clone().add(d.clone().multiplyScalar(L2 + .1)), "Colateral axonal (ramificação no nó)", "small"); }
     const bl = new T.Mesh(new T.CylinderGeometry(R + .05, R + .05, span, 64, 1, true), glass(0xcfe8ef, .07)); bl.rotation.z = Math.PI / 2; G.add(bl);
     const el = new T.Mesh(new T.SphereGeometry(.07, 24, 24), glow(0xffffff, 1)); el.position.set(0, 2.0, 0); G.add(el);
     for (let k = 0; k < 9; k++) { const a = (k - 4) * .28, pts = []; for (let s2 = 0; s2 <= 12; s2++) pts.push(V3(Math.sin(a) * s2 * .2, 2.0 - Math.cos(a) * s2 * .14, 0)); G.add(tube(pts, .006, glow(0x9ad7ff, .35), 24, 4)); }
@@ -435,7 +646,7 @@
     const tm = new T.InstancedMesh(new T.CylinderGeometry(.011, .009, .38, 5), phys(0xfbe8c0, { roughness: .6 }), tails.length);
     tails.forEach(([x, y, z], i) => { q.setFromEuler(new T.Euler((rnd() - .5) * .25, 0, (rnd() - .5) * .25)); m4.compose(V3(x, y, z), q, V3(1, 1, 1)); tm.setMatrixAt(i, m4); }); G.add(tm);
     const cm = new T.InstancedMesh(new T.CylinderGeometry(.03, .03, .26, 6), phys(0xb9e27a, { roughness: .4 }), Math.max(1, chol.length)); chol.forEach(([x, y, z], i) => { m4.makeTranslation(x, y, z); cm.setMatrixAt(i, m4); }); G.add(cm);
-    const helix = (x, z, col, h = 1.15, rr = .05) => { const m = new T.Mesh(new T.CylinderGeometry(rr, rr, h, 14), phys(col, { roughness: .35, clearcoat: .7 })); m.position.set(x, 0, z); return m; };
+    const helix = (x, z, col, h = 1.6, rr = .06) => { const m = new T.Mesh(new T.CylinderGeometry(rr, rr, h, 14), phys(col, { roughness: .3, clearcoat: .8, emissive: col, emissiveIntensity: .22 })); m.position.set(x, 0, z); return m; };
     const nav = new T.Group(); nav.position.set(-1.4, 0, .2);
     for (let d2 = 0; d2 < 4; d2++) { const a0 = d2 * Math.PI / 2; for (let h = 0; h < 6; h++) { const a = a0 + (h - 2.5) * .19, rr = h >= 4 ? .14 : .3; nav.add(helix(Math.cos(a) * rr, Math.sin(a) * rr, h === 3 ? 0xffd34d : [0x2fb8e8, 0x2a9fd0, 0x3fc6f0, 0x2287c2][d2])); } }
     G.add(nav);
@@ -456,24 +667,26 @@
   }
 
   // ======================================================== câmera, ambiente, ciclo
-  const VIEWS = { 1: { R: 2.05, t: [0, -.08, 0], phi: 1.45, th: .3 }, 2: { R: 1.75, t: [0, -.55, 0], phi: 1.12, th: .62 }, 3: { R: 1.95, t: [0, 0, 0], phi: 1.2, th: .95 }, 4: { R: 3.5, t: [0, .5, 0], phi: 1.3, th: .25 }, 5: { R: 2.7, t: [0, 0, 0], phi: 1.08, th: .45 } };
+  const VIEWS = { 1: { R: 2.2, t: [0, -.2, 0], phi: 1.45, th: .3 }, 2: { R: 1.75, t: [0, -.55, 0], phi: 1.12, th: .62 }, 3: { R: 1.95, t: [0, 0, 0], phi: 1.2, th: .95 }, 4: { R: 3.5, t: [0, .5, 0], phi: 1.3, th: .25 }, 5: { R: 2.7, t: [0, 0, 0], phi: 1.08, th: .45 } };
   function fitDist(R) { const v = camera.fov * Math.PI / 360, h = Math.atan(Math.tan(v) * camera.aspect); return R / Math.sin(Math.min(v, h)) * 1.02; }
   const BUILD = { 1: buildBody, 2: buildRegion, 3: buildFascicle, 4: buildAxon, 5: buildMembrane };
   function ensure(l) { if (S.built[l]) return; const gg = BUILD[l](); gg.visible = false; S.groups["L" + l] = gg; scene.add(gg); S.built[l] = true; refresh(); }
-  function syncLabels() { S.labels.forEach(L => L.el.style.display = L.group.visible ? "" : "none"); }
+  function syncLabels() { S.labels.forEach(L => L.el.style.display = L.group.visible && !L.el.dataset.hidden ? "" : "none"); }
   function setLevel(l, quiet) {
     l = Math.max(1, Math.min(5, l)); const fade = host.querySelector(".stage-fade"); if (!quiet) fade.classList.add("on");
     setTimeout(() => {
-      ensure(l); S.level = l; Object.entries(S.groups).forEach(([k, gg]) => gg.visible = k === "L" + l);
+      ensure(l); S.level = l; S.focusR = null; Object.entries(S.groups).forEach(([k, gg]) => gg.visible = k === "L" + l);
       const v = VIEWS[l]; cam.target.set(...v.t); cam.goal = { d: fitDist(v.R), phi: v.phi, th: v.th }; if (quiet) { cam.dist = cam.goal.d; cam.phi = v.phi; cam.theta = v.th; }
       syncLabels(); fade.classList.remove("on"); if (!quiet) document.dispatchEvent(new CustomEvent("axon:scale", { detail: { level: l } }));
     }, quiet ? 0 : 240);
   }
-  function makeEnv() {
-    const es = new T.Scene();
-    es.add(new T.Mesh(new T.SphereGeometry(10, 32, 16), new T.ShaderMaterial({ side: T.BackSide, vertexShader: "varying vec3 p; void main(){ p=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }", fragmentShader: "varying vec3 p; void main(){ float h=normalize(p).y; vec3 c=mix(vec3(.04,.09,.11),vec3(.55,.75,.8),smoothstep(-.2,1.,h)); gl_FragColor=vec4(c,1.); }" })));
-    [[3, 4, 2, 6], [-4, 2, -2, 3], [0, -3, 4, 1.2]].forEach(([x, y, z, k]) => { const b = new T.Mesh(new T.PlaneGeometry(3, 3), new T.MeshBasicMaterial({ color: new T.Color(k, k, k), side: T.DoubleSide })); b.position.set(x, y, z); b.lookAt(0, 0, 0); es.add(b); });
-    const pm = new T.PMREMGenerator(renderer); const rt = pm.fromScene(es, .02); pm.dispose(); return rt.texture;
+  function makeEnv() {   // estúdio equiretangular desenhado em canvas → PMREM (reflexos suaves, sem NaN)
+    const c = document.createElement("canvas"); c.width = 512; c.height = 256; const x = c.getContext("2d");
+    const gr = x.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, "#cfe8ec"); gr.addColorStop(.48, "#5d7f88"); gr.addColorStop(.52, "#24363c"); gr.addColorStop(1, "#0b1418");
+    x.fillStyle = gr; x.fillRect(0, 0, 512, 256);
+    [[90, 60, 70, "rgba(255,250,240,.95)"], [330, 80, 55, "rgba(200,255,245,.7)"], [440, 150, 40, "rgba(255,230,200,.5)"]].forEach(([cx, cy, r, col]) => { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, col); rg.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = rg; x.fillRect(cx - r, cy - r, 2 * r, 2 * r); });
+    const t = new T.CanvasTexture(c); t.mapping = T.EquirectangularReflectionMapping; t.encoding = T.sRGBEncoding;
+    const pm = new T.PMREMGenerator(renderer); const rt = pm.fromEquirectangular(t); pm.dispose(); t.dispose(); return rt.texture;
   }
   function init(el) {
     host = el; labelLayer = el.querySelector(".labels");
@@ -505,12 +718,21 @@
     const r = renderer.domElement.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
     raycaster.setFromCamera(mouse, camera);
     const hit = raycaster.intersectObjects(S.hot.filter(h => h.parent.visible))[0];
-    if (hit) { document.dispatchEvent(new CustomEvent("axon:select", { detail: { region: hit.object.userData.region } })); setTimeout(() => setLevel(2), 350); return; }
-    if (S.level === 1 && S.layers.skin && S.layers.skin.visible) { const h2 = raycaster.intersectObjects(S.skinMeshes)[0];
-      if (h2) { const code = Math.round(h2.object.geometry.attributes.derm.getX(h2.face.a)); S.skin.uniforms.sel.value = code; document.dispatchEvent(new CustomEvent("axon:dermatome", { detail: { code: DERM[code] } })); } }
+    if (hit && !S.simMode) { document.dispatchEvent(new CustomEvent("axon:select", { detail: { region: hit.object.userData.region } })); setTimeout(() => setLevel(2), 350); return; }
+    if (S.level !== 1) return;
+    if (!S.simMode) { const rp = rxPick(raycaster); if (rp) { applyReflex(rp); return; } }
+    const vis = (S.anatMeshes || []).filter(m => { let o = m; while (o) { if (!o.visible) return false; o = o.parent; } return true; });
+    const skinOn = S.layers.skin && S.layers.skin.visible;
+    if (skinOn) { const h2 = raycaster.intersectObjects(S.skinMeshes)[0];
+      if (h2 && h2.object.geometry.attributes.derm) { const code = Math.round(h2.object.geometry.attributes.derm.getX(h2.face.a)); S.skin.uniforms.sel.value = code; S.skin.uniforms.selHi.value = code; const nrm = h2.face.normal.clone().transformDirection(h2.object.matrixWorld).toArray(); document.dispatchEvent(new CustomEvent("axon:dermatome", { detail: { code: DERM[code], point: h2.point.toArray(), normal: nrm } })); } }
+    const inner = vis.filter(m => m.userData.layer !== "skin"), nervesHit = raycaster.intersectObjects([...S.layers.nerves.children, ...S.layers.autonomic.children])[0];
+    const h3 = raycaster.intersectObjects(inner)[0];
+    if (nervesHit && (!h3 || nervesHit.distance <= h3.distance + .02) && nervesHit.object.userData.nerve) { document.dispatchEvent(new CustomEvent("axon:structure", { detail: { name: nervesHit.object.userData.nerve, layer: "nervo", fma: null, note: "trajeto didático ancorado nos ossos" } })); return; }
+    if (h3) { const k = Math.round(h3.object.geometry.attributes.pid.getX(h3.face.a)), part = h3.object.userData.parts[k];
+      document.dispatchEvent(new CustomEvent("axon:structure", { detail: { name: part.pt || part.name, en: part.name, fma: part.fma, layer: h3.object.userData.layer, point: h3.point.toArray(), normal: h3.face.normal.clone().transformDirection(h3.object.matrixWorld).toArray() } })); }
   }
-  function resize() { const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); const v = VIEWS[S.level]; cam.goal = Object.assign(cam.goal || { phi: cam.phi, th: cam.theta }, { d: fitDist(v.R) }); }
-  const tmp = new T.Vector3();
+  function resize() { const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); const v = VIEWS[S.level]; cam.goal = Object.assign(cam.goal || { phi: cam.phi, th: cam.theta }, { d: fitDist(S.focusR || v.R) }); }
+  const tmp = new T.Vector3(), tmp2 = new T.Vector3();
   function loop() {
     requestAnimationFrame(loop); const t = clock.getElapsedTime();
     if (cam.goal) { cam.dist += (cam.goal.d - cam.dist) * .09; cam.phi += (cam.goal.phi - cam.phi) * .07; cam.theta += (cam.goal.th - cam.theta) * .07; if (Math.abs(cam.goal.d - cam.dist) < .005 && Math.abs(cam.goal.th - cam.theta) < .002) cam.goal = null; }
@@ -520,14 +742,60 @@
     S.anim.forEach(f => f(t)); if (S.skin) S.skin.uniforms.t.value = t;
     renderer.render(scene, camera);
     const w = host.clientWidth, h = host.clientHeight;
-    S.labels.forEach(L => { if (!L.group.visible) return; tmp.copy(L.pos).applyMatrix4(L.group.matrixWorld).project(camera); L.el.style.transform = `translate(${(tmp.x * .5 + .5) * w}px, ${(-tmp.y * .5 + .5) * h}px)`; L.el.style.opacity = tmp.z < 1 && Math.abs(tmp.x) < 1.05 && Math.abs(tmp.y) < 1.05 ? 1 : 0; });
+    S.labels.forEach(L => { if (!L.group.visible) return; tmp.copy(L.pos).applyMatrix4(L.group.matrixWorld).project(camera); L.el.style.transform = `translate(${(tmp.x * .5 + .5) * w}px, ${(-tmp.y * .5 + .5) * h}px)`; L.el.style.opacity = tmp.z < 1 && Math.abs(tmp.x) < 1.05 && Math.abs(tmp.y) < 1.05 && (!L.n || tmp2.copy(camera.position).sub(L.pos).dot(L.n) > 0) ? 1 : 0; });
   }
   function refresh() { updateRegion(); updateFascicle(); updateAxon(); }
+
+  // ======================================================== Modo Simulação: instrumento aplicado sobre a estrutura
+  function distSeg(p, a, b) { const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq())); return { d: a.clone().add(ab.multiplyScalar(t)).distanceTo(p), q: a.clone().add(b.clone().sub(a).multiplyScalar(t)) }; }
+  function nearestNerve(pt) {
+    const p = V3(...pt); let best = null;
+    const list = S.anat ? S.anat.nerves.filter(n => n.kind !== "root" && n.kind !== "cord") : [];
+    list.forEach(n => { for (let i = 0; i < n.p.length - 1; i++) { const r = distSeg(p, V3(...n.p[i]), V3(...n.p[i + 1])); if (!best || r.d < best.d) best = { name: n.name, kind: n.kind, d: r.d, q: r.q }; } });
+    if (!best) return { name: "nervo cutâneo (modelo procedural)", d: .03, mm: 13 };
+    best.mm = best.d * (S.anat.mm_per_unit || 450); return best;
+  }
+  function toolMesh(type) {
+    const g2 = new T.Group();
+    if (type === "ea") { const sh = new T.Mesh(new T.CylinderGeometry(.0018, .0006, .16, 8), metal(0xd8dee2, .12)); sh.position.y = -.02; g2.add(sh); const hd = new T.Mesh(new T.CylinderGeometry(.006, .006, .05, 10), metal(0xc77b3e, .3)); hd.position.y = .085; g2.add(hd); }
+    else if (type === "acu") { const tip = new T.Mesh(new T.SphereGeometry(.018, 16, 12), phys(0x2c2f33)); g2.add(tip); const rod = new T.Mesh(new T.CylinderGeometry(.006, .006, .12, 10), metal(0xb9c2c8)); rod.position.y = .07; g2.add(rod); const bd = new T.Mesh(new T.CylinderGeometry(.022, .022, .08, 20), phys(0xe9c46a, { clearcoat: .9 })); bd.position.y = .16; g2.add(bd); }
+    else if (type === "lifu") { const h2 = new T.Mesh(new T.CylinderGeometry(.05, .055, .06, 32), phys(0x3a4a57, { clearcoat: .8 })); h2.position.y = .03; g2.add(h2); const bm = new T.Mesh(new T.ConeGeometry(.05, .12, 32, 1, true), new T.MeshBasicMaterial({ color: 0x9ad7ff, transparent: true, opacity: .25, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); bm.rotation.x = Math.PI; bm.position.y = -.06; g2.add(bm); }
+    else if (type === "tavns") { const tip = new T.Mesh(new T.SphereGeometry(.008, 12, 12), metal(0xd7dde2)); g2.add(tip); g2.add(tube([[0, .008, 0], [.01, .04, -.01], [.04, .08, -.03]], .002, phys(0x202428), 12, 5)); }
+    else { const pad = new T.Mesh(new T.BoxGeometry(.07, .006, .05), glass(0x7fc8ff, .7, { clearcoat: 1 })); g2.add(pad); const cb = new T.Mesh(new T.BoxGeometry(.06, .004, .042), phys(0x1d2327)); cb.position.y = .005; g2.add(cb); }
+    return g2;
+  }
+  function placeTool(type, point, normal) {
+    const G = S.groups.L1; if (!G) return null;
+    if (S.tool) { G.remove(S.tool); S.tool = null; } if (S.toolLink) { G.remove(S.toolLink); S.toolLink = null; }
+    const m = toolMesh(type), n = normal ? V3(...normal).normalize() : V3(0, 0, 1);
+    m.quaternion.setFromUnitVectors(V3(0, 1, 0), n); m.position.set(...point).add(n.clone().multiplyScalar(type === "ea" ? .0 : .004)); G.add(m); S.tool = m;
+    const nn = nearestNerve(point);
+    if (nn.q) { S.toolLink = tube([V3(...point), nn.q], .0025, glow(0x9ffff0, .6), 8, 4); G.add(S.toolLink); }
+    S.toolPoint = V3(...point); return nn;
+  }
+  function reflex(kind) {
+    const G = S.groups.L1; if (!G || !S.toolPoint) return;
+    const col = kind === "twitch" ? 0xffd36b : kind === "withdraw" ? 0xff5d5d : 0x3ee6c5, ring = new T.Mesh(new T.SphereGeometry(.02, 20, 16), glow(col, .6)); ring.position.copy(S.toolPoint); G.add(ring);
+    const t0 = clock.getElapsedTime(), f = t => { const k = (t - t0) / .9; if (k >= 1) { G.remove(ring); ring.geometry.dispose(); S.anim.splice(S.anim.indexOf(f), 1); return; } ring.scale.setScalar(1 + k * (kind === "withdraw" ? 9 : 5)); ring.material.opacity = .6 * (1 - k); };
+    S.anim.push(f);
+    if (kind === "twitch" && S.layers.muscles) { S.layers.muscles.children.forEach(mm => { mm.material.emissive && mm.material.emissive.set(0x552200); setTimeout(() => mm.material.emissive && mm.material.emissive.set(0), 220); }); }
+  }
 
   g.AxonStage = {
     init, setLevel, get level() { return S.level; }, DERM,
     setParams(p) { Object.assign(S.params, p); refresh(); return S.fascStats; },
-    setLayer(name, on) { if (name === "dermatomes" && S.skin) S.skin.uniforms.dermOn.value = on ? 1 : 0; else if (S.layers[name]) S.layers[name].visible = on; },
-    stats: () => S.fascStats, pause(v) { S.paused = v; }
+    setLayer(name, on) { if (name === "dermatomes" && S.skin) S.skin.uniforms.dermOn.value = on ? 1 : 0; else { if (name === "muscles" && on) ensureMuscles(); if (S.layers[name]) S.layers[name].visible = on; if (name === "acupoints") syncLabels(); } },
+    get anatomy() { return S.anat ? { source: S.anat.source, license: S.anat.license, ready: !!S.anatReady } : null; },
+    sceneInfo: () => ({ camera, scene, renderer, S, cam }),
+    stats: () => S.fascStats, pause(v) { S.paused = v; },
+    placeTool, reflex, nearestNerve, setSimMode(v) { S.simMode = v; if (renderer) renderer.domElement.style.cursor = v ? "crosshair" : "grab"; }, branchComp: () => S.branchComp,
+    setBranching(on) { if (S.branchGroup) S.branchGroup.visible = on; },
+    reflexPoints: () => S.rx ? S.rx.list : [], RX_CAT: Object.fromEntries(Object.entries(RX_CAT).map(([k, v]) => [k, { label: v.label, color: hexCss(v.color) }])), RX_ASSOC: Object.fromEntries(Object.entries(RX_ASSOC).map(([k, v]) => [k, hexCss(v)])),
+    selectReflex(id, focus) { const r = S.rx && S.rx.list.find(x => x.id === id); if (S.layers.acupoints) S.layers.acupoints.visible = true; syncLabels(); const o = applyReflex(r || null); if (r && focus) focusOn(r.p, r.n, r.cat === "head" ? .85 : r.cat === "aur" ? .3 : .5); return o; },
+    reflexState: () => S.rx ? { cat: { ...S.rx.cat }, assoc: S.rx.assoc, reveal: S.rx.reveal, sel: S.rxSel ? S.rxSel.id : null, alpha: S.skin ? S.skin.uniforms.alphaK.value : 1 } : null,
+    setReflex(o) { if (!S.rx) return; if (o.cat) Object.assign(S.rx.cat, o.cat); if ("assoc" in o) S.rx.assoc = o.assoc; if ("reveal" in o) S.rx.reveal = o.reveal; rxVisibility(); if (S.rxSel && !S.rx.cat[S.rxSel.cat]) applyReflex(null); else if (S.rxSel && ("assoc" in o || "reveal" in o)) applyReflex(S.rxSel); },
+    setSkinOpacity(a) { if (S.skin) S.skin.uniforms.alphaK.value = a; },
+    resetView() { S.focusR = null; const v = VIEWS[S.level]; cam.target.set(...v.t); cam.goal = { d: fitDist(v.R), phi: v.phi, th: v.th }; },
+    clearTool() { const G = S.groups.L1; if (G && S.tool) { G.remove(S.tool); S.tool = null; } if (G && S.toolLink) { G.remove(S.toolLink); S.toolLink = null; } }
   };
 })(window);

@@ -2,6 +2,50 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.4.0-alpha] — 2026-11-22
+
+Pontos reflexos identificados por cor, com os elementos associados revelados nas camadas anatômicas, e barra de escala com ícones e descrição detalhada de cada nível.
+
+### Adicionado
+- **Pontos reflexos (Nível 1):** 20 pontos projetados sobre a pele real a partir de marcos ósseos e viscerais BodyParts3D, em 4 categorias com cor própria: acupontos OMS 2008 (rosa: LI4, PC6, HT7, ST36, SP6, GB34, LR3, BL40, GV20, CV12), auriculares (azul: cymba conchae com ABVN e lóbulo como controle sham), pontos-gatilho miofasciais (laranja: trapézio superior, glúteo médio, quadrado lombar) e zonas de Head de dor visceral referida (lilás: coração, estômago, vesícula biliar, rim, apêndice).
+- **Associações em camadas:** ao clicar num ponto, o dermátomo ou a faixa segmentar acende em dourado na pele, o nervo modelado em ciano, o músculo ou osso em laranja e o órgão em roxo, cada um ligado ao ponto por uma linha; a camada de cada associação é revelada e a pele fica translúcida (40 %) até limpar a seleção.
+- **Janela "Pontos reflexos"** (Dock): visibilidade por categoria (todas/nenhuma), liga/desliga das associações e da revelação de camadas, opacidade da pele, legenda de cores, lista de pontos (clicar aproxima a câmera) e ficha do ponto com segmento de referência, nervo, músculos com ID FMA, órgão, dor referida, referência bibliográfica e etiquetas de proveniência.
+- **Barra de escala com ícones volumétricos** para os 5 níveis; ao passar o mouse, cada nível mostra escala física, o que se vê, modelo/dados com proveniência e interação disponível (PT e EN; demais idiomas em EN).
+
+### Corrigido
+- Enquadramento do Nível 1: o corpo inteiro cabe acima do Dock.
+- Classificação anatômica: "trato iliotibial" e regiões do córtex (lóbulo parietal, pré-cúneo) deixam de cair em órgãos/músculos por engano.
+- Nomes em português na ordem correta e com concordância ("tibial anterior direito", "tíbia esquerda"); nomes sem tradução ficam no original FMA.
+- Nível 5: canais iônicos mais altos que a bicamada e com brilho próprio, visíveis de qualquer ângulo.
+- Aviso de carregamento da anatomia não sobrepõe mais a barra de escala.
+
+### Científico
+- Localizações de acupontos [LITERATURA] (OMS 2008); inervação auricular [LITERATURA] (Peuker & Filler 2002); pontos-gatilho [LITERATURA] (Travell & Simons 1999); zonas de Head [LITERATURA] (Head 1893). Posição sobre a malha e trajetos nervosos: [PREMISSA]. Correspondência de meridianos da MTC: [HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO], exibida como tradicional e não como relação anatômica.
+- Quando o mapa de dermátomos do app diverge do segmento da literatura (ex.: CV12 em T8, trapézio sobre C4), a ficha mostra os dois.
+
+## [0.3.0-alpha] — 2026-11-22
+
+Anatomia real a partir de imagens médicas, Modo Simulação gamificado com casos clínicos importáveis e ramificação dos axônios dentro dos feixes.
+
+### Adicionado
+- **Anatomia BodyParts3D (Nível 1):** 930 estruturas reais (pele, 258 ossos e discos, 157 órgãos e regiões encefálicas, 56 vasos, 457 músculos) do banco BodyParts3D, mapeadas na Foundational Model of Anatomy; clique em qualquer estrutura mostra o nome e o ID FMA; camadas de músculos e vasos sob demanda.
+- **Dermátomos na pele real:** 30 dermátomos (V1–S5) calculados por vértice a partir do osso mais próximo, do eixo dos ossos longos e dos níveis vertebrais reais.
+- **Nervos periféricos ancorados nos ossos reais:** 125 trajetos (medula, 48 raízes com gânglios, plexos braquial, lombar e sacral, mediano, ulnar, radial, musculocutâneo, intercostais, femoral, ciático, tibial, fibular comum, trigêmeo V1–V3, facial, vago com ramos cardíacos e gástricos, ramo auricular, tronco simpático).
+- **Modo Simulação:** bandeja de instrumentos (eletrodo TENS, agulha de EA com profundidade, sonda de pressão, eletrodo auricular, transdutor LIFU); o instrumento é aplicado clicando na pele ou no órgão-alvo; o nervo mais próximo e a distância em mm são calculados na anatomia real.
+- **Monitor do paciente gamificado:** expressão facial pela EVA, FC, VFC (RMSSD), condutância da pele, frações Aβ/Aδ/Aα, semáforos de segurança, reflexos (contração, retirada) visíveis no corpo, eventos, pontos e medalhas.
+- **Casos clínicos:** 5 casos fictícios (lombociatalgia L5/S1, neuralgia trigeminal V2, dor nociplástica com taVNS, neuropatia diabética, túnel do carpo) com origem da dor, mecanismo, dermátomos, condições que alteram o perfil anatômico e propostas terapêuticas; importação de novos casos em JSON (esquema axon-case/1) com validação e bloqueio de campos identificáveis (LGPD).
+- **Passo a passo** com verificação automática de cada etapa e **desfecho hipotético** por Monte Carlo (N = 300, semente 42) com mediana, faixa 10–90 % e probabilidade de redução ≥ 30 % para 1 e 5 sessões, comparação entre propostas e as ramificações secundárias que mais pesaram.
+- **Rede fisiológica ao vivo:** 23 nós e 37 conexões do campo físico às fibras, ao portão medular, aos opioides endógenos por frequência, à modulação descendente, à via colinérgica anti-inflamatória, ao tônus autonômico e aos desfechos, com referência por conexão.
+- **Ramificação dos axônios no feixe (Nível 3):** plexo intrafascicular (axônios trocando de fascículo) e ramo colateral que leva um subconjunto identificado de fibras; colateral axonal emergindo no nó de Ranvier (Nível 4).
+- `scripts/build_anatomy.py`: pipeline reprodutível BodyParts3D → pacotes binários quantizados (21 MB), dermátomos, marcos ósseos e trajetos nervosos.
+
+### Científico
+- O recrutamento no Modo Simulação usa o núcleo verificado; para eletrodos de superfície, o alvo são ramos cutâneos (1,2 mm + tecido adiposo) e só uma fração da corrente chega à fibra [PREMISSA]; fora de 0,3–1,5 mm, atenuação exponencial declarada [PREMISSA].
+- Pesos, constantes de tempo e a EVA da rede fisiológica são [HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO]; não há predição clínica.
+
+### Documentação
+- Manual do Usuário: Modo Simulação, casos clínicos e anatomia real. Manual Técnico: pipeline anatômico, licença CC BY-SA 2.1 JP, rede fisiológica, esquema de casos.
+
 ## [0.2.0-alpha] — 2026-11-22
 
 Hiper-realismo anatômico no palco 3D e entrega contínua: cada atualização aprovada nos testes chega sozinha à VPS, com versão e registro de alterações visíveis no app.

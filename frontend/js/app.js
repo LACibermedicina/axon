@@ -50,7 +50,7 @@
     const R = REGIONS[st.region], body = $("#leftBody");
     $$("#leftTabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === leftTab));
     if (leftTab === "anat") {
-      body.innerHTML = `<div class="card"><h4>${R.name}</h4><p class="note">${t("scale" + st.level)} · ${MODS.find(m => m.id === st.mod).name}</p>
+      body.innerHTML = `<div class="card" id="structCard">${st.structure ? `<h4>Estrutura selecionada</h4><p><b>${esc(st.structure.name)}</b></p><p class="note">${st.structure.fma ? "FMA " + esc(st.structure.fma) + " · " : ""}camada: ${esc(st.structure.layer)}</p>` : `<h4>Estrutura selecionada</h4><p class="note">Clique em um osso, órgão, músculo, vaso ou nervo no Nível 1.</p>`}</div><div class="card"><h4>${R.name}</h4><p class="note">${t("scale" + st.level)} · ${MODS.find(m => m.id === st.mod).name}</p>
         <ul>${R.structures.map(s => `<li>${s}</li>`).join("")}</ul>${tagHTML("lit", "teixeira")}</div>
         <div class="card"><h4>${t("fibers")}</h4>${R.fibers.map(f => `<div style="margin:4px 0"><span class="fib"><i style="background:${FIBERS[f].c}"></i>${FIBERS[f].n}</span><span class="note">${FIBERS[f].d} · ${FIBERS[f].v} — ${FIBERS[f].f}</span></div>`).join("")}${tagHTML("lit", "teixeira")}</div>
         <div class="card"><h4>${t("symptoms")}</h4><ul>${R.symptoms.map(s => `<li>${s}</li>`).join("")}</ul></div>
@@ -72,7 +72,7 @@
   function renderRight() {
     const mod = MODS.find(m => m.id === st.mod), p = st.p;
     let ctl = "";
-    if (mod.kind === "elec") ctl = slider("sF", t("freq"), 1, mod.id === "scs" ? 10000 : mod.id === "ti" ? 4000 : 200, 1, p.f, "Hz") + slider("sI", t("amp"), .05, 5, .05, p.I, "mA") + slider("sPw", t("pw"), 20, 500, 10, p.pw, "µs") + slider("sA", t("area"), .005, 10, .005, p.area, "cm²");
+    if (mod.kind === "elec") ctl = slider("sF", t("freq"), 1, mod.id === "scs" ? 10000 : mod.id === "ti" ? 4000 : 200, 1, p.f, "Hz") + slider("sI", t("amp"), .05, ({ tens: 50, ti: 50, scs: 10 })[mod.id] || 5, .05, p.I, "mA") + slider("sPw", t("pw"), 20, 500, 10, p.pw, "µs") + slider("sA", t("area"), .005, 10, .005, p.area, "cm²");
     if (mod.kind === "mech") ctl = slider("sP", t("pressure"), 0, 400, 5, p.P, "kPa") + slider("sA", t("area"), .1, 4, .1, p.area, "cm²");
     if (mod.kind === "acou") ctl = slider("sF", t("freq"), .2, 10, .1, p.f, "MHz") + slider("sU", "I_SPTA", 0, 2000, 10, p.U, "mW/cm²");
     ctl += slider("sR", t("dist"), .3, 3, .05, p.r, "mm") + slider("sD", t("fiber"), 1, 16, .5, p.D, "µm");
@@ -138,10 +138,13 @@
 
   // ---------------------------------------------------------------- mini-apps
   APPS.app1 = { title: "app1", w: 360, h: 420, render(b) {
-    b.innerHTML = `<div class="card"><h4>${t("layers")}</h4>${["skin", "dermatomes", "skeleton", "organs", "nerves", "autonomic", "acupoints"].map(k => `<label style="display:flex;gap:8px;align-items:center;margin:5px 0"><input type="checkbox" data-layer="${k}" checked> ${t(k)}</label>`).join("")}</div>
+    b.innerHTML = `<div class="card"><h4>${t("layers")}</h4>${["skin", "dermatomes", "skeleton", "organs", "muscles", "vessels", "nerves", "autonomic", "acupoints"].map(k => `<label style="display:flex;gap:8px;align-items:center;margin:5px 0"><input type="checkbox" data-layer="${k}" ${["muscles", "vessels"].includes(k) ? "" : "checked"}> ${t(k)}</label>`).join("")}<p class="note">${g.AxonStage.anatomy ? "Malhas reais: BodyParts3D (930 estruturas, CC BY-SA 2.1 JP)." : "Modelo procedural (pacote anatômico não carregado)."} Clique numa estrutura para ver o nome e o ID FMA.</p><button class="btn sm" id="rxOpen">${t("reflex")}: cores, associações e visibilidade…</button></div>
       <div class="card"><h4>Escalas</h4>${[1, 2, 3, 4, 5].map(l => `<button class="btn ghost" style="width:100%;margin:3px 0;text-align:left" data-l="${l}">${l} · ${t("scale" + l)}</button>`).join("")}</div>
       <div class="card"><h4>Regiões</h4>${Object.entries(REGIONS).map(([k, R]) => `<button class="btn ghost" style="width:100%;margin:3px 0;text-align:left" data-r="${k}">${R.name}</button>`).join("")}</div>`;
     $$("[data-layer]", b).forEach(c => c.onchange = () => g.AxonStage.setLayer(c.dataset.layer, c.checked));
+    $("#rxOpen", b).onclick = () => openApp("reflex");
+    $("#brTog", b).onchange = e => { g.AxonStage.setBranching(e.target.checked); if (e.target.checked) g.AxonStage.setLevel(3); };
+    const bc = g.AxonStage.branchComp(); $("#brComp", b).textContent = bc ? `Ramo colateral: ${bc.nA} Aβ + ${bc.nD} Aδ vindos dos fascículos ${bc.from.join(", ")} (amostra do modelo, semente 42).` : "Abra o Nível 3 para gerar o feixe.";
     $$("[data-l]", b).forEach(x => x.onclick = () => g.AxonStage.setLevel(+x.dataset.l));
     $$("[data-r]", b).forEach(x => x.onclick = () => selectRegion(x.dataset.r));
   } };
@@ -315,13 +318,29 @@
     });
   }
 
+  // ---------------------------------------------------------------- dicas detalhadas da barra de escala (hover)
+  const SCALE_TIPS = {
+    pt: { out: "Afastar", in: "Aproximar", k: ["Escala", "O que se vê", "Modelo / dados", "Interação"], lv: [
+      ["Organismo inteiro", "≈ 1,7 m (10⁰ m)", "Pele com mapa de dermátomos (V1–S5), esqueleto, órgãos, vasos, músculos, nervos periféricos, cadeias autonômicas e pontos reflexos coloridos por categoria.", "Malhas BodyParts3D (930 estruturas, FMA) [LITERATURA]; dermátomos por vértice e trajetos nervosos ancorados em marcos ósseos [PREMISSA].", "Clique na pele → dermátomo; numa estrutura → nome + ID FMA; num ponto reflexo → associações em camadas. Arraste para girar, role para aproximar.", "Rolar para dentro leva ao nível 2."],
+      ["Tecido e nervo periférico", "≈ 1–5 cm (10⁻² m)", "Bloco de tecido estratificado: epiderme, derme, hipoderme, fáscia e músculo, com o tronco nervoso misto e o dispositivo (TENS, EA, LIFU…) sobre a pele.", "Espessuras de camada [LITERATURA]; campo extracelular de fonte pontual em meio homogêneo ρe = 300 Ω·cm [PREMISSA].", "Mude modalidade, corrente e profundidade no painel direito; o mapa de calor de ativação acompanha.", "Nível 3 abre o feixe."],
+      ["Feixe de fibras nervosas", "≈ 0,3–1 mm (10⁻⁴ m)", "Corte transversal com perineuro, endoneuro e fibras Aα, Aβ, Aδ e C; fibras ativadas acendem; ramificações axonais dentro do feixe.", "Limiar Ith(D, r) do modelo nodal de 41 nós, interpolado em grade; distribuição de diâmetros [RESULTADO DE MODELO · SEMENTE 42].", "Ative 'Ramificações no feixe' no app Anatomia; altere distância eletrodo-fibra.", "Nível 4 isola um axônio."],
+      ["Fibra nervosa isolada", "≈ 1–20 µm (10⁻⁵ m)", "Axônio mielinizado com internós (L = 100·D) e nós de Ranvier (2,5 µm); potencial de ação saltatório propagando; colateral no nó 2.", "Cabo passivo McNeal (N = 41, Euler explícito dt = 1 µs, Cm 2 µF/cm², gL 30,3 mS/cm²); função de ativação de Rattay [DERIVADO].", "A cor dos nós mostra a função de ativação; ajuste diâmetro e pulso.", "Nível 5 mostra a membrana."],
+      ["Escala molecular", "≈ 5–10 nm (10⁻⁸ m)", "Bicamada lipídica com canais Nav (nó), Kv (justaparanodal) e bomba Na⁺/K⁺; íons atravessando durante o disparo.", "Representação ilustrativa; o modelo usado nos cálculos é passivo com limiar Vth = 20 mV [PREMISSA] — não há cinética de canais simulada.", "Observe a abertura sincronizada com o estímulo; use o app Ruído (ressonância estocástica).", "Rolar para fora volta ao nível 4."]] },
+    en: { out: "Zoom out", in: "Zoom in", k: ["Scale", "What you see", "Model / data", "Interaction"], lv: [
+      ["Whole organism", "≈ 1.7 m (10⁰ m)", "Skin with dermatome map (V1–S5), skeleton, organs, vessels, muscles, peripheral nerves, autonomic chains and color-coded reflex points.", "BodyParts3D meshes (930 structures, FMA) [LITERATURE]; per-vertex dermatomes and bone-anchored nerve paths [PREMISE].", "Click skin → dermatome; a structure → name + FMA ID; a reflex point → layered associations. Drag to rotate, scroll to zoom.", "Scroll in for level 2."],
+      ["Tissue and peripheral nerve", "≈ 1–5 cm (10⁻² m)", "Layered tissue block: epidermis, dermis, hypodermis, fascia and muscle, with the mixed nerve trunk and the device on the skin.", "Layer thicknesses [LITERATURE]; point-source extracellular field, homogeneous ρe = 300 Ω·cm [PREMISE].", "Change modality, current and depth in the right panel; the activation heat map follows.", "Level 3 opens the bundle."],
+      ["Nerve fiber bundle", "≈ 0.3–1 mm (10⁻⁴ m)", "Cross-section with perineurium, endoneurium and Aα, Aβ, Aδ, C fibers; activated fibers light up; axon branching inside the bundle.", "Threshold Ith(D, r) from the 41-node model on a grid; diameter distribution [MODEL RESULT · SEED 42].", "Enable 'Branching in bundle' in the Anatomy app; change electrode–fiber distance.", "Level 4 isolates one axon."],
+      ["Single nerve fiber", "≈ 1–20 µm (10⁻⁵ m)", "Myelinated axon with internodes (L = 100·D) and nodes (2.5 µm); saltatory action potential; collateral at node 2.", "Passive McNeal cable (N = 41, explicit Euler dt = 1 µs); Rattay activation function [DERIVED].", "Node color shows the activation function; adjust diameter and pulse.", "Level 5 shows the membrane."],
+      ["Molecular scale", "≈ 5–10 nm (10⁻⁸ m)", "Lipid bilayer with Nav (node), Kv (juxtaparanode) channels and Na⁺/K⁺ pump; ions crossing during firing.", "Illustrative; the computational model is passive with threshold Vth = 20 mV [PREMISE] — no channel kinetics simulated.", "Watch opening synchronized with the stimulus; see the Noise app (stochastic resonance).", "Scroll out to return to level 4."]] }
+  };
+
   // ---------------------------------------------------------------- inicialização
   function init() {
     // Dock
-    const order = ["app1", "app2", "app3", "app4", "app5", "app6", "app7", "app8"];
+    const order = ["app1", "app2", "app3", "app4", "app5", "app6", "app7", "app8", "reflex", "sim"];
     $("#dock").innerHTML = order.map(id => `<button data-app="${id}" aria-label="${t(id)}">${g.AxonIcons[id]}<span class="tip" data-i18n="${id}">${t(id)}</span></button>`).join("")
       + `<button data-app="updates" aria-label="${t("updates")}">${g.AxonIcons.updates}<span class="tip" data-i18n="updates">${t("updates")}</span></button><span class="sep"></span><a href="docs/manual-usuario.html" target="_blank" rel="noopener"><button aria-label="Manuais">${g.AxonIcons.docs}<span class="tip">Manuais</span></button></a>`;
-    $$("#dock button[data-app]").forEach(b => b.onclick = () => openApp(b.dataset.app));
+    $$("#dock button[data-app]").forEach(b => b.onclick = () => b.dataset.app === "sim" ? g.AxonSim && g.AxonSim.toggle() : openApp(b.dataset.app));
     $("#bot .art").innerHTML = g.AxonIcons.bot;
     $("#bot").onclick = () => openApp("app8");
     $("#botMute").onclick = e => { e.stopPropagation(); muted = !muted; $("#bot").classList.toggle("muted", muted); $("#botMute").textContent = muted ? "🔇" : "🔊"; };
@@ -334,12 +353,22 @@
     $$(".side-h button").forEach(b => b.onclick = () => { const s = b.closest(".side"); s.classList.toggle("collapsed"); b.textContent = s.classList.contains("collapsed") ? (s.id === "left" ? "›" : "‹") : (s.id === "left" ? "‹" : "›"); setTimeout(() => window.dispatchEvent(new Event("resize")), 320); });
     $$("#leftTabs button").forEach(b => b.onclick = () => { leftTab = b.dataset.tab; renderLeft(); });
     // escala
-    $("#scalebar").innerHTML = `<button class="z" data-z="-1" aria-label="Afastar">−</button>` + [1, 2, 3, 4, 5].map(l => `<button data-l="${l}"><span class="n">${l}</span> <span class="lab" data-i18n="scale${l}">${t("scale" + l)}</span></button>`).join("") + `<button class="z" data-z="1" aria-label="Aproximar">+</button>`;
-    $$("#scalebar [data-l]").forEach(b => b.onclick = () => g.AxonStage.setLevel(+b.dataset.l));
-    $$("#scalebar [data-z]").forEach(b => b.onclick = () => g.AxonStage.setLevel(g.AxonStage.level + +b.dataset.z));
+    const drawScale = () => {
+      const L = SCALE_TIPS[g.I18N.lang] || SCALE_TIPS.en;
+      $("#scalebar").innerHTML = `<button class="z" data-z="-1" aria-label="${L.out}">−</button>` + [1, 2, 3, 4, 5].map(l => { const d = L.lv[l - 1];
+        return `<button data-l="${l}" class="${st.level === l ? "on" : ""}" aria-describedby="sct${l}"><span class="ic">${g.AxonIcons["scale" + l]}</span><span class="n">${l}</span> <span class="lab" data-i18n="scale${l}">${t("scale" + l)}</span>
+          <span class="sctip" role="tooltip" id="sct${l}"><span class="sch"><span class="ic big">${g.AxonIcons["scale" + l]}</span><span><b>${l} · ${t("scale" + l)}</b><em>${d[0]}</em></span></span>
+          ${[[L.k[0], d[1]], [L.k[1], d[2]], [L.k[2], d[3]], [L.k[3], d[4]]].map(([k, v]) => `<span class="scr"><i>${k}</i><span>${v}</span></span>`).join("")}<span class="scf">${d[5]}</span></span></button>`; }).join("") + `<button class="z" data-z="1" aria-label="${L.in}">+</button>`;
+      $$("#scalebar [data-l]").forEach(b => b.onclick = () => g.AxonStage.setLevel(+b.dataset.l));
+      $$("#scalebar [data-z]").forEach(b => b.onclick = () => g.AxonStage.setLevel(g.AxonStage.level + +b.dataset.z));
+    };
+    drawScale(); document.addEventListener("axon:lang", drawScale);
     document.addEventListener("axon:scale", e => { st.level = e.detail.level; $$("#scalebar [data-l]").forEach(b => b.classList.toggle("on", +b.dataset.l === st.level)); renderLeft(); });
     document.addEventListener("axon:select", e => selectRegion(e.detail.region));
-    document.addEventListener("axon:dermatome", e => selectDermatome(e.detail.code));
+    document.addEventListener("axon:dermatome", e => { if (!g.AxonSim || !g.AxonSim.active) selectDermatome(e.detail.code); });
+    document.addEventListener("axon:structure", e => { const d = e.detail; st.structure = d;
+      botSay(`${d.name}${d.fma ? " · " + d.fma : ""}${d.note ? " (" + d.note + ")" : ""}`);
+      const el = $("#structCard"); if (el) el.innerHTML = `<h4>Estrutura selecionada</h4><p><b>${esc(d.name)}</b>${d.en && d.en !== d.name ? ` <span class="note">(${esc(d.en)})</span>` : ""}</p><p class="note">${d.fma ? "Foundational Model of Anatomy: " + esc(d.fma) + " · " : ""}camada: ${esc(d.layer)}${d.note ? " · " + esc(d.note) : ""}</p>`; });
     g.AxonStage.init($("#stage"));
     $$("#scalebar [data-l]").forEach(b => b.classList.toggle("on", +b.dataset.l === 1));
     renderRight(); renderLeft(); update(); g.I18N.apply();
@@ -352,5 +381,6 @@
     const ctl = new AbortController(); setTimeout(() => ctl.abort(), 2500);
     fetch("api/health", { signal: ctl.signal }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.project === "axon") { st.api = true; $("#apiPill").textContent = "API " + j.version; $("#apiPill").classList.add("on"); } }).catch(() => {});
   }
-  g.AxonApp = { init, openApp, closeApp, state: st };
+  g.AxonApp = { init, openApp, closeApp, state: st, compute, update, tagHTML, esc: x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]), botSay: (s2) => botSay(s2),
+    registerApp(id, def) { APPS[id] = def; }, isOpen: id => !!WM.wins[id], body: id => WM.wins[id] && WM.wins[id].querySelector(".body"), setMod, slider, MODS, FIBERS, renderRight, renderLeft };
 })(window);

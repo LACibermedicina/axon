@@ -1,0 +1,61 @@
+{
+  "schema": "axon-case/1",
+  "id": "meu-caso-exemplo",
+  "title": "Exemplo para importação (fictício)",
+  "summary": "Parestesia noturna nos três primeiros dedos, com dor no punho.",
+  "patient": {
+    "ageRange": "40–49",
+    "sex": "não informado"
+  },
+  "pain": {
+    "origin": "neuropática",
+    "mechanism": "Compressão do nervo mediano no túnel do carpo (isquemia e desmielinização focal)",
+    "baseline": 5,
+    "dermatomes": [
+      "C6",
+      "C7"
+    ],
+    "structures": [
+      "Nervo mediano",
+      "Retináculo dos flexores"
+    ],
+    "descriptors": [
+      "formigamento",
+      "dormência"
+    ],
+    "inflammation": 0.3,
+    "sensitization": 0.2
+  },
+  "autonomic": {
+    "hr": 76,
+    "rmssd": 34
+  },
+  "conditions": [
+    {
+      "id": "compressao",
+      "label": "Hipertrofia perineural / fibrose",
+      "effect": {
+        "peri": 0.4,
+        "fib": 0.2
+      }
+    }
+  ],
+  "proposals": [
+    {
+      "modality": "ea",
+      "site": "PC6 (antebraço, 2 cm do punho)",
+      "target": "C6",
+      "params": {
+        "f": 2,
+        "I": 0.8,
+        "pw": 200,
+        "depth": 10
+      },
+      "rationale": "Agulha próxima ao mediano: atenção ao recrutamento motor (Aα)."
+    }
+  ],
+  "objectives": [
+    "Evitar contração tenar (Aα)",
+    "Observar o efeito da fibrose no limiar absoluto"
+  ]
+}
