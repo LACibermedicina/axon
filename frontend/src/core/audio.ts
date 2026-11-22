@@ -91,17 +91,27 @@ export function timbreOf(s: Score, l: Layer): Timbre {
   return instrument((l.staff === "bass" ? st.lower : st.upper).instrument).timbre;
 }
 
-export function click(when: number, accent: boolean) {
+export function click(when: number, accent: boolean, dest?: AudioNode) {
   const c = ac();
   const o = c.createOscillator(); const g = c.createGain();
   o.frequency.value = accent ? 1600 : 1000;
   g.gain.setValueAtTime(0.25, when); g.gain.exponentialRampToValueAtTime(0.0001, when + 0.05);
-  o.connect(g).connect(master); o.start(when); o.stop(when + 0.06);
+  o.connect(g).connect(dest || master); o.start(when); o.stop(when + 0.06);
 }
 
+// ------------------------------------------------------------ sessões de reprodução
+// Uma única sessão toca por vez (partitura ou trecho de áudio). O player universal controla a sessão
+// atual: pausar, retomar, avançar, parar, volume geral — e mostra qual quadro está tocando.
+export interface PlaySource { id: string; label: string; icon?: string; focus?: () => void }
+export interface PlayerState { source: PlaySource | null; playing: boolean; paused: boolean; pos: number; dur: number }
+interface Session { source: PlaySource; startedAt: number; offset: number; dur: number; bus: GainNode; stop: () => void; replay: (fromSec: number) => void }
 export interface Transport { stop: () => void; startedAt: number; spb: number; fromBeat: number; }
-let current: Transport | null = null;
+let current: Session | null = null;
+let last: { source: PlaySource; replay: (fromSec: number) => void; dur: number } | null = null;
+let pausedAt = -1;
 const audioCache = new Map<string, AudioBuffer>();
+const layerBus = new Map<string, { gain: GainNode; an: AnalyserNode }>();
+let masterAn: AnalyserNode | null = null;
 
 async function loadBuffer(url: string) {
   if (audioCache.has(url)) return audioCache.get(url)!;
@@ -114,60 +124,145 @@ export function audibleLayers(s: Score): Layer[] {
   return (solo.length ? solo : s.layers.filter((l) => !l.muted));
 }
 
-/** Toca a partitura a partir de `fromBeat` (opcionalmente só um trecho). */
-export async function play(s: Score, opts: { fromBeat?: number; toBeat?: number; metronome?: boolean; loop?: boolean; onBeat?: (b: number) => void; onEnd?: () => void } = {}) {
+function newBus() {
+  const c = ac();
+  const bus = c.createGain();
+  if (!masterAn) { masterAn = c.createAnalyser(); masterAn.fftSize = 512; master.connect(masterAn); }
+  bus.connect(master);
+  return bus;
+}
+
+/** Aplica ao vivo volume, mudo e solo de cada camada (mesa de som) na sessão em andamento. */
+export function liveMix(s: Score) {
+  const aud = new Set(audibleLayers(s).map((l) => l.id));
+  const c = ctx; if (!c) return;
+  for (const l of s.layers) {
+    const b = layerBus.get(l.id); if (!b) continue;
+    b.gain.gain.setTargetAtTime(aud.has(l.id) ? l.volume : 0, c.currentTime, 0.02);
+  }
+}
+export function setMasterVolume(v: number) { ac(); master.gain.setTargetAtTime(Math.max(0, Math.min(1.2, v)), ctx!.currentTime, 0.02); try { localStorage.setItem("harmonia.volume", String(v)); } catch { /* */ } }
+export function masterVolume() { const v = parseFloat((() => { try { return localStorage.getItem("harmonia.volume") || ""; } catch { return ""; } })()); return isNaN(v) ? 0.8 : v; }
+/** Nível (0–1) de uma camada ou do master — para os medidores da mesa. */
+export function level(layerId?: string) {
+  const an = layerId ? layerBus.get(layerId)?.an : masterAn;
+  if (!an || !current) return 0;
+  const d = new Float32Array(an.fftSize); an.getFloatTimeDomainData(d);
+  let m = 0; for (let i = 0; i < d.length; i++) m = Math.max(m, Math.abs(d[i]));
+  return Math.min(1, m * 1.6);
+}
+
+function startSession(source: PlaySource, dur: number, offset: number, bus: GainNode, replay: (fromSec: number) => void, onStop: () => void) {
+  const c = ac();
+  current = { source, startedAt: c.currentTime + 0.12, offset, dur, bus, replay,
+    stop: () => {
+      onStop();
+      const t = c.currentTime;
+      bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0, t + 0.04);
+      setTimeout(() => { try { bus.disconnect(); } catch { /* */ } }, 120);
+    } };
+  last = { source, replay, dur };
+  pausedAt = -1;
+  stateListeners.forEach((f) => f(true)); emit();
+}
+
+/** Toca a partitura a partir de `fromBeat` (opcionalmente só um trecho). `source` identifica o quadro no player.
+ *  `rangeStart` (interno) guarda o início do trecho original para pausar/avançar dentro dele. */
+export async function play(s: Score, opts: { fromBeat?: number; toBeat?: number; rangeStart?: number; metronome?: boolean; loop?: boolean; onBeat?: (b: number) => void; onEnd?: () => void } = {},
+  source: PlaySource = { id: "score", label: "Partitura", icon: "🎼" }): Promise<Transport> {
   stop();
   const c = ac();
   const spb = 60 / s.tempo;
   const from = opts.fromBeat || 0;
+  const rangeStart = opts.rangeStart ?? (opts.toBeat !== undefined ? from : 0);
   const bpmM = (s.timeSig[0] * 4) / s.timeSig[1];
   const end = opts.toBeat ?? Math.max(s.measures * bpmM, ...s.layers.flatMap((l) => l.notes.map((n) => n.start + n.dur)));
   const t0 = c.currentTime + 0.12;
+  const bus = newBus();
+  layerBus.clear();
   const sources: AudioScheduledSourceNode[] = [];
-  for (const l of audibleLayers(s)) {
+  let raf = 0;
+  startSession(source, (end - rangeStart) * spb, (from - rangeStart) * spb, bus,
+    (sec) => { play(s, { ...opts, rangeStart, fromBeat: rangeStart + sec / spb }, source); },
+    () => { cancelAnimationFrame(raf); sources.forEach((x) => { try { x.stop(); } catch { /* */ } }); });
+  const mine = current;
+  const aud = new Set(audibleLayers(s).map((l) => l.id));
+  // todas as camadas são agendadas (mudas com ganho 0) para a mesa poder abrir/fechar canais ao vivo
+  for (const l of s.layers) {
+    const g = c.createGain(); g.gain.value = aud.has(l.id) ? l.volume : 0;
+    const an = c.createAnalyser(); an.fftSize = 256;
+    g.connect(an); g.connect(bus);
+    layerBus.set(l.id, { gain: g, an });
     const tb = timbreOf(s, l);
     for (const n of l.notes) {
       if (n.start + n.dur <= from || n.start >= end) continue;
       const st = Math.max(n.start, from);
-      playNote(n.pitch, t0 + (st - from) * spb, (Math.min(n.start + n.dur, end) - st) * spb, n.vel ?? 80, l.volume, undefined, tb);
-    }
-    const url = l.audioUrl || (l.audio ? `/api/media/${l.audio}` : "");
-    if (url) {
-      try {
-        const buf = await loadBuffer(url);
-        const src = c.createBufferSource(); src.buffer = buf;
-        const g = c.createGain(); g.gain.value = l.volume;
-        src.connect(g).connect(master);
-        const offset = from * spb - (l.audioOffset || 0);
-        if (offset >= 0) src.start(t0, offset); else src.start(t0 - offset);
-        sources.push(src);
-      } catch { /* mídia indisponível */ }
+      playNote(n.pitch, t0 + (st - from) * spb, (Math.min(n.start + n.dur, end) - st) * spb, n.vel ?? 80, 1, g, tb);
     }
   }
-  if (opts.metronome) for (let b = Math.ceil(from); b < end; b++) click(t0 + (b - from) * spb, b % bpmM === 0);
-  let raf = 0;
+  for (const l of s.layers) {
+    const url = l.audioUrl || (l.audio ? `/api/media/${l.audio}` : "");
+    if (!url) continue;
+    try {
+      const buf = await loadBuffer(url);
+      if (current !== mine) break; // parou ou outra sessão começou enquanto carregava
+      const src = c.createBufferSource(); src.buffer = buf;
+      src.connect(layerBus.get(l.id)!.gain);
+      const offset = from * spb - (l.audioOffset || 0);
+      const when = Math.max(t0, c.currentTime);
+      if (offset >= 0) { if (offset < buf.duration) src.start(when, offset + (when - t0)); } else src.start(t0 - offset);
+      sources.push(src);
+    } catch { /* mídia indisponível */ }
+  }
+  if (opts.metronome) for (let b = Math.ceil(from); b < end; b++) click(t0 + (b - from) * spb, b % bpmM === 0, bus);
   const tick = () => {
+    if (current !== mine) return;
     const b = from + (c.currentTime - t0) / spb;
     if (b >= end) {
-      if (opts.loop) { play(s, opts); return; }
+      if (opts.loop) { play(s, { ...opts, fromBeat: rangeStart }, source); return; }
       stop(); opts.onEnd?.(); return;
     }
     opts.onBeat?.(Math.max(from, b));
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
-  current = {
-    startedAt: t0, spb, fromBeat: from,
-    stop: () => { cancelAnimationFrame(raf); sources.forEach((x) => { try { x.stop(); } catch { /* */ } }); master.gain.cancelScheduledValues(0); const g = master.gain.value; master.gain.setValueAtTime(0, c.currentTime); master.gain.setValueAtTime(g, c.currentTime + 0.05); },
-  };
-  stateListeners.forEach((f) => f(true));
-  return current;
+  return { stop, startedAt: t0, spb, fromBeat: from };
+}
+
+/** Toca um trecho de áudio (ex.: faixa do Importar) como sessão do player universal: pausar, avançar,
+ *  voltar e mover o ponteiro funcionam dentro do trecho [rangeStart, to]. */
+export function playBuffer(buf: AudioBuffer, o: { from?: number; to?: number; rangeStart?: number; gainDb?: number; source: PlaySource }) {
+  stop();
+  const c = ac();
+  const to = Math.min(buf.duration, o.to ?? buf.duration);
+  const rangeStart = o.rangeStart ?? o.from ?? 0;
+  const from = Math.max(rangeStart, Math.min(to - 0.02, o.from ?? rangeStart));
+  const bus = newBus();
+  const g = c.createGain(); g.gain.value = Math.pow(10, (o.gainDb || 0) / 20);
+  const src = c.createBufferSource(); src.buffer = buf; src.connect(g).connect(bus);
+  src.start(c.currentTime + 0.12, from, Math.max(0.02, to - from));
+  startSession(o.source, to - rangeStart, from - rangeStart, bus,
+    (sec) => playBuffer(buf, { ...o, rangeStart, to, from: rangeStart + sec }),
+    () => { src.onended = null; try { src.stop(); } catch { /* */ } });
+  const mine = current;
+  src.onended = () => { if (current === mine) stop(); };
 }
 
 const stateListeners = new Set<(playing: boolean) => void>();
 /** Avisa quem mostra botões ▶/■ (editor, pentagrama do desktop) quando a reprodução começa/para. */
 export const onPlayState = (fn: (playing: boolean) => void) => { stateListeners.add(fn); return () => stateListeners.delete(fn); };
-export function stop() { const was = !!current; current?.stop(); current = null; if (was) stateListeners.forEach((f) => f(false)); }
+const playerListeners = new Set<(st: PlayerState) => void>();
+export const onPlayer = (fn: (st: PlayerState) => void) => { playerListeners.add(fn); fn(playerState()); return () => playerListeners.delete(fn); };
+function emit() { const st = playerState(); playerListeners.forEach((f) => f(st)); }
+export function playerState(): PlayerState {
+  if (current) return { source: current.source, playing: true, paused: false, pos: Math.max(0, current.offset + (ctx!.currentTime - current.startedAt)), dur: current.dur };
+  return { source: last?.source ?? null, playing: false, paused: pausedAt >= 0, pos: Math.max(0, pausedAt), dur: last?.dur ?? 0 };
+}
+export function stop() { const was = !!current; current?.stop(); current = null; pausedAt = -1; if (was) { stateListeners.forEach((f) => f(false)); emit(); } }
+export function pause() { if (!current) return; const pos = playerState().pos; current.stop(); current = null; pausedAt = pos; stateListeners.forEach((f) => f(false)); emit(); }
+export function resume() { if (!last) return; const p = Math.max(0, pausedAt); last.replay(p >= last.dur - 0.05 ? 0 : p); }
+export function seek(sec: number) { if (!last) return; const t = Math.max(0, Math.min(last.dur - 0.05, sec)); if (current) last.replay(t); else { pausedAt = t; emit(); } }
+export function restart() { last?.replay(0); }
 export const isPlaying = () => !!current;
 
 // ------------------------------------------------------------- gravação

@@ -2,6 +2,21 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.6.0-alpha] — 2026-11-22
+
+### Adicionado
+- **Player universal** sempre visível na barra de menus (no celular, acima da barra inferior): ⏮ do início, ⏪ −5 s, ▶/⏸, ⏩ +5 s, ■, barra de posição arrastável, tempo e volume geral. Controla qualquer áudio em execução e **mostra qual quadro está tocando** (Composição, Pentagrama do desktop, Importar, Visualizador, Mesa, Biblioteca) — clique no nome para ir até ele. Espaço fora da partitura toca/pausa.
+- **Mesa de som no painel Propriedades** (barra lateral): o que está tocando, volume geral com medidor e um canal por camada (fader, mudo, solo e medidor com a cor da camada) que **mudam o som ao vivo**, sem reiniciar a reprodução.
+- **Visualizador** dinâmico da transcrição (abre sozinho depois de transcrever um áudio): 🎹 **piano vertical** (notas caindo sobre o teclado, teclas acendem) ou 🎼 **pauta** que corre sob o cursor. Ouvir **ambos**, só a **transcrição** ou só o **original**; arraste para avançar/voltar; ← → pulam compassos.
+- **Arrastar o trecho do Importar para a partitura**: solte no compasso desejado — vira camada 🎙 na posição exata e é transcrito em notas **vinculadas** 🔗. Arrastar o clipe 🎙 na pauta move as notas junto. No painel de Camadas, a **corrente** ao lado do olho abre/fecha o vínculo; o **cadeado** 🔒 impede mudanças (inclusive pelo vínculo).
+
+### Alterado
+- **Importar reorganizado**: barra fixa no topo com tudo à vista — 📂 Arquivo, 🎙 **Gravar ao vivo**, transporte (⏪ ▶/⏸ ■ ⏩ e tempo), ⇲ arrastar para a partitura, 👁 ver transcrição e **✨ Transcrever**; opções (extrair, andamento, separar voz, letra, ganho, recorte) logo abaixo. Na foto: 📂 Imagem, 📷 Câmera, girar, sem recorte, "só a melodia" e **✨ Ler partitura** no topo. Na cifra: acompanhamento e **✨ Transcrever** no topo.
+- **Ouvir trecho** toca a faixa importada/gravada inteira dentro do recorte (sem o limite de 8 s), com pausar/continuar, parar, ±5 s e **ponteiro verde arrastável** na onda: clique ou arraste para mudar de onde está tocando. As alças rosa continuam recortando.
+- Ao transcrever um áudio, a faixa original entra junto como camada 🎙 para comparar com as notas.
+- Pentagrama do desktop translúcido (fica opaco ao passar o mouse).
+- Parar a reprodução agora corta na hora todas as notas já agendadas.
+
 ## [0.5.1-alpha] — 2026-11-21
 
 ### Corrigido — IA

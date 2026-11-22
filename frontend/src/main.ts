@@ -24,13 +24,16 @@ import { PanelDock } from "./core/paneldock";
 import { mountProperties, mountAnnotations } from "./modules/inspector";
 import * as audio from "./core/audio";
 import { mountDeskScore } from "./modules/deskscore";
+import { mountVisualizer } from "./modules/visualizer";
+import { playerBar } from "./modules/playerbar";
 import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.5.1-alpha";
+const VERSION = "0.6.0-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1180, innerWidth - 40 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 30, y: 44, mount: mountScoreEditor },
   import: { id: "import", title: t("import"), icon: ICONS.import, width: 760, height: 560, mount: mountImporter },
+  visualizer: { id: "visualizer", title: t("visualizer"), icon: ICONS.visualizer, width: Math.min(1000, innerWidth - 80), height: Math.min(640, innerHeight - 140), mount: mountVisualizer },
   mixer: { id: "mixer", title: t("mixer"), icon: ICONS.mixer, width: 820, height: 460, mount: mountMixer },
   library: { id: "library", title: t("library"), icon: ICONS.library, width: 900, height: 560, mount: mountLibrary },
   graph: { id: "graph", title: t("graph"), icon: ICONS.graph, width: 1100, height: 420, mount: mountGraph },
@@ -39,7 +42,7 @@ const APPS: Record<string, AppDef> = {
   account: { id: "account", title: t("account"), icon: ICONS.account, width: 460, height: 560, mount: mountAccount },
   admin: { id: "admin", title: t("admin"), icon: ICONS.admin, width: 920, height: 560, mount: mountAdmin },
 };
-const ORDER = ["compose", "props", "layers", "notes", "import", "mixer", "library", "graph", "agenda", "community", "admin", "account"];
+const ORDER = ["compose", "props", "layers", "notes", "import", "visualizer", "mixer", "library", "graph", "agenda", "community", "admin", "account"];
 // Funções administrativas: visíveis e acessíveis somente ao papel admin (o servidor também valida)
 const ADMIN_ONLY = new Set(["graph", "admin"]);
 const isAdmin = () => currentUser?.role === "admin";
@@ -50,7 +53,7 @@ const visible = () => ORDER.filter(allowed);
 // Painéis da partitura (dock direito acoplável) — abrem como painel, não como janela
 const PANEL_IDS = new Set(["props", "layers", "notes"]);
 let panels: PanelDock;
-const PANEL_ICONS: Record<string, string> = { props: ICONS.props, layers: ICONS.layers, notes: ICONS.notes };
+const PANEL_ICONS: Record<string, string> = { props: ICONS.props, layers: ICONS.layers, notes: ICONS.notes, visualizer: ICONS.visualizer };
 // No desktop, Mesa de Edição e Comunidade vivem no grupo de painéis laterais (acopláveis/flutuantes)
 const DESKTOP_PANEL_ROUTE: Record<string, string> = { mixer: "mix", community: "chat" };
 const open = (id: string) => {
@@ -99,7 +102,7 @@ function menubar() {
     menu("Ajuda", [["Passo a passo inicial", () => showWizard(open)], ["Guia: compor e harmonizar", () => guide("compose")], ["Guia: gravar a melodia", () => guide("record")],
       ["Guia: importar áudio", () => guide("audio")], ["Guia: importar imagem de partitura", () => guide("image")], ["Despertar o Maestro (assistente)", () => dispatchEvent(new CustomEvent("maestro:wake"))], ["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
       ["Texto maior (liga/desliga)", () => toggleLargeText()], ["Alto contraste (liga/desliga)", () => toggleContrast()], ["Sobre / versão", about]]),
-    h("span", { class: "spacer" }), tray(), notifBell(), clock, userBtn);
+    h("span", { class: "spacer" }), playerBar(() => open("compose")), h("span", { class: "spacer" }), tray(), notifBell(), clock, userBtn);
 }
 
 /** Bandeja na barra de menus: janelas minimizadas (ponto colorido) e menus laterais recolhidos
@@ -112,7 +115,7 @@ function drawTray() {
     chips.push(h("button", { class: "tray-chip min", title: `${w.app.title} — minimizada (clique para abrir)`, onclick: () => restoreWindow(w) },
       h("i", { class: "dot", "aria-hidden": "true" }), h("span", { class: "tray-ic", html: w.app.icon }), h("span", {}, w.app.title)));
   const peek = (cls: string, label: string, icon: string, on: () => void) => h("button", { class: "tray-chip hidden-side" + (document.body.classList.contains(cls) ? " on" : ""), title: `${label} — recolhido (clique para mostrar)`,
-    onclick: (e: Event) => { e.stopPropagation(); on(); drawTray(); } }, h("i", { class: "blur-dot", "aria-hidden": "true" }), h("span", {}, icon + " " + label));
+    onclick: (e: Event) => { e.stopPropagation(); on(); drawTray(); }, "data-ic": icon, "aria-label": label }, h("i", { class: "blur-dot", "aria-hidden": "true" }), h("span", {}, icon + " " + label));
   if (document.body.classList.contains("hide-sidebar")) chips.push(peek("peek-sidebar", "Menu", "☰", () => document.body.classList.toggle("peek-sidebar")));
   if (panels?.isAway()) chips.push(peek("peek-rdock", "Painéis", "▦", () => document.body.classList.toggle("peek-rdock")));
   if (document.body.classList.contains("focus-mode") && document.querySelector(".panel.floating.discreet:not([hidden])"))
@@ -328,7 +331,8 @@ function mobileShell() {
   new MutationObserver(markTab).observe(more, { attributes: true, attributeFilter: ["hidden"] });
   addEventListener("keydown", (e) => { if (e.key === "Escape") { closeMore(); panels?.toggleSheet(false); } });
   setTimeout(markTab, 0);
-  return [home, more, tabbar];
+  const mPlayer = h("div", { class: "m-player" }, playerBar(() => open("compose"), false));
+  return [home, more, mPlayer, tabbar];
 }
 
 async function boot() {

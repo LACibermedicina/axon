@@ -29,6 +29,9 @@ export interface Layer {
   audioOffset?: number; // segundos
   measures?: number[]; // trecho que a gravação cobre
   group?: string;      // id do grupo de camadas
+  audioDur?: number;   // duração da gravação (s) — desenha o clipe contínuo na pauta
+  link?: string;       // camadas vinculadas (ex.: gravação ↔ notas transcritas) movem-se juntas
+  unlinked?: boolean;  // vínculo aberto (corrente aberta no painel de Camadas)
 }
 
 export interface ChordEv {

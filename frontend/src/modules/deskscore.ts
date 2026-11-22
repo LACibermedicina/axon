@@ -129,10 +129,11 @@ export function mountDeskScore(openEditor: () => void, newScore: () => void) {
   }
 
   function toggle() {
-    if (audio.isPlaying()) { audio.stop(); return; }
-    audio.play(store.score, { onBeat: (b) => { playhead = b; drawHead(); }, onEnd: () => { playhead = -1; drawHead(); } });
+    if (audio.isPlaying() && audio.playerState().source?.id === "desk") { audio.stop(); return; }
+    audio.play(store.score, { onBeat: (b) => { playhead = b; drawHead(); }, onEnd: () => { playhead = -1; drawHead(); } },
+      { id: "desk", label: `Pentagrama do desktop — ${store.score.title}`, icon: "🎼", focus: () => { pos.min = false; save(); apply(); card.classList.add("flash"); setTimeout(() => card.classList.remove("flash"), 700); } });
   }
-  audio.onPlayState((on) => { play.textContent = on ? "■ Parar" : "▶ Tocar"; if (!on) { playhead = -1; drawHead(); } });
+  audio.onPlayer((st) => { const on = st.playing && st.source?.id === "desk"; play.textContent = on ? "■ Parar" : "▶ Tocar"; if (!on) { playhead = -1; drawHead(); } });
 
   // arrastar pelo cabeçalho
   head.addEventListener("pointerdown", (e) => {

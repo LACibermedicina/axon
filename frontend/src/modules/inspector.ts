@@ -4,6 +4,7 @@ import { h, toast } from "../core/ui";
 import { KEY_NAMES, NAMES, SOLFEGE, parseChord } from "../core/theory";
 import { beatsPerMeasure, ChordEv, uid } from "../core/types";
 import * as audio from "../core/audio";
+import { mountConsole } from "./console";
 
 const DURS: [number, string][] = [[4, "𝅝 Semibreve"], [3, "𝅗𝅥. Mínima pont."], [2, "𝅗𝅥 Mínima"], [1.5, "♩. Semínima pont."], [1, "♩ Semínima"], [0.75, "♪. Colcheia pont."], [0.5, "♪ Colcheia"], [0.25, "𝅘𝅥𝅯 Semicolcheia"]];
 const EFFECTS: [string, string][] = [["", "—"], ["vibrato", "∿ Vibrato"], ["glissando", "↗ Glissando"], ["staccato", "· Staccato"], ["fermata", "𝄐 Fermata"], ["falsetto", "° Falsete"]];
@@ -22,7 +23,9 @@ function extract(mode: "copy" | "cut", src: "notes" | "measures") {
 export function mountProperties(body: HTMLElement) {
   body.classList.add("props");
   const scoreBox = h("div"); const selBox = h("div");
-  body.append(scoreBox, selBox);
+  const consoleBox = h("div");
+  body.append(h("div", { class: "prop-sec" }, h("h5", {}, "🎚 Mesa de som"), consoleBox), scoreBox, selBox);
+  mountConsole(consoleBox);
   let lastKey = "";
 
   function renderScore() {

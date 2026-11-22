@@ -459,6 +459,19 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       if (!l.visible) continue;
       const lg = svg("g", { class: "layer" + (l.id === store.selectedLayer ? " active" : "") + (l.locked ? " locked" : "") + (store.inHand(l) ? "" : " other-hand"), "data-layer": l.id, style: `--lc:${l.color}` });
       g.append(lg);
+      if (l.kind === "recording" && l.audioDur) { // clipe contínuo na posição exata (arrastável)
+        const spbS = 60 / s.tempo;
+        const b0 = (l.audioOffset || 0) / spbS, b1 = b0 + l.audioDur / spbS;
+        const sb0 = sys.firstMeasure * bpm, sb1 = (sys.firstMeasure + sys.nMeasures) * bpm;
+        if (b1 > sb0 && b0 < sb1) {
+          const x0 = xOf(sys, Math.max(b0, sb0), bpm, mW), x1 = Math.min(xOf(sys, Math.min(b1, sb1) - 1e-6, bpm, mW), sys.left + sys.nMeasures * mW);
+          const linked = !!l.link && !l.unlinked && s.layers.some((x) => x.link === l.link && x.id !== l.id);
+          lg.append(svg("rect", { x: x0, y: sys.trebleY + 44, width: Math.max(8, x1 - x0), height: 16, rx: 8, class: "rec-clip", fill: `url(#pat-${l.id})`, stroke: l.color, "data-rec": l.id }),
+            svg("text", { x: x0 + 6, y: sys.trebleY + 56, class: "rec-label", "data-rec": l.id }, (linked ? "🔗 " : "🎙 ") + l.name),
+            svg("title", {}, `${l.name} — arraste para mover${linked ? " (as notas vinculadas acompanham)" : ""}`));
+        }
+        continue;
+      }
       if (l.kind === "recording") {
         for (const m of l.measures || []) if (m >= sys.firstMeasure && m < sys.firstMeasure + sys.nMeasures) {
           const rx = sys.left + (m - sys.firstMeasure) * mW;
@@ -588,6 +601,8 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     const chordM = t0.closest<SVGElement>("[data-chord-measure]")?.dataset.chordMeasure;
     const annEl = t0.closest<SVGGElement>(".annotation");
 
+    const recId = (t0 as SVGElement).dataset?.rec;
+    if (recId) { dragRecording(recId, ev); return; }
     const ins = t0.closest<SVGElement>("[data-insert]")?.dataset.insert;
     if (ins !== undefined) {
       const at = +ins;
@@ -709,10 +724,18 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   });
 
   // Soltar figura de duração arrastada da paleta
-  canvas.addEventListener("dragover", (e) => { if (e.dataTransfer?.types.includes("text/harmonia-dur")) { e.preventDefault(); canvas.classList.add("drop"); } });
-  canvas.addEventListener("dragleave", () => canvas.classList.remove("drop"));
+  canvas.addEventListener("dragover", (e) => {
+    if (e.dataTransfer?.types.includes("text/harmonia-dur")) { e.preventDefault(); canvas.classList.add("drop"); }
+    if (e.dataTransfer?.types.includes("text/harmonia-audio")) {
+      e.preventDefault(); canvas.classList.add("drop-audio");
+      const loc = locate(e); status.dataset.hover = `soltar o trecho no compasso ${loc.measure + 1}, tempo ${(loc.beat % beatsPerMeasure(store.score)) + 1}`; status.setAttribute("data-hover", status.dataset.hover);
+    }
+  });
+  canvas.addEventListener("dragleave", () => canvas.classList.remove("drop", "drop-audio"));
   canvas.addEventListener("drop", (e) => {
-    canvas.classList.remove("drop");
+    canvas.classList.remove("drop", "drop-audio");
+    const key = e.dataTransfer?.getData("text/harmonia-audio");
+    if (key) { e.preventDefault(); const loc = locate(e); dispatchEvent(new CustomEvent("harmonia:drop-audio", { detail: { key, beat: Math.max(0, Math.floor(loc.beat)) } })); return; }
     const d = parseFloat(e.dataTransfer?.getData("text/harmonia-dur") || "");
     if (!d) return;
     e.preventDefault();
@@ -754,6 +777,39 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       store.mutate((s) => s.layers.forEach((l) => !l.locked && l.notes.forEach((n) => store.selectedNotes.has(n.id) && (n.start = Math.max(0, n.start + d)))), "nudge");
     }
   });
+
+  /** Arrasta o clipe de gravação no tempo; camadas vinculadas 🔗 (não trancadas) acompanham. */
+  function dragRecording(id: string, ev: PointerEvent) {
+    const l = store.score.layers.find((x) => x.id === id); if (!l) return;
+    if (l.locked) { toast(`Camada "${l.name}" está trancada 🔒`, "warn"); return; }
+    const mates = () => store.score.layers.filter((x) => x.id !== l.id && l.link && !l.unlinked && x.link === l.link && !x.unlinked);
+    const lockedMate = mates().find((x) => x.locked);
+    if (lockedMate) { toast(`A camada vinculada "${lockedMate.name}" está trancada 🔒 — destranque ou desvincule ⛓ para mover`, "warn", 4500); return; }
+    store.selectedLayer = id;
+    const spbS = 60 / store.score.tempo, bpm = beatsPerMeasure(store.score);
+    const sx = ev.clientX, off0 = l.audioOffset || 0;
+    const notes0 = new Map(mates().flatMap((m) => m.notes.map((n) => [n.id, n.start] as [string, number])));
+    let applied = 0, first = true;
+    paper.setPointerCapture(ev.pointerId);
+    const mv = (e: PointerEvent) => {
+      let d = Math.round((e.clientX - sx) / ppb / grid) * grid;
+      d = Math.max(-off0 / spbS, d); // não passa do início
+      if (d === applied) return;
+      if (first) { store.mutate(() => {}, "rec-drag"); first = false; }
+      applied = d;
+      l.audioOffset = off0 + d * spbS;
+      const b0 = l.audioOffset / spbS, b1 = b0 + (l.audioDur || 0) / spbS;
+      l.measures = Array.from({ length: Math.max(1, Math.floor((b1 - 1e-6) / bpm) - Math.floor(b0 / bpm) + 1) }, (_, i) => Math.floor(b0 / bpm) + i);
+      for (const m of mates()) for (const n of m.notes) { const s0 = notes0.get(n.id); if (s0 !== undefined) n.start = s0 + d; }
+      store.ensureMeasures();
+      if (store.score.measures < Math.ceil(b1 / bpm)) store.score.measures = Math.ceil(b1 / bpm);
+      render();
+      status.dataset.hover = `${l.name} → compasso ${Math.floor(b0 / bpm) + 1}, tempo ${((b0 % bpm) + 1).toFixed(2).replace(/\.00$/, "")}${mates().length ? " · notas vinculadas acompanham 🔗" : ""}`;
+      status.setAttribute("data-hover", status.dataset.hover);
+    };
+    const up = () => { paper.removeEventListener("pointermove", mv); paper.removeEventListener("pointerup", up); if (!first) store.emit("edit"); };
+    paper.addEventListener("pointermove", mv); paper.addEventListener("pointerup", up);
+  }
 
   // --------------------------------------------- editores inline (popover)
   function popover(x: number, y: number, value: string, placeholder: string, onDone: (v: string, ev?: KeyboardEvent) => void) {
@@ -819,7 +875,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
 
   // ------------------------------------------------------------ ações
   function togglePlay() {
-    if (audio.isPlaying()) { audio.stop(); playhead = -1; drawPlayhead(); return; }
+    if (audio.isPlaying() && audio.playerState().source?.id === "compose") { audio.stop(); playhead = -1; drawPlayhead(); return; }
     const s = store.score; const bpm = beatsPerMeasure(s);
     const sel = [...store.selectedMeasures].sort((a, b) => a - b);
     audio.play(s, {
@@ -827,8 +883,9 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       metronome, loop,
       onBeat: (b) => { playhead = b; drawPlayhead(); },
       onEnd: () => { playhead = -1; drawPlayhead(); },
-    });
+    }, srcCompose());
   }
+  const srcCompose = () => ({ id: "compose", label: `Composição — ${store.score.title}`, icon: "🎼", focus: () => win.focus() });
 
   function melodyLayer() {
     return store.layer() && ["melody", "voice", "omr"].includes(store.layer()!.kind) ? store.layer()! : store.score.layers.find((l) => l.kind === "melody" || l.kind === "voice");
@@ -920,7 +977,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       busy(btn, true, "");
       const rec = await audio.record({ countInBeats: bpm, spb, onCount: (n) => (btn.innerHTML = `<b>${n}</b>`) });
       btn.innerHTML = `<span class="tb-ic">■</span><span class="tb-lb">Gravando…</span>`; btn.disabled = false;
-      audio.play(s, { fromBeat: from * bpm, toBeat: to * bpm, metronome: true, onBeat: (b) => { playhead = b; drawPlayhead(); } });
+      audio.play(s, { fromBeat: from * bpm, toBeat: to * bpm, metronome: true, onBeat: (b) => { playhead = b; drawPlayhead(); } }, { id: "compose", label: "Composição — gravando trecho", icon: "🎙", focus: () => win.focus() });
       await new Promise((r) => setTimeout(r, (to - from) * bpm * spb * 1000));
       const blob = await rec.stop();
       audio.stop(); playhead = -1; drawPlayhead();
@@ -949,7 +1006,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       const rec = await audio.record({ countInBeats: bpm, spb, onCount: (n) => (btn.innerHTML = `<b>${n}</b>`) });
       btn.disabled = false; btn.classList.add("recording"); btn.innerHTML = `<span class="tb-ic">■</span><span class="tb-lb">Parar gravação</span>`;
       const t0 = performance.now();
-      audio.play(s, { fromBeat: from * bpm, metronome: true, onBeat: (b) => { playhead = b; drawPlayhead(); } });
+      audio.play(s, { fromBeat: from * bpm, metronome: true, onBeat: (b) => { playhead = b; drawPlayhead(); } }, { id: "compose", label: "Composição — gravando nova voz", icon: "🎙", focus: () => win.focus() });
       freeRec = {
         stop: async () => {
           freeRec = null;
@@ -1008,7 +1065,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     }
     render();
   });
-  const offPlay = audio.onPlayState((on) => { playBtn.textContent = playIn.textContent = (on ? "■ " + t("stop") : "▶ " + t("play")); if (!on) { playhead = -1; drawPlayhead(); } });
+  const offPlay = audio.onPlayer((st) => { const on = st.playing && st.source?.id === "compose"; playBtn.textContent = playIn.textContent = (on ? "■ " + t("stop") : "▶ " + t("play")); if (!on) { playhead = -1; drawPlayhead(); } });
   const ro = new ResizeObserver(() => render());
   ro.observe(canvas);
   setTool("select");

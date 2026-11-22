@@ -23,6 +23,18 @@ export function mountLayers(body: HTMLElement) {
 
   let dragId: string | null = null;
 
+  /** Corrente ao lado do olho: fechada = gravação e notas movem juntas; aberta = independentes. */
+  function linkBtn(l: Layer) {
+    if (!l.link) return "";
+    const mates = store.score.layers.filter((x) => x.link === l.link);
+    if (mates.length < 2) return "";
+    const on = !l.unlinked;
+    const other = mates.filter((x) => x.id !== l.id).map((x) => x.name).join(", ");
+    return h("button", { class: "ic-btn link-btn" + (on ? " on" : " off"), "aria-pressed": String(on),
+      title: on ? `Vinculada a: ${other}. Mover uma move a outra. Clique para desvincular.` : `Desvinculada de: ${other}. Clique para vincular de novo.`,
+      onclick: (e: Event) => { e.stopPropagation(); store.mutate(() => mates.forEach((x) => (x.unlinked = on)), "layer"); } }, on ? "🔗" : "⛓");
+  }
+
   function row(l: Layer) {
     const active = l.id === store.selectedLayer;
     const toggle = (key: "visible" | "muted" | "solo" | "locked", on: string, off: string, label: string) =>
@@ -35,7 +47,7 @@ export function mountLayers(body: HTMLElement) {
       h("div", { class: "lname" },
         h("input", { value: l.name, "aria-label": "Nome", onclick: (e: Event) => e.stopPropagation(), onchange: (e: Event) => store.mutate(() => (l.name = (e.target as HTMLInputElement).value), "layer") }),
         h("small", {}, `${KIND_LABEL[l.kind]} · ${l.kind === "recording" ? "áudio" : l.notes.length + " notas"} · ${l.staff === "bass" ? "𝄢 Fá" : "𝄞 Sol"}`)),
-      toggle("visible", "👁", "◌", "Visível"), toggle("muted", "🔇", "🔈", "Mudo"), toggle("solo", "S", "S", "Solo"), toggle("locked", "🔒", "🔓", "Bloquear edição"),
+      toggle("visible", "👁", "◌", "Visível"), linkBtn(l), toggle("muted", "🔇", "🔈", "Mudo"), toggle("solo", "S", "S", "Solo"), toggle("locked", "🔒", "🔓", "Bloquear edição (cadeado)"),
       h("input", { type: "range", min: 0, max: 1, step: 0.05, value: l.volume, class: "vol", "aria-label": "Volume", onclick: (e: Event) => e.stopPropagation(),
         onchange: (e: Event) => store.mutate(() => (l.volume = +(e.target as HTMLInputElement).value), "layer") }),
       menu(l));

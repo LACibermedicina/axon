@@ -119,12 +119,12 @@ export function mountLibrary(body: HTMLElement) {
   async function listen(id: number, own: boolean, c: any) {
     const r = own ? await api(`/api/compositions/${id}`) : await api(`/api/share/${c.shareUrl?.split("/").pop()}`).catch(() => null);
     if (!r?.score) { toast("Prévia indisponível", "warn"); return; }
-    audio.play(r.score);
+    audio.play(r.score, {}, { id: "library", label: `Biblioteca — ${r.score.title || r.title || "prévia"}`, icon: "📚", focus: () => dispatchEvent(new CustomEvent("open-app", { detail: "library" })) });
   }
   async function playAll(items: any[]) {
     for (const it of items) {
       const r = await api(`/api/compositions/${it.id}`);
-      await new Promise<void>((res) => audio.play(r.score, { onEnd: res }));
+      await new Promise<void>((res) => audio.play(r.score, { onEnd: res }, { id: "library", label: `Playlist — ${r.score.title || "faixa"}`, icon: "📚", focus: () => dispatchEvent(new CustomEvent("open-app", { detail: "library" })) }));
     }
   }
   async function newPl(kind: string) {
