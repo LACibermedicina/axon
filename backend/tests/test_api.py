@@ -97,7 +97,7 @@ def test_admin_ai_credentials_and_diagnose(monkeypatch):
                                                    "url": "https://api.exemplo.com/v1/chat/completions", "model": "m1", "free": True, "test": False}, headers=ha).json()
     assert any(p["name"] == "minha-ia" and p["custom"] and p["model"] == "m1" for p in s2["providers"])
 
-    async def fake(p, client, system, user, mt):
+    async def fake(p, client, system, user, mt, key=None):
         if p.name == "groq":
             return "ok"
         import httpx

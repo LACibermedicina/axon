@@ -2,6 +2,19 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.5.0-alpha] — 2026-11-21
+
+### Alterado — credenciais de IA: o .env do GitHub é a base
+- Ordem de uso das chaves de cada provedor: **1. .env da VPS sincronizado do GitHub** (SERVIDOR_ENV / secrets) → **2. chaves de outras apps da mesma VPS** → **3. painel**. As reservas só entram se a anterior faltar ou **falhar no teste**. Antes, a chave do painel tinha prioridade sobre a do .env.
+- Cada chave tem seu próprio disjuntor: se a do .env falha numa chamada, a próxima chave do mesmo provedor responde antes de trocar de provedor.
+- **Rodar diagnóstico** agora primeiro **atualiza o acervo local** (relê o .env vindo do GitHub e procura chaves nas outras apps), depois testa **todas** as chaves e grava o resultado (`data/ai/status.json`). Uma chave reprovada sai da frente em todos os processos da API, sem reiniciar.
+- Painel IA: cada provedor mostra a lista de chaves na ordem de prioridade (📄 .env/GitHub, 🔗 app X, 🔐 painel), qual está **em uso** e o resultado do teste de cada uma.
+
+### Adicionado
+- `infra/scripts/coletar-ia.sh` (root): percorre as outras apps da VPS (`/opt`, `/srv`, `/var/www`, `/home`, `/root`, até 4 níveis, e as variáveis dos containers Docker que não são do harmonIA — ex.: Prática, Gusto) e reúne **só** nomes de chaves de IA conhecidos (nunca senhas de banco/JWT). Ignora valores de exemplo, não repete a chave que já está no .env e nunca imprime valores (só os 4 últimos caracteres). Grava `data/ai/env.ai` e `data/ai/apps.ai` (0640, root:api).
+- Coleta automática: a cada ciclo da atualização automática, no deploy, após a sincronização do GitHub (merge-env) e na hora em que o painel pede (unidade `harmonia-ia.path`, instalada sozinha).
+- Novos provedores: DeepSeek, xAI Grok, Together AI e Hugging Face (também aceitos nos secrets do GitHub: `DEEPSEEK_API_KEY`, `XAI_API_KEY`, `TOGETHER_API_KEY`, `HF_TOKEN`).
+
 ## [0.4.0-alpha] — 2026-11-21
 
 ### Alterado — quadro de composição mais limpo e acessível

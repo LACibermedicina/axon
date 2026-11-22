@@ -4,6 +4,13 @@ Provedores (entram na cadeia só se a chave existir no .env da VPS):
   pagos/assinatura: anthropic, openai
   gratuitos (free tier, sem cartão): groq, gemini, github (GitHub Models), cerebras, mistral, openrouter (openrouter/free)
 Ordem: AI_PROVIDERS (os configurados que não estiverem na lista entram no fim, para nenhuma chave ficar ociosa).
+
+Origem das chaves de cada provedor, nesta prioridade (a seguinte só é usada se a anterior faltar ou falhar no teste):
+  1. env      — .env da VPS, sincronizado a partir do GitHub (SERVIDOR_ENV / secrets). Lido ao vivo de
+                /data/ai/env.ai (coletar-ia.sh) e, se não houver, das variáveis do processo.
+  2. apps:X   — chaves de IA encontradas em outras apps da mesma VPS (ex.: Prática, Gusto) — /data/ai/apps.ai.
+  3. painel   — cadastradas em Administração → IA.
+O diagnóstico testa TODAS as chaves e grava o resultado em /data/ai/status.json; chave reprovada sai da frente.
 Em erro de rede, timeout, 429, 5xx ou chave inválida, o próximo provedor responde; o que falhou fica em pausa
 crescente (circuit breaker, AI_COOLDOWN_S). Se TODOS falharem, as rotas usam fallbacks sem IA generativa
 (tradução gratuita MyMemory e respostas do Maestro offline) — as funcionalidades sempre respondem.
@@ -22,7 +29,101 @@ import httpx
 from fastapi import HTTPException
 
 log = logging.getLogger("harmonia.llm")
-DEFAULT_ORDER = "anthropic,openai,groq,gemini,github,cerebras,mistral,openrouter"
+DEFAULT_ORDER = "anthropic,openai,groq,gemini,github,cerebras,mistral,openrouter,deepseek,xai,together,huggingface"
+AI_DIR = os.getenv("AI_DATA_DIR", "/data/ai")
+SOURCE_RANK = {"env": 0, "apps": 1, "painel": 2}
+
+
+@dataclass
+class Cand:
+    """Uma chave candidata de um provedor, com seu próprio disjuntor (circuit breaker)."""
+    source: str                        # env | apps:<app> | painel
+    key: str
+    failures: int = 0
+    paused_until: float = 0.0
+    last_error: str = ""
+    last_ok: float = 0.0
+    verified: bool | None = None       # resultado do último teste (None = ainda não testada)
+    checked_at: float = 0.0
+
+    @property
+    def fid(self) -> str:              # identificador estável SEM revelar a chave
+        import hashlib
+        return hashlib.sha256(self.key.encode()).hexdigest()[:12]
+
+    @property
+    def hint(self) -> str:
+        return ("••••" + self.key[-4:]) if len(self.key) > 8 else "••••"
+
+
+_pool_cache: dict[str, tuple[float, object]] = {}
+
+
+def _read_file(name: str):
+    """Lê env.ai (CHAVE=valor) ou apps.ai (CHAVE@app=valor) com cache pela data de modificação."""
+    path = os.path.join(AI_DIR, name)
+    try:
+        mt = os.path.getmtime(path)
+    except OSError:
+        return [] if name == "apps.ai" else {}
+    hit = _pool_cache.get(name)
+    if hit and hit[0] == mt:
+        return hit[1]
+    out: object = [] if name == "apps.ai" else {}
+    try:
+        for raw in open(path, encoding="utf-8", errors="ignore"):
+            raw = raw.strip()
+            if not raw or raw.startswith("#") or "=" not in raw:
+                continue
+            k, v = raw.split("=", 1)
+            if name == "apps.ai":
+                env, _, app = k.partition("@")
+                out.append((env, app or "app", v))  # type: ignore[union-attr]
+            else:
+                out[k] = v  # type: ignore[index]
+    except OSError:
+        pass
+    _pool_cache[name] = (mt, out)
+    return out
+
+
+def pool_env(k: str) -> str:
+    """Valor do acervo env.ai (atualizado sem reiniciar) ou do processo."""
+    v = _read_file("env.ai").get(k, "")  # type: ignore[union-attr]
+    return v or os.getenv(k, "").strip().strip('"').strip("'")
+
+
+_status_cache: tuple[float, dict] = (0.0, {})
+
+
+def _load_status() -> dict:
+    global _status_cache
+    path = os.path.join(AI_DIR, "status.json")
+    try:
+        mt = os.path.getmtime(path)
+    except OSError:
+        return _status_cache[1]
+    if mt != _status_cache[0]:
+        try:
+            import json
+            _status_cache = (mt, json.load(open(path)))
+        except Exception:  # noqa: BLE001
+            pass
+    return _status_cache[1]
+
+
+def _save_status(results: dict) -> None:
+    import json
+    cur = dict(_load_status())
+    cur.update(results)
+    path = os.path.join(AI_DIR, "status.json")
+    try:
+        tmp = path + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(cur, fh)
+        os.replace(tmp, path)
+    except OSError:
+        pass  # sem pasta de dados (dev/testes): resultado fica só na memória
 
 
 @dataclass
@@ -35,7 +136,7 @@ class Provider:
     kind: str                          # anthropic | openai | gemini
     url: str = ""
     free: bool = False
-    db_key: str = ""                   # cadastrada no painel (sobrepõe o .env)
+    db_key: str = ""                   # cadastrada no painel (reserva: só entra se env/apps faltarem ou falharem)
     db_model: str = ""
     source: str = "env"
     custom: bool = False
@@ -44,26 +145,61 @@ class Provider:
     last_error: str = ""
     last_ok: float = 0.0
     calls: int = 0
+    _cands: dict = None  # type: ignore[assignment]  # fid -> Cand (mantém o disjuntor de cada chave)
+
+    def candidates(self) -> list[Cand]:
+        """Chaves na ordem de prioridade: .env/GitHub → outras apps → painel (sem repetir a mesma chave)."""
+        if self._cands is None:
+            self._cands = {}
+        want: list[tuple[str, str]] = []
+        for k in self.key_envs:                      # 1. env (acervo ao vivo e variáveis do processo)
+            for v in (_read_file("env.ai").get(k, ""), os.getenv(k, "").strip().strip('"').strip("'")):  # type: ignore[union-attr]
+                if v:
+                    want.append(("env", v))
+        canon = self.key_envs[0] if self.key_envs else ""
+        for env, app, v in _read_file("apps.ai"):    # 2. outras apps da VPS
+            if env == canon:
+                want.append((f"apps:{app}", v))
+        if self.db_key:                              # 3. painel
+            want.append(("painel", self.db_key))
+        st = _load_status().get(self.name, {})
+        out, seen = [], set()
+        for src, v in want:
+            c = Cand(src, v)
+            if c.fid in seen:
+                continue
+            seen.add(c.fid)
+            c = self._cands.setdefault(c.fid, c)
+            c.source = src
+            r = st.get(c.fid)
+            if r and r.get("at", 0) > c.checked_at:
+                c.verified, c.checked_at = bool(r.get("ok")), r.get("at", 0)
+            out.append(c)
+        return out
+
+    def usable(self) -> list[Cand]:
+        """Candidatas utilizáveis: reprovadas no teste vão para o fim (só se não houver outra)."""
+        cs = self.candidates()
+        return [c for c in cs if c.verified is not False] + [c for c in cs if c.verified is False]
+
+    @property
+    def active(self) -> Cand | None:
+        cs = self.usable()
+        return cs[0] if cs else None
 
     @property
     def key(self) -> str:
-        if self.db_key:
-            return self.db_key
-        for k in self.key_envs:
-            v = os.getenv(k, "").strip().strip('"').strip("'")
-            if v:
-                return v
-        return ""
+        a = self.active
+        return a.key if a else ""
 
     @property
     def model(self) -> str:
-        return self.db_model or os.getenv(self.model_env, "").strip() or self.default_model
+        return self.db_model or pool_env(self.model_env) or self.default_model
 
     @property
     def key_source(self) -> str:
-        if self.db_key:
-            return "painel"
-        return "env" if any(os.getenv(k, "").strip() for k in self.key_envs) else ""
+        a = self.active
+        return a.source if a else ""
 
 
 PROVIDERS: dict[str, Provider] = {p.name: p for p in [
@@ -82,6 +218,14 @@ PROVIDERS: dict[str, Provider] = {p.name: p for p in [
              "https://api.mistral.ai/v1/chat/completions", free=True),
     Provider("openrouter", "OpenRouter (modelos :free)", ("OPENROUTER_API_KEY",), "OPENROUTER_MODEL", "openrouter/free", "openai",
              "https://openrouter.ai/api/v1/chat/completions", free=True),
+    Provider("deepseek", "DeepSeek", ("DEEPSEEK_API_KEY",), "DEEPSEEK_MODEL", "deepseek-chat", "openai",
+             "https://api.deepseek.com/chat/completions"),
+    Provider("xai", "xAI Grok", ("XAI_API_KEY", "GROK_API_KEY"), "XAI_MODEL", "grok-3-mini", "openai",
+             "https://api.x.ai/v1/chat/completions"),
+    Provider("together", "Together AI", ("TOGETHER_API_KEY",), "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", "openai",
+             "https://api.together.xyz/v1/chat/completions", free=True),
+    Provider("huggingface", "Hugging Face (Inference)", ("HF_TOKEN", "HUGGINGFACE_API_KEY"), "HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct", "openai",
+             "https://router.huggingface.co/v1/chat/completions", free=True),
 ]}
 
 
@@ -116,7 +260,7 @@ def refresh_from_db(force: bool = False) -> None:
         p = PROVIDERS.get(r.name)
         if p is None:
             p = PROVIDERS[r.name] = Provider(r.name, r.label or r.name, (), "", r.model or "", r.kind, r.url, free=r.free, custom=True)
-        p.db_key, p.db_model, p.source = key, r.model or "", "painel"
+        p.db_key, p.db_model = key, r.model or ""
         if p.custom:
             p.kind, p.url, p.label, p.default_model, p.free = r.kind, r.url, r.label or r.name, r.model or p.default_model, r.free
     for name in list(PROVIDERS):
@@ -136,19 +280,20 @@ def order() -> list[str]:
 
 def chain() -> list[Provider]:
     refresh_from_db()
-    return [PROVIDERS[n] for n in order() if PROVIDERS[n].key]
+    return [PROVIDERS[n] for n in order() if PROVIDERS[n].candidates()]
 
 
-async def _call(p: Provider, client: httpx.AsyncClient, system: str, user: str, max_tokens: int) -> str:
+async def _call(p: Provider, client: httpx.AsyncClient, system: str, user: str, max_tokens: int, key: str | None = None) -> str:
+    key = key or p.key
     if p.kind == "anthropic":
         r = await client.post("https://api.anthropic.com/v1/messages",
-                              headers={"x-api-key": p.key, "anthropic-version": "2023-06-01"},
+                              headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
                               json={"model": p.model, "max_tokens": max_tokens, "system": system,
                                     "messages": [{"role": "user", "content": user}]})
         r.raise_for_status()
         return "".join(b.get("text", "") for b in r.json().get("content", []))
     if p.kind == "openai":
-        headers = {"Authorization": f"Bearer {p.key}"}
+        headers = {"Authorization": f"Bearer {key}"}
         if p.name == "openrouter":
             headers |= {"HTTP-Referer": os.getenv("PUBLIC_BASE_URL", "https://harmonia.m3d.pro"), "X-Title": "harmonIA"}
         if p.name == "github":
@@ -161,7 +306,7 @@ async def _call(p: Provider, client: httpx.AsyncClient, system: str, user: str, 
         return msg.get("content") or ""
     if p.kind == "gemini":
         r = await client.post(f"https://generativelanguage.googleapis.com/v1beta/models/{p.model}:generateContent",
-                              headers={"x-goog-api-key": p.key},
+                              headers={"x-goog-api-key": key},
                               json={"systemInstruction": {"parts": [{"text": system}]},
                                     "contents": [{"role": "user", "parts": [{"text": user}]}],
                                     "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.3}})
@@ -182,26 +327,29 @@ async def complete_ex(system: str, user: str, max_tokens: int = 2000, timeout: f
         raise HTTPException(503, "Nenhum provedor de IA configurado no servidor")
     cooldown = float(os.getenv("AI_COOLDOWN_S", "60"))
     now = time.time()
-    # provedores em pausa vão para o fim da fila (ainda são tentados se todos estiverem pausados)
-    ordered = [p for p in providers if p.paused_until <= now] + [p for p in providers if p.paused_until > now]
+    # cada provedor tenta suas chaves na ordem env → apps → painel; chaves em pausa vão para o fim da fila
+    pairs = [(p, c) for p in providers for c in p.usable()]
+    ordered = [x for x in pairs if x[1].paused_until <= now] + [x for x in pairs if x[1].paused_until > now]
     errors = []
     async with httpx.AsyncClient(timeout=timeout or float(os.getenv("AI_TIMEOUT_S", "45"))) as client:
-        for p in ordered:
+        for p, c in ordered:
             p.calls += 1
             try:
-                text = await _call(p, client, system, user, max_tokens)
+                text = await _call(p, client, system, user, max_tokens, key=c.key)
                 if not text.strip():
                     raise ValueError("resposta vazia")
-                p.failures, p.last_ok, p.last_error, p.paused_until = 0, time.time(), "", 0.0
+                c.failures, c.last_ok, c.last_error, c.paused_until = 0, time.time(), "", 0.0
+                p.failures, p.last_ok, p.last_error, p.paused_until = 0, c.last_ok, "", 0.0
                 return text, p.name
             except Exception as e:  # noqa: BLE001
                 resp = getattr(e, "response", None)
                 code = getattr(resp, "status_code", None)
-                p.failures += 1
-                p.last_error = (f"HTTP {code}" + (f" — {provider_message(resp)[:90]}" if provider_message(resp) else "")) if code else type(e).__name__
-                p.paused_until = time.time() + cooldown * min(p.failures, 10)
-                errors.append(f"{p.name}: {p.last_error}")
-                log.warning("IA %s falhou (%s) — tentando o próximo provedor", p.name, p.last_error)
+                c.failures += 1
+                c.last_error = (f"HTTP {code}" + (f" — {provider_message(resp)[:90]}" if provider_message(resp) else "")) if code else type(e).__name__
+                c.paused_until = time.time() + cooldown * min(c.failures, 10)
+                p.failures, p.last_error, p.paused_until = p.failures + 1, c.last_error, c.paused_until
+                errors.append(f"{p.name}[{c.source}]: {c.last_error}")
+                log.warning("IA %s (%s) falhou (%s) — tentando a próxima", p.name, c.source, c.last_error)
     raise HTTPException(502, "Todos os provedores de IA falharam: " + "; ".join(errors))
 
 
@@ -211,9 +359,13 @@ def status() -> list[dict]:
     out = []
     for i, n in enumerate(order()):
         p = PROVIDERS[n]
-        k = p.key
+        cs = p.candidates()
+        a = p.active
+        k = a.key if a else ""
         out.append({"name": n, "label": p.label, "free": p.free, "configured": bool(k), "model": p.model,
-                    "keySource": p.key_source, "keyHint": ("••••" + k[-4:]) if len(k) > 8 else ("••••" if k else ""),
+                    "keySource": p.key_source, "keyHint": a.hint if a else "",
+                    "candidates": [{"source": c.source, "hint": c.hint, "verified": c.verified, "active": c is a,
+                                    "paused": c.paused_until > now, "lastError": c.last_error} for c in cs],
                     "custom": p.custom, "kind": p.kind, "url": p.url if p.custom else "",
                     "position": i + 1, "paused": p.paused_until > now, "failures": p.failures,
                     "lastError": p.last_error, "lastOk": p.last_ok or None, "calls": p.calls})
@@ -244,33 +396,82 @@ ERROR_HINTS = {
 }
 
 
-async def diagnose(names: list[str] | None = None, timeout: float = 20) -> list[dict]:
-    """Testa cada provedor isoladamente (em paralelo), sem afetar o circuit breaker."""
+async def refresh_pool(wait: float = 8.0) -> bool:
+    """Pede ao host a recoleta do acervo (.env do GitHub + outras apps) e espera até `wait` s pela atualização."""
     import asyncio
+    req = os.path.join(AI_DIR, "refresh.request")
+    env_file = os.path.join(AI_DIR, "env.ai")
+    try:
+        t0 = time.time()
+        with open(req, "w") as fh:
+            fh.write(str(int(t0)))
+    except OSError:
+        return False  # sem pasta de dados (dev/testes)
+    while time.time() - t0 < wait:
+        try:
+            if os.path.getmtime(env_file) >= t0 - 0.5:
+                return True
+        except OSError:
+            pass
+        await asyncio.sleep(0.4)
+    return False
+
+
+async def diagnose(names: list[str] | None = None, timeout: float = 20, refresh: bool = False) -> list[dict]:
+    """Testa TODAS as chaves de cada provedor (em paralelo): primeiro as do .env/GitHub, depois as de outras apps
+    e as do painel. Grava o resultado (status.json) para que chaves reprovadas saiam da frente em todos os workers."""
+    import asyncio
+    refreshed = await refresh_pool() if refresh else False
     refresh_from_db(force=True)
     targets = [PROVIDERS[n] for n in order() if (names is None or n in names)]
 
-    async def one(p: Provider, client: httpx.AsyncClient) -> dict:
-        base = {"name": p.name, "label": p.label, "model": p.model, "free": p.free, "keySource": p.key_source}
-        if not p.key:
-            return base | {"ok": False, "state": "sem_chave", "detail": "sem chave cadastrada"}
+    async def test(p: Provider, c: Cand, client: httpx.AsyncClient) -> dict:
         t0 = time.time()
+        r = {"source": c.source, "hint": c.hint}
         try:
-            text = await _call(p, client, "Você é um teste de conectividade. Responda apenas: ok", "teste", 16)
+            text = await _call(p, client, "Você é um teste de conectividade. Responda apenas: ok", "teste", 16, key=c.key)
             ms = int((time.time() - t0) * 1000)
             if not text.strip():
-                return base | {"ok": False, "state": "erro", "ms": ms, "detail": "resposta vazia"}
-            p.failures, p.paused_until, p.last_error, p.last_ok = 0, 0.0, "", time.time()
-            return base | {"ok": True, "state": "ok", "ms": ms, "reply": text.strip()[:40]}
+                r |= {"ok": False, "ms": ms, "detail": "resposta vazia"}
+            else:
+                c.failures, c.paused_until, c.last_error, c.last_ok = 0, 0.0, "", time.time()
+                r |= {"ok": True, "ms": ms, "reply": text.strip()[:40]}
         except Exception as e:  # noqa: BLE001
             resp = getattr(e, "response", None)
             code = getattr(resp, "status_code", None)
             detail = ERROR_HINTS.get(code, "") if code else ("tempo esgotado" if "Timeout" in type(e).__name__ else "falha de rede/conexão")
-            return base | {"ok": False, "state": "erro", "ms": int((time.time() - t0) * 1000),
-                           "code": code, "detail": detail or f"HTTP {code}", "provider_message": provider_message(resp)}
+            r |= {"ok": False, "ms": int((time.time() - t0) * 1000), "code": code, "detail": detail or f"HTTP {code}",
+                  "provider_message": provider_message(resp)}
+        c.verified, c.checked_at = r["ok"], time.time()
+        r["_fid"] = c.fid
+        return r
+
+    async def one(p: Provider, client: httpx.AsyncClient) -> dict:
+        cs = p.candidates()
+        base = {"name": p.name, "label": p.label, "model": p.model, "free": p.free}
+        if not cs:
+            return base | {"ok": False, "state": "sem_chave", "keySource": "", "detail": "sem chave cadastrada", "candidates": []}
+        rs = list(await asyncio.gather(*(test(p, c, client) for c in cs)))
+        good = next((r for r in rs if r["ok"]), None)
+        main = good or rs[0]  # resposta principal: a 1ª que funcionou (na ordem de prioridade) ou a de maior prioridade
+        out = base | {k: v for k, v in main.items() if not k.startswith("_") and k not in ("source", "hint")}
+        out |= {"state": "ok" if good else "erro", "keySource": main["source"], "keyHint": main["hint"],
+                "candidates": [{k: v for k, v in r.items() if not k.startswith("_")} for r in rs]}
+        if good and good is not rs[0]:
+            out["note"] = f"{rs[0]['source']} falhou; usando a chave de {good['source']}"
+        out["_save"] = {r["_fid"]: {"ok": r["ok"], "at": time.time(), "source": r["source"]} for r in rs}
+        return out
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         results = list(await asyncio.gather(*(one(p, client) for p in targets)))
+    save = {}
+    for r in results:
+        sv = r.pop("_save", None)
+        if sv:
+            save[r["name"]] = {**_load_status().get(r["name"], {}), **sv}
+    _save_status(save)
+    if refresh and results:
+        results[0]["poolRefreshed"] = refreshed
     if names is not None:  # teste pontual de um provedor (botão "Testar")
         return results
     # fallbacks gratuitos sem chave

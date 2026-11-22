@@ -18,15 +18,22 @@ export function mountAdmin(body: HTMLElement) {
       ["github", "GitHub Models (grátis — PAT com models:read)", "https://github.com/settings/personal-access-tokens/new"],
       ["openrouter", "OpenRouter (modelos :free)", "https://openrouter.ai/keys"], ["cerebras", "Cerebras (grátis)", "https://cloud.cerebras.ai"],
       ["mistral", "Mistral (plano Experiment)", "https://console.mistral.ai/api-keys"], ["anthropic", "Anthropic Claude", "https://console.anthropic.com/settings/keys"],
-      ["openai", "OpenAI", "https://platform.openai.com/api-keys"], ["__custom", "➕ Outra IA (compatível com OpenAI)", ""]];
+      ["openai", "OpenAI", "https://platform.openai.com/api-keys"], ["deepseek", "DeepSeek", "https://platform.deepseek.com/api_keys"],
+      ["xai", "xAI Grok", "https://console.x.ai"], ["together", "Together AI", "https://api.together.ai/settings/api-keys"], ["huggingface", "Hugging Face (grátis)", "https://huggingface.co/settings/tokens"], ["__custom", "➕ Outra IA (compatível com OpenAI)", ""]];
     const SRC: Record<string, string> = { painel: "🔐 painel", env: "📄 .env / GitHub", "": "—" };
+    const src = (x: string) => SRC[x] ?? (x?.startsWith("apps:") ? "🔗 app " + x.slice(5).replace(/\+/g, ", ") : x || "—");
+    /** Lista das chaves do provedor na ordem de prioridade, com o resultado do último teste. */
+    const candList = (cs: any[] = []) => cs.length > 1 || cs.some((c) => c.source !== "env") ? h("ul", { class: "cand-list" }, ...cs.map((c) =>
+      h("li", { class: (c.active ? "active " : "") + (c.verified === false || c.ok === false ? "bad" : c.verified || c.ok ? "good" : "") },
+        h("span", {}, c.ok === true || c.verified === true ? "✅" : c.ok === false || c.verified === false ? "❌" : "◻️"), " ", src(c.source), " ", h("code", {}, c.hint),
+        c.active ? h("small", { class: "chip" }, "em uso") : "", c.ok === false && c.detail ? h("small", { class: "hint" }, ` — ${c.code ? "HTTP " + c.code + " · " : ""}${c.detail}`) : ""))) : "";
     const statusBox = h("div");
     const drawStatus = () => statusBox.replaceChildren(h("table", { class: "grid-table" },
       h("thead", {}, h("tr", {}, ...["#", "Provedor", "Chave", "Modelo", "Estado", ""].map((t) => h("th", {}, t)))),
       h("tbody", {}, ...r.providers.map((p: any) => h("tr", { class: p.configured ? "" : "muted" },
         h("td", {}, String(p.position)),
         h("td", {}, h("b", {}, p.label || p.name), p.free ? h("small", { class: "chip" }, "grátis") : "", p.custom ? h("small", { class: "chip" }, "personalizada") : ""),
-        h("td", {}, p.configured ? `${SRC[p.keySource] || p.keySource} ${p.keyHint}` : "—"),
+        h("td", {}, p.configured ? `${src(p.keySource)} ${p.keyHint}` : "—", candList(p.candidates)),
         h("td", { class: "mono" }, p.model),
         h("td", {}, !p.configured ? "sem chave" : p.paused ? `⏸ em pausa (${p.lastError})` : p.lastOk ? "✅ ok" : "pronto"),
         h("td", { class: "row-actions" },
@@ -52,15 +59,16 @@ export function mountAdmin(body: HTMLElement) {
     // ----- diagnóstico
     const diagBox = h("div");
     const diagBtn = h("button", { class: "btn primary", onclick: async () => {
-      diagBtn.disabled = true; diagBox.replaceChildren(h("p", { class: "hint" }, h("span", { class: "spin" }), "Testando cada IA separadamente…"));
+      diagBtn.disabled = true; diagBox.replaceChildren(h("p", { class: "hint" }, h("span", { class: "spin" }), "Atualizando o acervo de chaves (.env do GitHub e outras apps) e testando cada uma…"));
       try {
         const d = await api("/api/admin/ai/diagnose", { method: "POST" });
         r = { providers: d.providers }; drawStatus();
         diagBox.replaceChildren(
-          h("p", {}, h("b", {}, d.working ? `✅ ${d.working} IA(s) funcionando` : "⚠️ Nenhuma IA generativa respondeu — o app segue com tradução grátis e Maestro offline"), ` · ${d.ms} ms`),
+          h("p", {}, h("b", {}, d.working ? `✅ ${d.working} IA(s) funcionando` : "⚠️ Nenhuma IA generativa respondeu — o app segue com tradução grátis e Maestro offline"), ` · ${d.ms} ms`,
+            h("span", { class: "hint" }, d.poolRefreshed ? " · acervo atualizado agora (.env do GitHub + outras apps da VPS)" : " · acervo de chaves: última coleta automática")),
           h("table", { class: "grid-table" }, h("thead", {}, h("tr", {}, ...["", "IA", "Origem", "Modelo", "Tempo", "Diagnóstico"].map((t) => h("th", {}, t)))),
             h("tbody", {}, ...d.results.map((x: any) => h("tr", { class: x.state === "sem_chave" ? "muted" : "" },
-              h("td", {}, x.ok ? "✅" : x.state === "sem_chave" ? "⚪" : "❌"), h("td", {}, h("b", {}, x.label)), h("td", {}, SRC[x.keySource] ?? x.keySource),
+              h("td", {}, x.ok ? "✅" : x.state === "sem_chave" ? "⚪" : "❌"), h("td", {}, h("b", {}, x.label)), h("td", {}, src(x.keySource), x.note ? h("div", { class: "hint" }, "↪ " + x.note) : "", candList(x.candidates)),
               h("td", { class: "mono" }, x.model), h("td", {}, x.ms != null ? `${x.ms} ms` : "—"),
               h("td", {}, x.ok ? (x.reply ? `respondeu “${x.reply}”` : x.detail || "ok") : `${x.code ? "HTTP " + x.code + " — " : ""}${x.detail}`,
                 x.provider_message ? h("div", { class: "mono hint" }, "Provedor: " + x.provider_message) : "",
@@ -121,9 +129,9 @@ export function mountAdmin(body: HTMLElement) {
     key.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save.click(); } });
     return h("div", { class: "ai-admin" },
       h("h4", {}, "Provedores (ordem de failover)"), statusBox,
-      h("h4", {}, "Diagnóstico"), h("div", { class: "row" }, diagBtn, h("span", { class: "hint" }, "Testa cada IA isoladamente e mostra qual funciona e o motivo de falha (chave inválida, limite, modelo inexistente…).")), diagBox,
+      h("h4", {}, "Diagnóstico"), h("div", { class: "row" }, diagBtn, h("span", { class: "hint" }, "Recolhe as chaves do .env (GitHub) e de outras apps da VPS, testa todas e mostra qual funciona e o motivo de falha. Ordem de uso: 📄 .env/GitHub → 🔗 outras apps → 🔐 painel.")), diagBox,
       h("h4", {}, "Registrar ou atualizar credencial"), formBox,
-      h("p", { class: "hint" }, "A chave é cifrada (AES-256-GCM) antes de ir ao banco e nunca volta para a tela — aparecem só os 4 últimos caracteres. Chave cadastrada aqui tem prioridade sobre a do .env/GitHub para o mesmo provedor. Deixe a chave em branco para trocar só o modelo."));
+      h("p", { class: "hint" }, "A chave é cifrada (AES-256-GCM) antes de ir ao banco e nunca volta para a tela — aparecem só os 4 últimos caracteres. Prioridade: a chave do .env/GitHub é usada primeiro; as de outras apps da VPS e as cadastradas aqui são reservas e só entram se a anterior faltar ou falhar no teste. Deixe a chave em branco para trocar só o modelo."));
   }
 
   async function updates() {

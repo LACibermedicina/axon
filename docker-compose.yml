@@ -38,6 +38,7 @@ services:
     volumes:
       - ./data/media:/data/media
       - ./data/status:/data/status:ro   # estado da atualização automática (painel Administração)
+      - ./data/ai:/data/ai              # acervo de credenciais de IA (coletar-ia.sh) + resultado dos testes
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }

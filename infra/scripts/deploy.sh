@@ -25,6 +25,9 @@ echo "[deploy] portas: HTTP 127.0.0.1:$(env_get .env HTTP_PORT) · TURN $(env_ge
 
 export GIT_SHA="$SHA"
 docker compose build --pull
+# acervo de credenciais de IA (lido pela API): .env do GitHub (prioridade) + outras apps desta VPS
+mkdir -p data/ai
+if [[ $EUID -eq 0 ]]; then chown root:10001 data/ai; chmod 2770 data/ai; bash infra/scripts/coletar-ia.sh --quiet || true; fi
 docker compose up -d --remove-orphans
 for _ in $(seq 1 30); do docker compose exec -T api python -m app.migrate && break; sleep 3; done
 docker image prune -f >/dev/null

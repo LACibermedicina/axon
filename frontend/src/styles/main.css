@@ -857,3 +857,6 @@ body.mobile .rail-btn { width: 60px; }
 body.mobile .rail { min-height: 0; align-items: center; }
 body.mobile .rail-pinned .btn { padding: 6px 0 4px; }
 body.mobile .rail .seg > .tool { align-self: center; }
+.cand-list { list-style: none; margin: 4px 0 0; padding: 0; font-size: 11.5px; display: flex; flex-direction: column; gap: 2px; }
+.cand-list li { color: var(--ink2); } .cand-list li.active { color: var(--ink); font-weight: 600; } .cand-list li.bad code { text-decoration: line-through; }
+.cand-list code { font-size: 11px; }

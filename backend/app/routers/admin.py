@@ -194,8 +194,10 @@ async def ai_diagnose(body: DiagIn | None = None, admin: User = Depends(admin_on
     from ..core import llm
     t0 = __import__("time").time()
     names = [n.strip().lower() for n in (body.names if body and body.names else [])][:20] or None
-    results = await llm.diagnose(names)
+    results = await llm.diagnose(names, refresh=names is None)  # rodada completa: recoleta o acervo antes
     ok = [r["name"] for r in results if r["ok"] and r["name"] not in ("mymemory", "offline")]
     db.add(AuditLog(user_id=admin.id, action="ai_diagnose", detail={"ok": ok, "failed": [r["name"] for r in results if r["state"] == "erro"]}))
     db.commit()
-    return {"results": results, "working": len(ok), "ms": int((__import__("time").time() - t0) * 1000), "providers": llm.status()}
+    refreshed = bool(results and results[0].pop("poolRefreshed", False))
+    return {"results": results, "working": len(ok), "ms": int((__import__("time").time() - t0) * 1000), "providers": llm.status(),
+            "poolRefreshed": refreshed}

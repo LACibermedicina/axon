@@ -35,6 +35,30 @@ status() { # grava estado para o painel de Administração
 }
 tail -n 2000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG" || true
 
+# ---------------------------------------- acervo de credenciais de IA (independe de haver versão nova)
+# "Rodar diagnóstico" no painel grava data/ai/refresh.request → esta unidade recoleta na hora.
+if [[ $EUID -eq 0 && ! -f /etc/systemd/system/harmonia-ia.path && -f infra/scripts/coletar-ia.sh ]]; then
+  cat > /etc/systemd/system/harmonia-ia.service <<UNIT
+[Unit]
+Description=harmonIA — coleta credenciais de IA (.env do GitHub + outras apps)
+[Service]
+Type=oneshot
+Environment=APP_DIR=$APP_DIR
+ExecStart=/bin/bash $APP_DIR/infra/scripts/coletar-ia.sh --quiet
+UNIT
+  cat > /etc/systemd/system/harmonia-ia.path <<UNIT
+[Unit]
+Description=harmonIA — recoleta credenciais de IA quando o painel pede
+[Path]
+PathChanged=$APP_DIR/data/ai/refresh.request
+[Install]
+WantedBy=multi-user.target
+UNIT
+  mkdir -p data/ai; systemctl daemon-reload; systemctl enable --now harmonia-ia.path >/dev/null 2>&1 || true
+  log "Instalada a coleta automática de credenciais de IA (harmonia-ia.path)"
+fi
+[[ $EUID -eq 0 && -f infra/scripts/coletar-ia.sh ]] && bash infra/scripts/coletar-ia.sh --quiet >/dev/null 2>&1 || true
+
 [[ "$(env_get .env AUTOUPDATE)" == "0" ]] && { status disabled "Atualização automática desativada (AUTOUPDATE=0)"; exit 0; }
 REPO="$(env_get .env AUTOUPDATE_REPO)"; BRANCH="$(env_get .env AUTOUPDATE_BRANCH)"; BRANCH="${BRANCH:-main}"
 REQUIRE_CI="$(env_get .env AUTOUPDATE_REQUIRE_CI)"; REQUIRE_CI="${REQUIRE_CI:-1}"

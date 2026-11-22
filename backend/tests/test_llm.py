@@ -10,7 +10,10 @@ from app.core import llm
 
 
 @pytest.fixture(autouse=True)
-def keys(monkeypatch):
+def keys(monkeypatch, tmp_path):
+    monkeypatch.setattr(llm, "AI_DIR", str(tmp_path))
+    llm._pool_cache.clear()
+    monkeypatch.setattr(llm, "_status_cache", (0.0, {}))
     for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("AI_PROVIDERS", "anthropic,openai,gemini,openrouter")
@@ -19,7 +22,7 @@ def keys(monkeypatch):
         if name not in llm.BUILTIN:
             llm.PROVIDERS.pop(name)
     for p in llm.PROVIDERS.values():
-        p.failures, p.paused_until, p.last_error, p.db_key, p.db_model = 0, 0.0, "", "", ""
+        p.failures, p.paused_until, p.last_error, p.db_key, p.db_model, p._cands = 0, 0.0, "", "", "", None
 
 
 def run(c):
@@ -37,7 +40,7 @@ def test_failover_and_breaker(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "g")
     calls = []
 
-    async def fake(p, client, system, user, mt):
+    async def fake(p, client, system, user, mt, key=None):
         calls.append(p.name)
         if p.name == "anthropic":
             raise TimeoutError("lento")
@@ -64,3 +67,34 @@ def test_all_fail(monkeypatch):
     with pytest.raises(HTTPException) as e:
         run(llm.complete("s", "u"))
     assert e.value.status_code == 502 and "openai" in e.value.detail
+
+
+def test_priority_env_then_apps_then_panel(monkeypatch, tmp_path):
+    """Chaves do .env (GitHub) vêm primeiro; outras apps e painel só entram se a do .env falhar no teste."""
+    (tmp_path / "env.ai").write_text("GROQ_API_KEY=gsk_env_000000000000001\n")
+    (tmp_path / "apps.ai").write_text("GROQ_API_KEY@gusto=gsk_gusto_0000000000002\nOPENAI_API_KEY@pratica=sk-pratica-00000000003\n")
+    monkeypatch.setenv("AI_PROVIDERS", "groq,openai")
+    llm.PROVIDERS["groq"].db_key = "gsk_painel_000000000004"
+    g = llm.PROVIDERS["groq"]
+    assert [c.source for c in g.candidates()] == ["env", "apps:gusto", "painel"]
+    assert g.key_source == "env"
+    assert llm.PROVIDERS["openai"].key_source == "apps:pratica"
+
+    async def fake(p, client, system, user, mt, key=None):
+        if key and "env" in key:
+            import httpx
+            raise httpx.HTTPStatusError("x", request=httpx.Request("POST", "https://x"), response=httpx.Response(401))
+        return "ok"
+
+    monkeypatch.setattr(llm, "_call", fake)
+    res = {r["name"]: r for r in run(llm.diagnose(["groq"]))}
+    gr = res["groq"]
+    assert gr["ok"] and gr["keySource"] == "apps:gusto" and "env falhou" in gr["note"]
+    assert [c["ok"] for c in gr["candidates"]] == [False, True, True]
+    assert "gsk_" not in str(res)  # nunca devolve a chave
+    # o resultado fica gravado e a chave reprovada sai da frente (inclusive em outro worker)
+    assert (tmp_path / "status.json").exists()
+    g._cands = None
+    assert g.key_source == "apps:gusto"
+    st = {x["name"]: x for x in llm.status()}["groq"]
+    assert [c["source"] for c in st["candidates"]] == ["env", "apps:gusto", "painel"] and st["candidates"][0]["verified"] is False
