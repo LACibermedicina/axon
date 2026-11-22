@@ -133,6 +133,11 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Proteger instalação de outro projeto em /opt/axon
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "test ! -e ${{ env.APP_DIR }} || test -f ${{ env.APP_DIR }}/scripts/deploy.sh -a -f ${{ env.APP_DIR }}/frontend/js/stage3d.js" \
+            || { echo "::error::${{ env.APP_DIR }} contém outra instalação. Mova-a (mv ${{ env.APP_DIR }} ${{ env.APP_DIR }}.bak-DATA) e rode scripts/setup_vps.sh antes do deploy."; exit 1; }
       - name: Enviar v${{ needs.release.outputs.version }} (rsync, preserva .env e data/)
         run: |
           rsync -az --delete --exclude '.git' --exclude '.env' --exclude 'data/' --exclude '__pycache__' \
