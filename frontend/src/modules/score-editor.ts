@@ -10,6 +10,7 @@ import { currentUser, runJob, upload } from "../core/api";
 import { t } from "../core/i18n";
 import { prefs } from "../core/prefs";
 import { ICONS } from "../core/icons";
+import { mountInstrumentView } from "./instrumentview";
 import { transcribeRecording, recordingSpan } from "../core/rectx";
 import type { Win } from "../core/wm";
 
@@ -244,16 +245,20 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   addEventListener("pointerdown", (e) => { if (openGroup && !fly.contains(e.target as Node) && !toolbar.contains(e.target as Node)) toggleGroup(""); }, true);
   body.addEventListener("keydown", (e) => { if (e.key === "Escape" && openGroup) { e.stopPropagation(); toggleGroup(""); } });
 
-  const TB_KEY = "harmonia.rail.v1";
+  const TB_KEY = "harmonia.rail.v2"; // v2: começa sempre aderida à lateral da pauta
   let tb: { mode: "docked" | "floating"; x: number; y: number } = { mode: "docked", x: 12, y: 12 };
   try { tb = { ...tb, ...JSON.parse(localStorage.getItem(TB_KEY) || "{}") }; } catch { /* */ }
   const tbGrip = h("div", { class: "rail-grip", title: "Arraste para mover a barra de ferramentas · duplo clique: voltar para a lateral" }, "⋯");
   const gb = (id: string) => groupBtns.find((b) => b.dataset.group === id)!;
+  // Visualizador do instrumento (subfunção da pauta): abre/fecha a gaveta embaixo da partitura
+  const vizBtn = tip(h("button", { class: "rail-btn", "data-group": "viz", style: { "--c": "#7c5cff" }, "aria-label": "Visualizador do instrumento", "aria-pressed": "false",
+    onclick: () => toggleViz() }, h("span", { class: "rail-ic", "aria-hidden": "true", html: ICONS.visualizer }), h("small", {}, "Teclado")),
+    "Visualizador — teclado ou braço do instrumento em 3D sob a pauta. 👁 Mostrar acende as notas tocadas (nome, intensidade e pedal); ✎ Criar escreve na pauta a nota que você tocar.") as HTMLButtonElement;
   const sec = (label: string, ...kids: HTMLElement[]) => h("div", { class: "rail-sec", role: "group", "aria-label": label }, h("small", { class: "rail-h" }, label), ...kids);
   const toolbar = h("aside", { class: "rail", "aria-label": "Barra de ferramentas da composição" }, tbGrip,
     sec("Criar", h("div", { class: "rail-pinned" }, recMain, importBtn)),
     sec("Escrever", tools),
-    sec("Ajustar", h("div", { class: "rail-grid" }, gb("dur"), gb("play"), gb("staff"), gb("edit"))),
+    sec("Ajustar", h("div", { class: "rail-grid" }, gb("dur"), gb("play"), gb("staff"), gb("edit"), vizBtn)),
     sec("IA", gb("harm")));
   const applyTb = () => {
     toolbar.classList.toggle("floating", tb.mode === "floating");
@@ -303,7 +308,46 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   canvas.append(paper);
   const legend = h("div", { class: "score-legend", "data-noi18n": "" });
   if (document.body.classList.contains("mobile")) { zoom = 0.9; }
-  const main = h("div", { class: "score-main" }, legend, canvas);
+  const drawer = h("div", { class: "score-drawer", hidden: true, role: "region", "aria-label": "Visualizador do instrumento" });
+  const main = h("div", { class: "score-main" }, legend, canvas, drawer);
+  let viz: { destroy: () => void; setMode: (m: "show" | "create") => void } | null = null;
+  let insBeat = -1; // cursor de inserção do modo Criar
+  function toggleViz(force?: boolean, modeSel?: "show" | "create") {
+    const on = force ?? drawer.hidden;
+    drawer.hidden = !on; vizBtn.classList.toggle("on", on); vizBtn.setAttribute("aria-pressed", String(on));
+    if (on && !viz) viz = mountInstrumentView(drawer, {
+      instrumentId: () => staves(store.score).upper.instrument || "piano",
+      lit: () => {
+        const s = store.score, notes: { pitch: number; vel: number; color: string }[] = [];
+        let pedal = false;
+        if (playhead >= 0) {
+          const aud = new Set(audio.audibleLayers(s).map((l) => l.id));
+          for (const l of s.layers) if (l.visible && aud.has(l.id)) for (const n of l.notes) if (n.start <= playhead && n.start + n.dur > playhead) {
+            notes.push({ pitch: n.pitch, vel: n.vel ?? 80, color: l.color });
+            if (l.staff === "bass" && n.dur >= 2) pedal = true;
+          }
+        } else for (const l of s.layers) for (const n of l.notes) if (store.selectedNotes.has(n.id)) notes.push({ pitch: n.pitch, vel: n.vel ?? 80, color: l.color });
+        return { notes, pedal };
+      },
+      create: (pitch, vel) => {
+        const s = store.score, bpm = beatsPerMeasure(s), d = dur * (dotted ? 1.5 : 1);
+        if (insBeat < 0) {
+          const sel = [...store.selectedMeasures].sort((a, b) => a - b);
+          const l = store.layer();
+          insBeat = sel.length ? sel[0] * bpm : l && l.notes.length ? Math.max(...l.notes.map((n) => n.start + n.dur)) : 0;
+        }
+        const st = staves(s);
+        const staff: "treble" | "bass" = store.hand === "upper" ? "treble" : store.hand === "lower" ? "bass" : !st.lower.visible ? "treble" : !st.upper.visible ? "bass" : pitch >= 60 ? "treble" : "bass";
+        insertNote(pitch, insBeat, staff, d, vel, true);
+        insBeat += d;
+        store.ensureMeasures();
+        status.dataset.hover = `✎ próxima nota no compasso ${Math.floor(insBeat / bpm) + 1}, tempo ${((insBeat % bpm) + 1).toFixed(2).replace(/\.00$/, "")}`;
+        status.setAttribute("data-hover", status.dataset.hover);
+      },
+    });
+    if (on && modeSel) viz?.setMode(modeSel);
+  }
+  store.on((r) => { if (r === "selection" && store.selectedMeasures.size) insBeat = -1; if (r === "load") insBeat = -1; });
   stage.append(toolbar, main, fly);
   body.append(header, stage, status);
   applyTb();
@@ -582,15 +626,15 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   }
 
   const timbreFor = (staff: "treble" | "bass") => instrument((staff === "bass" ? staves(store.score).lower : staves(store.score).upper).instrument).timbre;
-  function insertNote(pitch: number, beat: number, staff: "treble" | "bass", d = dur * (dotted ? 1.5 : 1)) {
+  function insertNote(pitch: number, beat: number, staff: "treble" | "bass", d = dur * (dotted ? 1.5 : 1), vel = 84, silent = false) {
     store.mutate(() => {
       const l = targetLayer(staff);
-      const n: Note = { id: uid(), pitch, start: beat, dur: d, vel: 84 };
+      const n: Note = { id: uid(), pitch, start: beat, dur: d, vel };
       l.notes.push(n);
       store.selectedLayer = l.id;
       store.selectedNotes = new Set([n.id]);
     }, "add");
-    audio.playNote(pitch, 0, 0.5, 80, 1, undefined, timbreFor(staff));
+    if (!silent) audio.playNote(pitch, 0, 0.5, 80, 1, undefined, timbreFor(staff));
   }
 
   // ------------------------------------------------------ interações
@@ -824,7 +868,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       mates.length ? item(l.unlinked ? "🔗" : "⛓", l.unlinked ? "Vincular às notas" : "Desvincular das notas", mates.map((m) => m.name).join(", "), () => store.mutate(() => [l, ...mates].forEach((x) => (x.unlinked = !l.unlinked)), "layer")) : "",
       item(l.locked ? "🔓" : "🔒", l.locked ? "Destrancar" : "Trancar", "impede mover ou apagar", () => store.mutate(() => (l.locked = !l.locked), "layer")),
       item(l.muted ? "🔈" : "🔇", l.muted ? "Ativar som" : "Silenciar", "na reprodução e na mesa", () => { store.mutate(() => (l.muted = !l.muted), "layer"); audio.liveMix(store.score); }),
-      item("👁", "Ver no visualizador", "piano vertical ou pauta", () => dispatchEvent(new CustomEvent("open-app", { detail: "visualizer" }))),
+      item("🎹", "Ver no teclado", "visualizador sob a pauta", () => (dispatchEvent(new CustomEvent("open-app", { detail: "compose" })), setTimeout(() => dispatchEvent(new CustomEvent("harmonia:action", { detail: "viz-open" })), 300))),
       item("🗑", "Apagar gravação", l.locked ? "trancada" : "as notas transcritas ficam", () => { if (confirm(`Apagar a gravação "${l.name}"?`)) store.mutate((sc) => (sc.layers = sc.layers.filter((x) => x.id !== l.id)), "layer"); }, l.locked));
     canvas.append(menu);
     setTimeout(() => addEventListener("pointerdown", outside, true), 0);
@@ -1107,6 +1151,8 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
     if (a === "record-section") recordSection(recSecBtn);
     if (a === "hand-both") { store.hand = "both"; syncStaffCtl(); render(); }
     if (a === "tool-pencil") setTool("pencil");
+    if (a === "viz-open") toggleViz(true, "show");
+    if (a === "viz-create") toggleViz(true, "create");
     if (typeof a === "string" && a.startsWith("group:")) { const id = a.slice(6); if (openGroup !== id) toggleGroup(id); }
     if (a === "group-close") toggleGroup("");
   };
@@ -1127,5 +1173,5 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   setTool("select");
   render();
   win.setTitle(`${t("compose")} — ${store.score.title}`);
-  return () => { off(); ro.disconnect(); audio.stop(); removeEventListener("harmonia:action", onAction); offPlay(); };
+  return () => { off(); ro.disconnect(); audio.stop(); removeEventListener("harmonia:action", onAction); offPlay(); viz?.destroy(); };
 }

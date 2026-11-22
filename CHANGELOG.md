@@ -2,6 +2,27 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.8.0-alpha] — 2026-11-22
+
+### Adicionado
+- **🎤 Capturar notas** (no lugar de "Gravar ao vivo"): cante ou toque e a **pauta é escrita em tempo real**, no andamento da partitura, a partir do compasso selecionado (conta 1 compasso, metrônomo). Microfone com detecção de altura no navegador ou **teclado MIDI** (Web MIDI), com intensidade. Indicador ao vivo da nota ouvida.
+- **Visualizador do instrumento como subfunção da pauta** (botão **Teclado** em Ajustar): teclado ou braço do instrumento em 3D cartunesco sob a partitura.
+  - 👁 **Mostrar**: acende as notas que soam (ou as selecionadas) com **nome da nota**, **intensidade** (barra + p/mp/mf/f/ff) e **pedal de sustentação** no piano.
+  - ✎ **Criar**: tocar nas teclas/casas escreve a nota na pauta, em sequência, com a duração escolhida; a altura do toque define a intensidade; teclado do computador (A W S E D F T G Y H U J K).
+  - Instrumento do mostrador escolhível: piano/órgão/harpa (teclado com pedais no piano), violão/guitarra/baixo (braço com casas) e cordas (espelho sem trastes); o som da prévia acompanha o instrumento.
+- **Importar ao lado da pauta**: o Importar abre no painel lateral (que se alarga), junto da partitura.
+- **Trechos marcados**: ✂ guarda a seleção da onda como trecho (T1, T2…), com ▶ ouvir, ◎ selecionar e ✕ remover. **Arraste qualquer trecho (ou o ✂) e solte na pauta** no compasso desejado — isso basta para importar: vira gravação 🎙 + notas transcritas e vinculadas 🔗. Dá para importar partes diferentes em lugares diferentes.
+- **Revisão da leitura de imagem (OMR)** antes de ir para a pauta: a leitura aparece **sobreposta à imagem** (com transparência ajustável) e em cartões por compasso; corrija altura (▲▼), **acidentes (♯ ♭ ♮)**, apague notas, ouça cada compasso e **escolha só os compassos de interesse**; eles entram a partir do compasso selecionado na pauta.
+- **⏹ Cancelar transcrição** no ícone de tarefas: cancela o envio, tira da fila ou para o processamento na próxima etapa.
+- **Barra superior**: menu do **usuário** (dados da conta, privacidade/LGPD, minhas composições, administração, sair) e ícone discreto de **comunidade** com seu **estado** (🟢 online / 🌙 ausente / 👻 invisível), **quem está online** (e quem está em 📹), **chat** e **videochamada**. Conta e Comunidade saíram do Dock.
+
+### Alterado
+- A Composição abre **maximizada**; a barra de ferramentas começa **aderida à lateral** da pauta.
+- Arquivos de **vídeo** (MP4, MOV, WebM) podem ser importados — o áudio é extraído no navegador.
+
+### Corrigido
+- "Falha no envio" de áudio/vídeo (ex.: A_Equação_da_Aurora.mp4): mesma causa da 0.7.2 (permissão de `data/media` na VPS), já corrigida no deploy; os formatos de vídeo também passaram a ser aceitos pelo servidor.
+
 ## [0.7.2-alpha] — 2026-11-22
 
 ### Corrigido — envio de arquivos ("Falha no envio")

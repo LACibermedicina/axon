@@ -29,7 +29,7 @@ export function mountTaskHub() {
     const idx = t.stages.findIndex((s) => s.key === t.stage);
     return h("ol", { class: "th-steps" }, ...t.stages.map((s, i) => {
       const done = t.status === "done" || i < idx;
-      const cur = i === idx && t.status !== "done" && t.status !== "error";
+      const cur = i === idx && !["done", "error", "cancelled"].includes(t.status);
       const bad = i === idx && t.status === "error";
       return h("li", { class: done ? "done" : cur ? "cur" : bad ? "bad" : "" },
         h("span", { class: "th-dot", "aria-hidden": "true" }, done ? "✓" : bad ? "!" : cur ? "" : String(i + 1)),
@@ -48,8 +48,11 @@ export function mountTaskHub() {
       h("div", { class: "th-progress" }, h("i", { style: { width: Math.round(t.status === "done" ? 100 : t.pct) + "%" } })),
       t.status === "done" ? h("div", { class: "th-result" }, h("p", {}, "✅ " + (t.summary || "Concluído")),
         t.open ? h("button", { class: "btn primary", onclick: () => { t.open?.(); open = false; draw(); } }, "Ver resultado") : "") :
+      t.status === "cancelled" ? h("div", { class: "th-result err" }, h("p", {}, "⏹ " + (t.error || "Cancelada")),
+        t.retry ? h("button", { class: "btn", onclick: () => { removeTask(t.id); t.retry?.(); } }, "↻ Recomeçar") : "") :
       t.status === "error" ? h("div", { class: "th-result err" }, h("p", {}, "❌ " + (t.error || "Falha")),
         t.retry ? h("button", { class: "btn", onclick: () => { removeTask(t.id); t.retry?.(); } }, "↻ Tentar de novo") : "") : "",
+      t.cancel && !["done", "error", "cancelled"].includes(t.status) ? h("button", { class: "btn ghost danger th-cancel", disabled: !!t.cancelRequested, onclick: () => t.cancel?.() }, t.cancelRequested ? "Cancelando…" : "⏹ Cancelar transcrição") : "",
       stepList(t));
   }
 
@@ -58,8 +61,9 @@ export function mountTaskHub() {
     const list = allTasks();
     root.hidden = !list.length;
     if (!list.length) { open = false; return; }
-    const running = list.filter((t) => t.status !== "done" && t.status !== "error");
+    const running = list.filter((t) => !["done", "error", "cancelled"].includes(t.status));
     if (running.length > prevRunning) open = true; // nova tarefa: mostra o detalhe
+    if (!running.length && prevRunning && open) setTimeout(() => { if (!allTasks().some((t) => !["done", "error", "cancelled"].includes(t.status)) && allTasks()[0]?.status === "done") { open = false; draw(); } }, 6000); // terminou bem: recolhe sozinho
     prevRunning = running.length;
     const main = running[0] ?? list[0];
     const target = main.status === "done" ? 100 : main.pct;
@@ -81,7 +85,7 @@ export function mountTaskHub() {
   const tick = () => {
     const list = allTasks();
     if (list.length) {
-      const running = list.find((t) => t.status !== "done" && t.status !== "error");
+      const running = list.find((t) => !["done", "error", "cancelled"].includes(t.status));
       const main = running ?? list[0];
       let target = main.status === "done" ? 100 : main.pct;
       // enquanto roda, avança devagar dentro da etapa atual (até o fim dela), para nunca parecer travado
@@ -99,7 +103,7 @@ export function mountTaskHub() {
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
-  setInterval(() => { if (open && allTasks().some((t) => t.status !== "done" && t.status !== "error")) draw(); }, 1000);
+  setInterval(() => { if (open && allTasks().some((t) => !["done", "error", "cancelled"].includes(t.status))) draw(); }, 1000);
   onTasks(draw);
   draw();
 }

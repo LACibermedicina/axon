@@ -63,11 +63,14 @@ export function mountCommunity(body: HTMLElement) {
       local = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       const me = h("video", { autoplay: true, muted: true, playsinline: true, class: "me" }) as HTMLVideoElement; me.srcObject = local; videos.append(me);
       callBtn.textContent = "Sair da chamada";
+      ws.send(JSON.stringify({ type: "call", on: true }));
       ws.send(JSON.stringify({ type: "leave", room })); ws.send(JSON.stringify({ type: "join", room })); // reanuncia → pares enviam ofertas
     } catch (e: any) { toast("Câmera/microfone indisponível: " + e.message, "error"); }
   }
-  function hangup() { local?.getTracks().forEach((t) => t.stop()); local = null; peers.forEach((p) => p.close()); peers.clear(); videos.replaceChildren(); callBtn.textContent = "📹 Entrar na chamada"; }
-  return () => { hangup(); ws.close(); };
+  function hangup() { if (local && ws.readyState === 1) ws.send(JSON.stringify({ type: "call", on: false })); local?.getTracks().forEach((t) => t.stop()); local = null; peers.forEach((p) => p.close()); peers.clear(); videos.replaceChildren(); callBtn.textContent = "📹 Entrar na chamada"; }
+  const onCall = () => { if (!local) call(); };
+  addEventListener("community:call", onCall);
+  return () => { removeEventListener("community:call", onCall); hangup(); ws.close(); };
 }
 
 

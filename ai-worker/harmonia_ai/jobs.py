@@ -31,6 +31,16 @@ PLANS: dict[str, list[tuple[str, str, int]]] = {
     "export": [("prepare", "Preparando a partitura", 15), ("render", "Gerando os arquivos", 90), ("done", "Finalizando", 100)],
 }
 _reporter = None
+_cancelled = None  # função que diz se o usuário pediu para cancelar
+
+
+class Cancelled(Exception):
+    """O usuário cancelou a tarefa — o worker para na próxima etapa."""
+
+
+def set_cancel_check(fn) -> None:
+    global _cancelled
+    _cancelled = fn
 
 
 def set_reporter(fn) -> None:
@@ -40,6 +50,8 @@ def set_reporter(fn) -> None:
 
 def step(plan: str, key: str, detail: str = "") -> None:
     """Marca o INÍCIO da etapa `key` (o % sobe até o fim da etapa anterior)."""
+    if _cancelled and _cancelled():
+        raise Cancelled()
     if not _reporter:
         return
     stages = PLANS[plan]

@@ -20,7 +20,7 @@ _r = None
 
 ALLOWED = {
     "audio": {"audio/mpeg", "audio/wav", "audio/x-wav", "audio/wave", "audio/flac", "audio/ogg", "audio/webm",
-              "audio/mp4", "audio/x-m4a", "audio/aac", "video/webm"},
+              "audio/mp4", "audio/x-m4a", "audio/aac", "video/webm", "video/mp4", "video/quicktime", "audio/opus"},
     "image": {"image/png", "image/jpeg", "image/webp", "image/heic"},
 }
 MAGIC = {b"RIFF": "wav", b"ID3": "mp3", b"\xff\xfb": "mp3", b"\xff\xf3": "mp3", b"fLaC": "flac", b"OggS": "ogg",
@@ -103,6 +103,25 @@ def create_job(body: JobIn, user: User = Depends(require("ai"))):
     except redis.RedisError:
         raise HTTPException(503, "A fila de processamento de IA está fora do ar (Redis). O arquivo foi enviado; tente de novo em instantes.")
     return {"id": jid, "status": "queued"}
+
+
+@router.delete("/jobs/{jid}")
+def cancel_job(jid: str, user: User = Depends(current_user)):
+    """Cancela uma transcrição: sai da fila se ainda não começou; se já está rodando, o worker para na próxima etapa."""
+    key = f"harmonia:job:{jid}"
+    h = rds().hgetall(key)
+    if not h or h.get("owner") != str(user.id):
+        raise HTTPException(404, "Job não encontrado")
+    if h.get("status") in ("done", "error", "cancelled"):
+        return {"id": jid, "status": h.get("status")}
+    rds().hset(key, mapping={"cancel": "1"})
+    removed = 0
+    for item in rds().lrange("harmonia:jobs", 0, 500):
+        if f'"{jid}"' in item:
+            removed += rds().lrem("harmonia:jobs", 1, item)
+    if removed or h.get("status") == "queued":
+        rds().hset(key, mapping={"status": "cancelled"})
+    return {"id": jid, "status": "cancelled" if removed or h.get("status") == "queued" else "cancelling"}
 
 
 @router.get("/jobs/{jid}")

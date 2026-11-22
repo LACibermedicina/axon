@@ -76,3 +76,22 @@ def test_job_reports_progress(monkeypatch):
     pcts = [s["pct"] for s in seen]
     assert pcts == sorted(pcts) and pcts[-1] < 100 and all(s["stages"] for s in seen)
     assert "notas ouvidas" in seen[3]["detail"]
+
+
+def test_job_can_be_cancelled(monkeypatch):
+    mel, acc = song()
+    media = tempfile.mkdtemp()
+    write_wav(mel, os.path.join(media, "a.wav"))
+    monkeypatch.setattr(jobs, "MEDIA", __import__("pathlib").Path(media))
+    monkeypatch.setattr(jobs, "_ml_available", lambda: False)
+    calls = {"n": 0}
+    def check():
+        calls["n"] += 1
+        return calls["n"] >= 3  # cancela na 3ª etapa
+    jobs.set_cancel_check(check)
+    try:
+        import pytest
+        with pytest.raises(jobs.Cancelled):
+            jobs.job_transcribe_audio({"asset": "a.wav", "mode": "both", "tempo": 120})
+    finally:
+        jobs.set_cancel_check(None)

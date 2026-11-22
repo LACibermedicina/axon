@@ -11,6 +11,13 @@ const store = new Redis(process.env.REDIS_URL);
 const wss = new WebSocketServer({ port: PORT, path: "/ws/", maxPayload: 512 * 1024 });
 const rooms = new Map(); // room -> Set<ws>
 
+// Presença: quem está online (um registro por usuário, mesmo com várias abas); "invisible" some da lista
+function presence() {
+  const users = new Map();
+  for (const c of wss.clients) if (c.user && c.status !== "invisible") users.set(c.user.id, { id: c.user.id, nick: c.user.nick, status: c.status || "online", call: !!c.inCall });
+  return [...users.values()];
+}
+const announce = () => { const msg = { type: "presence", users: presence() }; for (const c of wss.clients) send(c, msg); };
 const send = (ws, msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg));
 const broadcast = (room, msg, except) => {
   for (const c of rooms.get(room) || []) if (c !== except) send(c, msg);
@@ -36,7 +43,9 @@ wss.on("connection", (ws, req) => {
   ws.rooms = new Set();
   ws.isAlive = true;
   ws.on("pong", () => (ws.isAlive = true));
+  ws.status = "online";
   send(ws, { type: "hello", user: ws.user, ice: [{ urls: "stun:stun.l.google.com:19302" }, turnCredentials(ws.user.id)] });
+  announce();
 
   let tokens = 20; // rate-limit simples: 20 msgs / 5 s
   const refill = setInterval(() => (tokens = 20), 5000);
@@ -78,6 +87,15 @@ wss.on("connection", (ws, req) => {
         if (!ws.rooms.has(room)) return;
         broadcast(room, { type: "score-patch", room, from: ws.user.id, ops: m.ops }, ws);
         break;
+      case "status": // online | away | invisible
+        if (["online", "away", "invisible"].includes(m.status)) { ws.status = m.status; announce(); }
+        break;
+      case "who":
+        send(ws, { type: "presence", users: presence() });
+        break;
+      case "call": // entrou/saiu de uma videochamada (mostra 📹 ao lado do nome)
+        ws.inCall = !!m.on; announce();
+        break;
       case "cursor":
         if (ws.rooms.has(room)) broadcast(room, { type: "cursor", room, from: ws.user, pos: m.pos }, ws);
         break;
@@ -86,6 +104,7 @@ wss.on("connection", (ws, req) => {
 
   ws.on("close", () => {
     clearInterval(refill);
+    setTimeout(announce, 50);
     for (const r of ws.rooms) {
       rooms.get(r)?.delete(ws);
       broadcast(r, { type: "peer-leave", room: r, user: ws.user });

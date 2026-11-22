@@ -61,6 +61,8 @@ export async function runJob(type: string, payload: any, onProgress?: (s: string
     return result;
   };
   if (j.status === "done") return finish(j.result);
+  let cancelled = false;
+  if (t) updateTask(t, { cancel: () => { cancelled = true; updateTask(t, { cancelRequested: true, detail: "cancelando…" }); api(`/api/jobs/${j.id}`, { method: "DELETE" }).catch(() => {}); } });
   if (t) applyJob(t, j);
   let stuck = 0;
   for (let i = 0; i < 1200; i++) {
@@ -68,6 +70,9 @@ export async function runJob(type: string, payload: any, onProgress?: (s: string
     let s: any;
     try { s = await api(`/api/jobs/${j.id}`); } catch (e: any) { if (++stuck > 20) throw fail("Conexão perdida com o servidor: " + e.message); continue; }
     stuck = 0;
+    if (s.status === "cancelled" || (cancelled && s.status !== "done")) {
+      if (s.status === "cancelled" || i > 30) { if (t) updateTask(t, { status: "cancelled", error: "Cancelada por você", endedAt: Date.now(), cancel: undefined }); throw new Error("Transcrição cancelada"); }
+    }
     if (t) applyJob(t, s);
     const info: JobInfo = { status: s.status, pct: t?.pct ?? 0, label: t?.stageLabel ?? s.status, detail: t?.detail ?? "", queuePos: s.queuePos, workerAlive: s.workerAlive };
     onProgress?.(s.status, info);
@@ -103,6 +108,7 @@ export async function upload(kind: string, blob: Blob, filename: string, task?: 
       if (x.status >= 200 && x.status < 300) { updateTask(task, { pct: 4, stage: "queue", stageLabel: "Na fila do processador de IA", detail: "arquivo enviado" }); resolve(body); }
       else { const m = uploadError(x.status, body.detail); updateTask(task, { status: "error", error: m, endedAt: Date.now() }); reject(new Error(m)); }
     };
+    updateTask(task, { cancel: () => { x.abort(); updateTask(task, { status: "cancelled", error: "Envio cancelado", endedAt: Date.now(), cancel: undefined }); reject(new Error("Envio cancelado")); } });
     x.onerror = () => { updateTask(task, { status: "error", error: "Sem conexão com o servidor", endedAt: Date.now() }); reject(new Error("Sem conexão com o servidor")); };
     x.send(fd);
   });

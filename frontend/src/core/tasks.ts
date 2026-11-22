@@ -3,10 +3,10 @@
 export interface Stage { key: string; label: string; pct: number }
 export interface Task {
   id: string; type: string; label: string;
-  status: "upload" | "queued" | "running" | "done" | "error";
+  status: "upload" | "queued" | "running" | "done" | "error" | "cancelled";
   pct: number; stage: string; stageLabel: string; detail: string; stages: Stage[];
   queuePos?: number; workerAlive?: boolean; startedAt: number; endedAt?: number;
-  error?: string; summary?: string; open?: () => void; retry?: () => void;
+  error?: string; summary?: string; open?: () => void; retry?: () => void; cancel?: () => void; cancelRequested?: boolean;
 }
 const tasks = new Map<string, Task>();
 const listeners = new Set<() => void>();

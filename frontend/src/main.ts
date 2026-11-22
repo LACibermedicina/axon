@@ -27,9 +27,11 @@ import { mountDeskScore } from "./modules/deskscore";
 import { mountVisualizer } from "./modules/visualizer";
 import { playerBar } from "./modules/playerbar";
 import { mountTaskHub } from "./modules/taskhub";
+import { connectPresence, onPresence, online as onlineUsers, isConnected, status as myStatus, setStatus } from "./core/presence";
+import { setToken } from "./core/api";
 import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.7.2-alpha";
+const VERSION = "0.8.0-alpha";
 
 const APPS: Record<string, AppDef> = {
   compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1220, innerWidth - 24 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 16, y: 44, mount: mountScoreEditor },
@@ -43,7 +45,7 @@ const APPS: Record<string, AppDef> = {
   account: { id: "account", title: t("account"), icon: ICONS.account, width: 460, height: 560, mount: mountAccount },
   admin: { id: "admin", title: t("admin"), icon: ICONS.admin, width: 920, height: 560, mount: mountAdmin },
 };
-const ORDER = ["compose", "props", "layers", "notes", "import", "visualizer", "mixer", "library", "graph", "agenda", "community", "admin", "account"];
+const ORDER = ["compose", "props", "layers", "notes", "import", "mixer", "library", "graph", "agenda", "community", "admin", "account"];
 // Funções administrativas: visíveis e acessíveis somente ao papel admin (o servidor também valida)
 const ADMIN_ONLY = new Set(["graph", "admin"]);
 const isAdmin = () => currentUser?.role === "admin";
@@ -56,13 +58,19 @@ const PANEL_IDS = new Set(["props", "layers", "notes"]);
 let panels: PanelDock;
 const PANEL_ICONS: Record<string, string> = { props: ICONS.props, layers: ICONS.layers, notes: ICONS.notes, visualizer: ICONS.visualizer };
 // No desktop, Mesa de Edição e Comunidade vivem no grupo de painéis laterais (acopláveis/flutuantes)
-const DESKTOP_PANEL_ROUTE: Record<string, string> = { mixer: "mix", community: "chat" };
+const DESKTOP_PANEL_ROUTE: Record<string, string> = { mixer: "mix", community: "chat", import: "imp" };
+// conta e comunidade ficam na barra superior (menu do nome e ícone de presença), não no Dock
+const DOCK_HIDE = new Set(["account", "community"]);
 const open = (id: string) => {
   if (PANEL_IDS.has(id)) { panels?.reveal(id); return; }
-  if (!isMobile() && DESKTOP_PANEL_ROUTE[id] && panels) { panels.reveal(DESKTOP_PANEL_ROUTE[id]); return; }
+  if (!isMobile() && DESKTOP_PANEL_ROUTE[id] && panels) { if (id === "community") document.body.classList.add("peek-float"); panels.reveal(DESKTOP_PANEL_ROUTE[id]); return; }
   if (!APPS[id]) return;
   if (!allowed(id)) { toast("Acesso restrito ao administrador", "warn"); return; }
-  return openApp(APPS[id]);
+  const fresh = !openWindows().some((w) => w.app.id === id);
+  const w = openApp(APPS[id]);
+  // a Composição abre maximizada (pauta com o máximo de espaço; o botão verde restaura)
+  if (id === "compose" && fresh && !isMobile()) w.el.classList.add("max");
+  return w;
 };
 /** Nova composição: partitura vazia + editor aberto (confirma se já há notas). */
 function newComposition() {
@@ -79,9 +87,7 @@ function menubar() {
   const clock = h("span", { class: "clock", "data-noi18n": "" });
   const tick = () => (clock.textContent = new Date().toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" }));
   tick(); setInterval(tick, 20000);
-  const userBtn = h("button", { class: "mb-item", onclick: () => open("account") });
-  const setUser = () => (userBtn.textContent = currentUser ? "👤 " + currentUser.name.split(" ")[0] : "Entrar");
-  addEventListener("auth", setUser); setUser();
+  const userBtn = userMenu();
   const menu = (label: string, items: [string, () => void][]) => {
     const dd = h("div", { class: "dropdown" }, ...items.map(([l, fn]) => h("button", { onclick: () => { dd.parentElement!.classList.remove("open"); fn(); } }, l)));
     const m = h("div", { class: "mb-menu" }, h("button", { class: "mb-item", onclick: (e: Event) => { e.stopPropagation(); document.querySelectorAll(".mb-menu.open").forEach((x) => x !== m && x.classList.remove("open")); m.classList.toggle("open"); } }, label), dd);
@@ -103,7 +109,7 @@ function menubar() {
     menu("Ajuda", [["Passo a passo inicial", () => showWizard(open)], ["Guia: compor e harmonizar", () => guide("compose")], ["Guia: gravar a melodia", () => guide("record")],
       ["Guia: importar áudio", () => guide("audio")], ["Guia: importar imagem de partitura", () => guide("image")], ["Despertar o Maestro (assistente)", () => dispatchEvent(new CustomEvent("maestro:wake"))], ["Atalhos de teclado", shortcuts], ["Versão para celular", () => setPreference("mobile")], ["Detectar dispositivo automaticamente", () => setPreference("auto")],
       ["Texto maior (liga/desliga)", () => toggleLargeText()], ["Alto contraste (liga/desliga)", () => toggleContrast()], ["Sobre / versão", about]]),
-    h("span", { class: "spacer" }), playerBar(() => open("compose")), h("span", { class: "spacer" }), tray(), notifBell(), clock, userBtn);
+    h("span", { class: "spacer" }), playerBar(() => open("compose")), h("span", { class: "spacer" }), tray(), communityMenu(), notifBell(), clock, userBtn);
 }
 
 /** Bandeja na barra de menus: janelas minimizadas (ponto colorido) e menus laterais recolhidos
@@ -148,6 +154,67 @@ function focusMode() {
     }
   });
   apply();
+}
+
+/** Menu do usuário (barra superior): dados da conta, privacidade e sair. */
+function userMenu() {
+  const dd = h("div", { class: "dropdown user-dd" });
+  const btn = h("button", { class: "mb-item user-btn", "aria-haspopup": "menu" });
+  const wrap = h("div", { class: "mb-menu" }, btn, dd);
+  const go = (id: string) => () => { wrap.classList.remove("open"); open(id); };
+  const draw = () => {
+    btn.textContent = currentUser ? "👤 " + currentUser.name.split(" ")[0] + " ▾" : "Entrar";
+    const guest = currentUser?.role === "guest" || currentUser?.guest;
+    const ROLE: Record<string, string> = { admin: "Administrador", composer: "Compositor", student: "Estudante", viewer: "Ouvinte", guest: "Visitante" };
+    dd.replaceChildren(...(currentUser ? [
+      h("div", { class: "dd-head" }, h("b", {}, currentUser.name), h("small", {}, guest ? "Visitante (sem cadastro)" : currentUser.email || ""), h("small", { class: "chip" }, ROLE[currentUser.role] || currentUser.role)),
+      h("button", { onclick: go("account") }, guest ? "✍️ Criar conta / entrar" : "👤 Minha conta e perfil"),
+      h("button", { onclick: go("account") }, "🔒 Privacidade e meus dados (LGPD)"),
+      h("button", { onclick: go("library") }, "📚 Minhas composições"),
+      ...(isAdmin() ? [h("button", { onclick: go("admin") }, "🛡 Administração")] : []),
+      h("hr"),
+      h("button", { onclick: () => { wrap.classList.remove("open"); setToken("", null); } }, "↩ Sair")] : []));
+  };
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!currentUser) { open("account"); return; }
+    document.querySelectorAll(".mb-menu.open").forEach((x) => x !== wrap && x.classList.remove("open"));
+    wrap.classList.toggle("open");
+  });
+  addEventListener("auth", draw); draw();
+  return wrap;
+}
+
+/** Comunidade discreta na barra superior: seu estado (online/ausente/invisível), quem está online,
+ *  chat e videochamada — abre o chat do compositor (painel) ao lado. */
+function communityMenu() {
+  const dot = h("i", { class: "cm-dot" });
+  const count = h("small", { class: "cm-count" });
+  const btn = h("button", { class: "cm-btn", "aria-haspopup": "dialog", title: "Comunidade: quem está online, chat e videochamada" }, h("span", { "aria-hidden": "true" }, "👥"), dot, count);
+  const panel = h("div", { class: "cm-panel", role: "dialog", "aria-label": "Comunidade", hidden: true });
+  const STATUS: Record<string, string> = { online: "🟢 Online", away: "🌙 Ausente", invisible: "👻 Invisível" };
+  const draw = () => {
+    const users = onlineUsers();
+    const me = currentUser ? String(currentUser.id) : "";
+    const st = myStatus();
+    dot.className = "cm-dot " + (!isConnected() ? "off" : st);
+    count.textContent = isConnected() ? String(users.length) : "";
+    btn.setAttribute("aria-label", `Comunidade: ${isConnected() ? users.length + " online" : "desconectado"}`);
+    panel.replaceChildren(
+      h("header", {}, h("b", {}, "Comunidade"), h("small", {}, isConnected() ? `${users.length} online agora` : currentUser ? "conectando…" : "entre para ver quem está online")),
+      currentUser ? h("div", { class: "cm-status", role: "radiogroup", "aria-label": "Seu estado" }, ...(["online", "away", "invisible"] as const).map((s) =>
+        h("button", { class: st === s ? "on" : "", role: "radio", "aria-checked": String(st === s), onclick: () => setStatus(s) }, STATUS[s]))) : "",
+      users.length ? h("ul", { class: "cm-list" }, ...users.map((u) => h("li", {}, h("i", { class: "cm-dot " + u.status }), h("span", {}, u.nick + (u.id === me ? " (você)" : "")),
+        u.call ? h("small", { title: "em videochamada" }, "📹") : ""))) : h("p", { class: "hint" }, "Ninguém online no momento."),
+      h("div", { class: "row" },
+        h("button", { class: "btn primary", onclick: () => { panel.hidden = true; open("community"); } }, "💬 Chat"),
+        h("button", { class: "btn", onclick: () => { panel.hidden = true; open("community"); setTimeout(() => dispatchEvent(new CustomEvent("community:call")), 700); } }, "📹 Videochamada")));
+  };
+  btn.addEventListener("click", (e) => { e.stopPropagation(); document.querySelectorAll(".mb-menu.open").forEach((x) => x.classList.remove("open")); panel.hidden = !panel.hidden; if (!panel.hidden) draw(); });
+  panel.addEventListener("click", (e) => e.stopPropagation());
+  addEventListener("click", () => (panel.hidden = true));
+  onPresence(draw); draw();
+  return h("div", { class: "cm-wrap" }, btn, panel);
 }
 
 /** Área de notificações: sino com contador e lista (transcrições, exportações, atualizações, avisos). */
@@ -197,7 +264,7 @@ function sidebar() {
 function dock() {
   const d = h("footer", { class: "dock", role: "toolbar", "aria-label": "Dock" });
   const draw = () => {
-    d.replaceChildren(...visible().filter((id) => !PANEL_IDS.has(id)).map((id) => {
+    d.replaceChildren(...visible().filter((id) => !PANEL_IDS.has(id) && !DOCK_HIDE.has(id)).map((id) => {
       const running = openWindows().filter((w) => w.app.id === id);
       return h("button", { class: "dock-item" + (running.length ? " running" : ""), "aria-label": APPS[id].title,
         onclick: () => (running.length && running[0].el.classList.contains("min") ? restoreWindow(running[0]) : open(id)) },
@@ -352,6 +419,7 @@ async function boot() {
     { id: "props", title: t("props"), icon: ICONS.props, mount: mountProperties },
     { id: "layers", title: t("layers"), icon: ICONS.layers, mount: mountLayers },
     { id: "notes", title: t("notes"), icon: ICONS.notes, mount: mountAnnotations },
+    { id: "imp", title: t("import"), icon: ICONS.import, mount: mountImporter, defaultMode: "hidden" },
     { id: "mix", title: t("mixer"), icon: ICONS.export, mount: mountMixer, defaultCollapsed: true },
     // quadro discreto e móvel no fundo da área de trabalho; pode ser fechado ou acoplado ao menu lateral
     { id: "chat", title: t("community"), icon: ICONS.community, mount: mountCommunityPanel, defaultMode: "floating", discreet: true, defaultCollapsed: true,
@@ -383,6 +451,7 @@ async function boot() {
   // aviso ao administrador quando o servidor não consegue gravar arquivos (envio de áudio/imagem falharia)
   setTimeout(async () => { try { const hc = await api("/api/health"); if (hc.storage === false && isAdmin()) toast("⚠️ O servidor não consegue gravar na pasta de mídia: envios vão falhar. Rode a atualização na VPS (corrige a permissão).", "warn", 12000); } catch { /* */ } }, 4000);
   await restoreSession();
+  connectPresence();
   // Fluxo de entrada: link público → abre direto; sem sessão → tela de login/visitante;
   // usuário novo → passo a passo; senão → estação completa (desktop) ou Início (celular).
   const start = () => {

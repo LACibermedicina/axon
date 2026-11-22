@@ -167,7 +167,10 @@ export class PanelDock {
     const collapsed = this.layout.dockCollapsed || !docked.filter((id) => !this.panels.get(id)!.st.max).length;
     this.dock.classList.toggle("collapsed", collapsed);
     this.dock.classList.toggle("away", this.away && !mobile);
-    document.body.style.setProperty("--rdock", mobile ? "0px" : this.away ? "16px" : (collapsed ? STRIP_W : DOCK_W) + "px");
+    // com o Importar aberto no dock, a coluna fica mais larga (onda, imagem e trechos ao lado da pauta)
+    const wide = docked.some((id) => id === "imp" && !this.panels.get(id)!.st.collapsed);
+    this.dock.classList.toggle("wide", wide && !collapsed);
+    document.body.style.setProperty("--rdock", mobile ? "0px" : this.away ? "16px" : (collapsed ? STRIP_W : wide ? 460 : DOCK_W) + "px");
     this.save();
   }
 

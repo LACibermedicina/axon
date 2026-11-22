@@ -145,3 +145,12 @@ def test_upload_and_storage_health(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "write_bytes", boom)
     bad = c.post("/api/assets", data={"kind": "audio"}, files={"file": ("a.wav", wav, "audio/wav")}, headers=h)
     assert bad.status_code == 507 and "salvar o arquivo" in bad.json()["detail"]
+
+
+def test_cancel_job():
+    h = auth()
+    j = c.post("/api/jobs", json={"type": "export", "payload": {"score": {"title": "x", "layers": []}, "formats": ["mid"]}}, headers=h).json()
+    r = c.delete(f"/api/jobs/{j['id']}", headers=h).json()
+    assert r["status"] == "cancelled"
+    assert c.get(f"/api/jobs/{j['id']}", headers=h).json()["status"] == "cancelled"
+    assert not any(j["id"] in x for x in media._r.lrange("harmonia:jobs", 0, -1))

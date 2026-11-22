@@ -64,10 +64,16 @@ def main():
         _set(jid, status="running", started=str(t0))
         # progresso por etapa (%, rótulo, detalhe) — lido pela API e mostrado no ícone de tarefas
         jobs.set_reporter(lambda info, _j=jid: _set(_j, status="running", progress=info))
+        jobs.set_cancel_check(lambda _j=jid: r.hget(f"harmonia:job:{_j}", "cancel") == "1")
+        if r.hget(f"harmonia:job:{jid}", "cancel") == "1":
+            _set(jid, status="cancelled"); continue
         try:
             result = HANDLERS[kind](job["payload"])
             _set(jid, status="done", result=result, seconds=round(time.time() - t0, 2), progress={"pct": 100, "stage": "done", "label": "Concluído"})
             log.info("job %s (%s) ok em %.1fs", jid, kind, time.time() - t0)
+        except jobs.Cancelled:
+            log.info("job %s cancelado pelo usuário", jid)
+            _set(jid, status="cancelled")
         except ModuleNotFoundError as e:
             log.warning("job %s (%s) requer IA completa: %s", jid, kind, e)
             _set(jid, status="error", error="Transcrição por IA indisponível neste servidor (modo leve). "
@@ -77,6 +83,7 @@ def main():
             _set(jid, status="error", error=_friendly(e))
         finally:
             jobs.set_reporter(None)
+            jobs.set_cancel_check(None)
 
 
 if __name__ == "__main__":

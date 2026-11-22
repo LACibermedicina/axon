@@ -47,6 +47,8 @@ async function placeAudio(c: Clip, startBeat: number) {
 }
 import { prefs } from "../core/prefs";
 import { startTask } from "../core/tasks";
+import { startCapture, Capture } from "../core/livecapture";
+import { SOLFEGE } from "../core/theory";
 
 export function mountImporter(body: HTMLElement) {
   body.classList.add("importer");
@@ -131,30 +133,73 @@ function audioPane() {
   const fileIn = h("input", { type: "file", accept: "audio/*,video/webm", hidden: true, onchange: (e: Event) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) load(f); } }) as HTMLInputElement;
   const pickB = tip(h("button", { class: "btn", onclick: () => fileIn.click() }, "📂 Arquivo"), "Escolher um arquivo de áudio (MP3, WAV, FLAC, M4A, OGG) — ou arraste para a área abaixo");
   let rec: { stop: () => Promise<Blob> } | null = null; let recT0 = 0; let recTimer = 0;
-  const recB = tip(h("button", { class: "btn rec", onclick: () => toggleRec() }, "🎙 Gravar ao vivo"), "Grave agora pelo microfone (cante ou toque). Ao parar, a gravação aparece na onda para ouvir, recortar e transcrever.") as HTMLButtonElement;
+  const recB = tip(h("button", { class: "btn rec cap-btn", onclick: () => toggleCapture() }, "🎤 Capturar notas"),
+    "Capturar notas — cante ou toque (microfone ou teclado MIDI) e a pauta é escrita em tempo real, no andamento da partitura, a partir do compasso selecionado. Conto 1 compasso antes.") as HTMLButtonElement;
+  const capLive = h("span", { class: "cap-live", hidden: true, "aria-live": "polite" });
   const resetB = tip(h("button", { class: "btn ghost", onclick: () => { if (buf) { a = 0; b = buf.duration; draw(); } } }, "↺ Recorte"), "Voltar a usar a faixa inteira");
-  const viewB = h("button", { class: "btn", hidden: true, onclick: () => dispatchEvent(new CustomEvent("open-app", { detail: "visualizer" })) }, "👁 Ver transcrição") as HTMLButtonElement;
+  const viewB = h("button", { class: "btn", hidden: true, onclick: () => (dispatchEvent(new CustomEvent("open-app", { detail: "compose" })), setTimeout(() => dispatchEvent(new CustomEvent("harmonia:action", { detail: "viz-open" })), 300)) }, "👁 Ver transcrição") as HTMLButtonElement;
   // alça arrastável: solte o trecho sobre a partitura (no compasso desejado) — vira camada 🎙 + notas vinculadas
+  // trechos marcados: ✂ guarda a seleção atual (alças rosa) como trecho; cada trecho pode ser ouvido e
+  // ARRASTADO para a pauta (solte no compasso onde ele deve entrar) — vira 🎙 + notas vinculadas 🔗
   const clipKey = "clip-" + Math.random().toString(36).slice(2, 8);
-  const putClip = () => { if (buf) clips.set(clipKey, { buf, a, b, gainDb: +gain.value, name: file?.name || "faixa", mode: mode.value, separate: sep.checked, lyrics: lyr.checked }); };
-  const dragB = tip(h("span", { class: "drag-clip", draggable: "true", hidden: true, role: "button", tabindex: "0", "aria-label": "Arrastar o trecho para a partitura" }, "⇲ Arraste o trecho para a partitura"),
-    "Arraste e solte sobre a partitura, no compasso onde o trecho deve começar. Ele vira uma camada de gravação 🎙 e é transcrito em notas na mesma posição, vinculadas 🔗 (mover o áudio move as notas). Enter: coloca no compasso selecionado.") as HTMLElement;
-  dragB.addEventListener("dragstart", (e) => { putClip(); e.dataTransfer!.setData("text/harmonia-audio", clipKey); e.dataTransfer!.effectAllowed = "copy"; });
-  dragB.addEventListener("keydown", (e) => { if (e.key === "Enter" && buf) { putClip(); const sel = [...store.selectedMeasures].sort((x, y) => x - y); placeAudio(clips.get(clipKey)!, (sel[0] ?? 0) * beatsPerMeasure(store.score)); } });
+  const putClip = (ra = a, rb = b, key = clipKey) => { if (buf) clips.set(key, { buf, a: ra, b: rb, gainDb: +gain.value, name: file?.name || "faixa", mode: mode.value, separate: sep.checked, lyrics: lyr.checked }); };
+  interface Region { id: string; a: number; b: number; n: number }
+  let regions: Region[] = []; let regN = 0;
+  const regBox = h("div", { class: "regions", "aria-label": "Trechos marcados" });
+  const REG_COLORS = ["#ff8a4c", "#3d7bff", "#17a589", "#e5487f", "#8e44ad", "#f39c12"];
+  const drawRegions = () => {
+    regBox.replaceChildren(...regions.map((r, i) => {
+      const key = "reg-" + r.id;
+      const chip = tip(h("span", { class: "reg-chip", draggable: "true", tabindex: "0", role: "button", style: { "--rc": REG_COLORS[i % REG_COLORS.length] },
+        "aria-label": `Trecho ${r.n}: arraste para a pauta` },
+        h("b", { class: "reg-grip", "aria-hidden": "true" }, "⠿"), h("span", {}, `T${r.n} · ${fmt(r.a)}–${fmt(r.b)}`),
+        h("button", { class: "reg-btn", "aria-label": "Ouvir trecho", onclick: (e: Event) => { e.stopPropagation(); if (buf) audio.playBuffer(buf, { from: r.a, to: r.b, gainDb: +gain.value, source: source() }); } }, "▶"),
+        h("button", { class: "reg-btn", "aria-label": "Selecionar na onda", onclick: (e: Event) => { e.stopPropagation(); a = r.a; b = r.b; draw(); } }, "◎"),
+        h("button", { class: "reg-btn", "aria-label": "Remover trecho", onclick: (e: Event) => { e.stopPropagation(); regions = regions.filter((x) => x !== r); drawRegions(); draw(); } }, "✕")),
+        `Trecho ${r.n} — arraste e solte na pauta, no compasso onde deve começar (ou Enter = compasso selecionado). Vira gravação 🎙 + notas transcritas e vinculadas 🔗.`);
+      chip.addEventListener("dragstart", (e) => { putClip(r.a, r.b, key); e.dataTransfer!.setData("text/harmonia-audio", key); e.dataTransfer!.effectAllowed = "copy"; });
+      chip.addEventListener("keydown", (e) => { if (e.key === "Enter") { putClip(r.a, r.b, key); placeAudio(clips.get(key)!, ([...store.selectedMeasures].sort((x, y) => x - y)[0] ?? 0) * beatsPerMeasure(store.score)); } });
+      return chip;
+    }), regions.length ? "" : h("small", { class: "hint" }, "Selecione com as alças rosa e clique ✂ para guardar trechos. Arraste qualquer trecho (ou o ✂) direto para a pauta."));
+  };
+  const markB = tip(h("button", { class: "btn mark-btn", draggable: "true", hidden: true, "aria-label": "Marcar trecho",
+    onclick: () => { if (!buf) return; regions.push({ id: Math.random().toString(36).slice(2, 7), a, b, n: ++regN }); drawRegions(); draw(); } }, "✂"),
+    "Marcar trecho — guarda a parte selecionada (entre as alças rosa) para ouvir e importar. Você também pode ARRASTAR este ícone direto para a pauta e soltar onde o trecho deve entrar.") as HTMLButtonElement;
+  markB.addEventListener("dragstart", (e) => { putClip(); e.dataTransfer!.setData("text/harmonia-audio", clipKey); e.dataTransfer!.effectAllowed = "copy"; });
+  const dragB = h("span", { hidden: true });
   const bar = h("div", { class: "imp-bar" },
-    h("div", { class: "imp-row" }, pickB, recB, h("i", { class: "imp-sep" }), backB, playB, stopB, fwdB, clock, h("span", { class: "spacer" }), dragB, viewB, go),
+    h("div", { class: "imp-row" }, pickB, recB, capLive, h("i", { class: "imp-sep" }), backB, playB, stopB, fwdB, clock, h("span", { class: "spacer" }), markB, viewB, go),
     h("div", { class: "imp-row opts" },
       h("label", { class: "inline" }, "Extrair ", mode), h("label", { class: "inline" }, "♩ ", tempo),
       tip(h("label", { class: "check" }, sep, " Separar voz"), "Isola a voz (Demucs) para transcrever como camada 'Voz' com letra e efeitos vocais"),
       h("label", { class: "check" }, lyr, " Letra cantada"),
       h("label", { class: "inline" }, "Ganho ", gain), resetB));
   const lyricsBox = h("details", { class: "imp-more" }, h("summary", {}, "Conferir com a letra correta (opcional)"), expected);
-  const drop = dropZone("audio/*,video/webm", "Arraste um áudio aqui, escolha 📂 Arquivo ou use 🎙 Gravar ao vivo", load);
-  const editor = h("div", { class: "trim", hidden: true }, cv, info, lyricsBox, result);
+  const drop = dropZone("audio/*,video/*", "Arraste um áudio ou vídeo aqui, escolha 📂 Arquivo ou use 🎤 Capturar notas", load);
+  const editor = h("div", { class: "trim", hidden: true }, cv, regBox, info, lyricsBox, result);
   p.classList.add("imp-pane");
   p.append(fileIn, bar, drop, editor);
   const setTransport = (on: boolean) => [playB, stopB, backB, fwdB, resetB].forEach((x) => ((x as HTMLButtonElement).disabled = !on));
   setTransport(false);
+  let cap: Capture | null = null;
+  async function toggleCapture() {
+    if (cap) {
+      const n = await cap.stop(); cap = null;
+      recB.classList.remove("recording"); recB.textContent = "🎤 Capturar notas"; capLive.hidden = true;
+      toast(n ? `${n} nota(s) escritas na camada “Captura ao vivo”` : "Nenhuma nota detectada — aproxime o microfone e cante/toque notas mais longas", n ? "ok" : "warn", 5000);
+      return;
+    }
+    try {
+      audio.stop();
+      dispatchEvent(new CustomEvent("open-app", { detail: "compose" }));
+      const sel = [...store.selectedMeasures].sort((x, y) => x - y);
+      cap = await startCapture({ fromBeat: (sel[0] ?? 0) * beatsPerMeasure(store.score), metronome: true,
+        onPitch: (m, lvl) => { capLive.hidden = false; capLive.textContent = m === null ? "· · ·" : `${SOLFEGE[m % 12]}${Math.floor(m / 12) - 1}`; capLive.style.setProperty("--lvl", String(lvl)); } });
+      recB.classList.add("recording"); recB.textContent = cap.midi ? "■ Parar (teclado MIDI)" : "■ Parar captura";
+      toast(cap.midi ? "Teclado MIDI conectado: toque e a pauta é escrita na hora" : "Conto 1 compasso… depois cante ou toque: a pauta é escrita em tempo real", "info", 4500);
+    } catch (e: any) { toast("Microfone indisponível: " + e.message, "error"); cap = null; }
+  }
+  void toggleRec;
   async function toggleRec() {
     if (rec) {
       clearInterval(recTimer);
@@ -178,7 +223,8 @@ function audioPane() {
     try { buf = await audio.decode(f); } catch { toast("Não foi possível ler este áudio", "error"); return; }
     if (audio.playerState().source?.id === SRC_ID) audio.stop();
     a = 0; b = buf.duration; ph = -1; editor.hidden = false; drop.hidden = true; setTransport(true);
-    go.disabled = false; go.removeAttribute("title"); viewB.hidden = true; dragB.hidden = false; result.replaceChildren(); draw();
+    go.disabled = false; go.removeAttribute("title"); viewB.hidden = true; dragB.hidden = false; markB.hidden = false; result.replaceChildren();
+    regions = []; regN = 0; drawRegions(); draw();
   }
   function draw() {
     if (!buf) return;
@@ -189,6 +235,12 @@ function audioPane() {
       const x = i * 3, t = (x / W) * buf!.duration;
       ctx.fillStyle = t >= a && t <= b ? "#7c5cff" : "rgba(140,140,170,.35)";
       const hh = Math.max(2, v * H * 0.9); ctx.fillRect(x, (H - hh) / 2, 2, hh);
+    });
+    regions.forEach((r, i) => { // trechos marcados: faixa colorida no rodapé da onda
+      const x0 = (r.a / buf!.duration) * W, x1 = (r.b / buf!.duration) * W;
+      ctx.fillStyle = ["#ff8a4c", "#3d7bff", "#17a589", "#e5487f", "#8e44ad", "#f39c12"][i % 6];
+      ctx.globalAlpha = 0.25; ctx.fillRect(x0, 0, x1 - x0, H); ctx.globalAlpha = 1; ctx.fillRect(x0, H - 14, x1 - x0, 14);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 11px system-ui"; ctx.fillText("T" + r.n, x0 + 4, H - 3);
     });
     for (const t of [a, b]) { const x = (t / buf.duration) * W; ctx.fillStyle = "#ff5d8f"; ctx.fillRect(x - 2, 0, 4, H); ctx.beginPath(); ctx.arc(x, 8, 7, 0, 7); ctx.fill(); }
     if (ph >= 0) { // ponteiro de reprodução
@@ -266,7 +318,7 @@ function audioPane() {
       busy(go, true, "IA ouvindo e transcrevendo… (pode levar alguns minutos)");
       const r = await runJob("transcribe_audio", { asset: up.path, source_name: file?.name, mode: mode.value, separate: sep.checked, lyrics: lyr.checked,
         expected_lyrics: expected.value || undefined, tempo: tempo.value ? +tempo.value : undefined, timeSig: store.score.timeSig },
-        (_st, info) => busy(go, true, `${info.label} · ${Math.round(info.pct)}%`), { task, open: () => dispatchEvent(new CustomEvent("open-app", { detail: "visualizer" })), retry: () => go.click() });
+        (_st, info) => busy(go, true, `${info.label} · ${Math.round(info.pct)}%`), { task, open: () => (dispatchEvent(new CustomEvent("open-app", { detail: "compose" })), setTimeout(() => dispatchEvent(new CustomEvent("harmonia:action", { detail: "viz-open" })), 300)), retry: () => go.click() });
       // a faixa original entra junto como camada 🎙 (para comparar com a transcrição no visualizador)
       const spb = 60 / (r.tempo || store.score.tempo);
       const bpm = beatsPerMeasure(store.score);
@@ -275,7 +327,7 @@ function audioPane() {
       deliver(r, "Transcrição do áudio", false);
       showResult(r);
       viewB.hidden = false;
-      dispatchEvent(new CustomEvent("open-app", { detail: "visualizer" }));
+      (dispatchEvent(new CustomEvent("open-app", { detail: "compose" })), setTimeout(() => dispatchEvent(new CustomEvent("harmonia:action", { detail: "viz-open" })), 300));
     } catch (e: any) { toast(e.message, "error"); }
     finally { busy(go, false); }
   });
@@ -310,10 +362,14 @@ function imagePane() {
       tip(h("label", { class: "check" }, melOnly, " Só a melodia"), "Lê só a pauta de cima (você harmoniza depois)"),
       h("span", { class: "spacer" }), go),
     h("div", { class: "imp-row opts hint" }, "Arraste sobre a imagem para marcar só a área com as pautas. Fotos retas, com boa luz, uma página por vez."));
-  const stage = h("div", { class: "crop-stage", hidden: true }, cv);
+  // revisão da leitura (OMR): a leitura da IA aparece SOBREPOSTA à imagem e numa lista por compasso;
+  // dá para corrigir altura e acidentes, apagar notas e escolher só os compassos que entram na pauta.
+  const ovl = h("div", { class: "omr-overlay", hidden: true, "aria-hidden": "true" });
+  const stage = h("div", { class: "crop-stage", hidden: true }, h("div", { class: "omr-wrap" }, cv, ovl));
+  const reviewBox = h("div", { class: "omr-review", hidden: true });
   const drop = dropZone("image/*", "Arraste a foto ou o scan da partitura aqui", load);
   p.classList.add("imp-pane");
-  p.append(fileIn, camIn, bar, drop, stage);
+  p.append(fileIn, camIn, bar, drop, stage, reviewBox);
 
   function load(f: File) {
     file = f; const u = URL.createObjectURL(f);
@@ -360,10 +416,74 @@ function imagePane() {
       const r = await runJob("transcribe_image", { asset: up.path }, (_s, info) => busy(go, true, `${info.label} · ${Math.round(info.pct)}%`),
         { task, open: () => dispatchEvent(new CustomEvent("open-app", { detail: "compose" })), retry: () => go.click() });
       if (prefs.captureMode === "melody") { r.layers = (r.layers || []).filter((l: any) => l.staff !== "bass"); r.chords = []; }
-      deliver(r, "Leitura da partitura");
+      review(r);
     } catch (e: any) { toast(e.message, "error"); }
     finally { busy(go, false); }
   });
+
+  function review(r: any) {
+    const num = r.timeSig?.[0] ?? 4, den = r.timeSig?.[1] ?? 4, bpm = (num * 4) / den;
+    const res = JSON.parse(JSON.stringify(r));
+    const nMeas = Math.max(1, r.measures || 1);
+    const include = new Set<number>([...Array(nMeas).keys()]);
+    const NAMES_SHARP = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+    const name = (p: number) => `${SOLFEGE[p % 12]}${Math.floor(p / 12) - 1}`;
+    const durName = (d: number) => d >= 4 ? "𝅝" : d >= 2 ? "𝅗𝅥" : d >= 1 ? "♩" : d >= 0.5 ? "♪" : "𝅘𝅥𝅯";
+    const notesIn = (m: number) => res.layers.flatMap((l: any) => l.notes.filter((n: any) => Math.floor(n.start / bpm + 1e-9) === m).map((n: any) => ({ n, l })))
+      .sort((x: any, y: any) => x.n.start - y.n.start || y.n.pitch - x.n.pitch);
+    const opacity = h("input", { type: "range", min: 0, max: 1, step: 0.05, value: 0.85, "aria-label": "Transparência da leitura sobreposta",
+      oninput: (e: Event) => ovl.style.setProperty("--o", (e.target as HTMLInputElement).value) }) as HTMLInputElement;
+    const showOv = h("input", { type: "checkbox", checked: true, onchange: () => (ovl.hidden = !showOv.checked) }) as HTMLInputElement;
+    const drawOverlay = () => {
+      // grade aproximada: compassos distribuídos sobre a área recortada (4 por linha)
+      const per = Math.min(4, nMeas), rows = Math.ceil(nMeas / per);
+      ovl.style.setProperty("--per", String(per)); ovl.style.setProperty("--rows", String(rows));
+      ovl.replaceChildren(...[...Array(nMeas).keys()].map((m) => h("div", { class: "ov-cell" + (include.has(m) ? "" : " off") },
+        h("small", {}, String(m + 1)), h("div", {}, ...notesIn(m).map(({ n, l }: any) => h("span", { class: l.staff === "bass" ? "ov-n bass" : "ov-n" }, name(n.pitch).replace(/\d$/, "") + durName(n.dur)))))));
+      ovl.hidden = !showOv.checked;
+    };
+    const draw = () => {
+      drawOverlay();
+      reviewBox.hidden = false;
+      reviewBox.replaceChildren(
+        h("div", { class: "omr-head" }, h("b", {}, "Revise a leitura antes de levar para a pauta"),
+          h("label", { class: "check" }, showOv, " Sobrepor à imagem"), h("label", { class: "inline" }, "opacidade ", opacity),
+          h("button", { class: "btn ghost", onclick: () => { [...Array(nMeas).keys()].forEach((m) => include.add(m)); draw(); } }, "Todos"),
+          h("button", { class: "btn ghost", onclick: () => { include.clear(); draw(); } }, "Nenhum"),
+          h("button", { class: "btn primary go", disabled: !include.size, onclick: () => commit() }, `✓ Agregar ${include.size} compasso(s) à pauta`)),
+        h("p", { class: "hint" }, "Compare cada compasso com a imagem. ▲▼ sobem/descem meio tom, ♯ ♭ ♮ corrigem o acidente, ✕ remove a nota. Desmarque os compassos que não quer importar."),
+        h("div", { class: "omr-measures" }, ...[...Array(nMeas).keys()].map((m) => {
+          const ns = notesIn(m);
+          return h("div", { class: "omr-m" + (include.has(m) ? "" : " off") },
+            h("header", {}, h("label", { class: "check" }, h("input", { type: "checkbox", checked: include.has(m), onchange: (e: Event) => { (e.target as HTMLInputElement).checked ? include.add(m) : include.delete(m); draw(); } }), ` Compasso ${m + 1}`),
+              h("button", { class: "reg-btn", "aria-label": `Ouvir compasso ${m + 1}`, onclick: () => ns.forEach(({ n }: any) => audio.playNote(n.pitch, audio.ac().currentTime + 0.05 + (n.start - m * bpm) * 0.5, Math.min(1.5, n.dur * 0.5))) }, "▶")),
+            ns.length ? h("div", { class: "omr-notes" }, ...ns.map(({ n, l }: any) => {
+              const set = (p: number) => { n.pitch = Math.max(21, Math.min(108, p)); audio.playNote(n.pitch, 0, 0.4); draw(); };
+              return h("span", { class: "omr-n" + (l.staff === "bass" ? " bass" : "") },
+                h("b", {}, name(n.pitch)), h("small", {}, durName(n.dur)),
+                h("button", { "aria-label": "Meio tom acima", onclick: () => set(n.pitch + 1) }, "▲"), h("button", { "aria-label": "Meio tom abaixo", onclick: () => set(n.pitch - 1) }, "▼"),
+                h("button", { "aria-label": "Sustenido", onclick: () => set(NAMES_SHARP[n.pitch % 12] ? n.pitch : n.pitch + 1) }, "♯"),
+                h("button", { "aria-label": "Bemol", onclick: () => set(NAMES_SHARP[n.pitch % 12] ? n.pitch : n.pitch - 1) }, "♭"),
+                h("button", { "aria-label": "Natural (sem acidente)", onclick: () => set(NAMES_SHARP[n.pitch % 12] ? n.pitch - 1 : n.pitch) }, "♮"),
+                h("button", { "aria-label": "Remover nota", onclick: () => { l.notes = l.notes.filter((x: any) => x !== n); draw(); } }, "✕"));
+            })) : h("small", { class: "hint" }, "pausa / sem notas"));
+        })));
+    };
+    function commit() {
+      const ms = [...include].sort((x, y) => x - y);
+      if (!ms.length) return;
+      const target = [...store.selectedMeasures].sort((x, y) => x - y)[0];
+      const shift = target !== undefined ? (target - ms[0]) * bpm : 0;
+      const out = { ...res, layers: res.layers.map((l: any) => ({ ...l, notes: l.notes.filter((n: any) => include.has(Math.floor(n.start / bpm + 1e-9))).map((n: any) => ({ ...n, start: n.start + shift })) })).filter((l: any) => l.notes.length),
+        chords: [] as any[] };
+      (res.chords || []).forEach((cell: any, m: number) => { if (include.has(m)) out.chords[m + Math.round(shift / bpm)] = cell; });
+      out.measures = Math.max(...ms) + 1 + Math.round(shift / bpm);
+      deliver(out, `Leitura da partitura (${ms.length} compasso(s))`);
+      reviewBox.hidden = true; ovl.hidden = true;
+    }
+    draw();
+    toast("Leitura pronta: confira a sobreposição, corrija o que precisar e escolha os compassos", "info", 6000);
+  }
   return p;
 }
 
