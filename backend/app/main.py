@@ -31,6 +31,16 @@ def health():
     return {"status": "ok", "project": "axon", "version": bm.__version__, "git_sha": os.getenv("GIT_SHA", "dev")}
 
 
+@app.get("/api/release")
+def release():
+    """Versão no ar e registro de alterações (gerado por scripts/release.py)."""
+    import json, pathlib
+    for p in (pathlib.Path("/srv/release.json"), pathlib.Path(__file__).resolve().parents[2] / "frontend" / "release.json"):
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    return {"version": bm.__version__, "releases": []}
+
+
 @app.get("/api/model/provenance")
 def provenance():
     return envelope(bm.PROVENANCE, "LITERATURA/PREMISSA/DERIVADO")

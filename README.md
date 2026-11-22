@@ -7,7 +7,7 @@ fundamentada em *Biofísica da Neuromodulação: Resolução de Fibra Única e L
 > **Ferramenta de pesquisa, ensino e modelagem in silico** (ASME V&V 40 — verificado, não validado; Res. CNS 510/2016).
 > **Não é dispositivo médico** nem protocolo clínico. Não calcula parâmetros de estimulação para pessoas.
 
-Versão **0.1.0-alpha** — ver [CHANGELOG](CHANGELOG.md).
+Versão **0.2.0-alpha** (atualização automática — ver CHANGELOG) — ver [CHANGELOG](CHANGELOG.md).
 
 ## O que tem aqui
 

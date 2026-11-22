@@ -12,7 +12,9 @@ c = TestClient(app)
 
 def test_health():
     r = c.get("/api/health").json()
-    assert r["project"] == "axon" and r["version"] == "0.1.0-alpha"
+    import pathlib
+    v = (pathlib.Path(__file__).resolve().parents[2] / "VERSION").read_text().strip()
+    assert r["project"] == "axon" and r["version"] == v
 
 
 def test_threshold_and_refusal():

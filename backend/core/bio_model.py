@@ -21,7 +21,17 @@ from typing import Dict, Iterable, Tuple
 
 import numpy as np
 
-__version__ = "0.1.0-alpha"
+import pathlib as _pl
+
+
+def _read_version() -> str:
+    for p in (_pl.Path(__file__).resolve().parents[1] / "VERSION", _pl.Path(__file__).resolve().parents[2] / "VERSION"):
+        if p.exists():
+            return p.read_text().strip()
+    return "0.0.0-dev"
+
+
+__version__ = _read_version()   # fonte única: arquivo VERSION na raiz do repositório
 SEED = 42
 
 # ---------------------------------------------------------------------------

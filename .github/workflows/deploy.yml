@@ -1,17 +1,21 @@
-# axon — CI/CD: testes de regressão científica + sincronização das credenciais de IA + deploy via SSH
+# axon — CI/CD com entrega contínua
+#   push em main → test → release (versão + tag + GitHub Release + changelog) → sync-ai-env → deploy (SSH) → verificação da versão no ar
+# A VPS também se atualiza sozinha (scripts/autoupdate.sh, timer de 2 min) a partir da última tag aprovada.
 # Secrets (Settings → Secrets and variables → Actions, ou Environment "production"):
-#   VPS_HOST, VPS_USER (deploy), VPS_SSH_KEY  — acesso SSH à VPS
-#   SERVIDOR_ENV  — bloco .env (linhas CHAVE=valor) com as chaves de IA; e/ou secrets individuais
-# Variables: AI_PROVIDERS, GEMINI_MODEL … (opcionais) · DEPLOY_MODE=off desliga o deploy
+#   VPS_HOST, VPS_USER (deploy), VPS_SSH_KEY · SERVIDOR_ENV (bloco .env com chaves de IA) e/ou secrets individuais
+# Variables opcionais: AI_PROVIDERS, GEMINI_MODEL · DEPLOY_MODE=off desliga o deploy por SSH (fica só o pull da VPS)
 name: ci-axon
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:          # Actions → ci-axon → Run workflow (reenvia credenciais e redeploy)
+  workflow_dispatch:          # Actions → ci-axon → Run workflow
   schedule:
     - cron: "23 6 * * *"      # resincroniza as credenciais de IA diariamente
+
+permissions:
+  contents: write             # criar commit de versão, tag e GitHub Release
 
 concurrency:
   group: axon-production
@@ -34,10 +38,54 @@ jobs:
         run: |
           pip install -r requirements-dev.txt
           python -m pytest -q
-      - name: Shell scripts (sintaxe)
-        run: for f in scripts/*.sh; do bash -n "$f"; done
-      - name: Compose (validação)
-        run: HTTP_PORT=20180 POSTGRES_PASSWORD=x NEO4J_PASSWORD=x docker compose -f docker-compose.yml config -q
+      - name: CHANGELOG cobre a versão de VERSION
+        run: python3 scripts/release.py json --sha "${GITHUB_SHA::7}"
+      - name: Shell scripts e Compose
+        run: |
+          for f in scripts/*.sh; do bash -n "$f"; done
+          HTTP_PORT=20180 POSTGRES_PASSWORD=x NEO4J_PASSWORD=x docker compose -f docker-compose.yml config -q
+
+  release:
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      sha: ${{ steps.v.outputs.sha }}
+      created: ${{ steps.v.outputs.created }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Versão, changelog e tag
+        id: v
+        run: |
+          git config user.name  "axon-release[bot]"
+          git config user.email "axon-release@users.noreply.github.com"
+          python3 scripts/release.py bump --auto        # sobe a versão só se a atual já tiver tag
+          V=$(cat VERSION)
+          python3 scripts/release.py json --sha "${GITHUB_SHA::7}"
+          git add VERSION CHANGELOG.md frontend/release.json frontend/js/release.js
+          git diff --cached --quiet || git commit -m "chore(release): v$V [skip ci]"
+          if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            git tag -a "v$V" -m "axon v$V"
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+          git push origin HEAD:main --follow-tags
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: GitHub Release
+        if: steps.v.outputs.created == 'true'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          V=${{ steps.v.outputs.version }}
+          python3 scripts/release.py notes "$V" > notes.md
+          PRE=""; [[ "$V" == *-* ]] && PRE="--prerelease"
+          gh release create "v$V" --title "axon v$V" --notes-file notes.md $PRE
+      - name: Resumo
+        run: |
+          { echo "## axon v${{ steps.v.outputs.version }}"; echo; python3 scripts/release.py notes "${{ steps.v.outputs.version }}"; } >> "$GITHUB_STEP_SUMMARY"
 
   sync-ai-env:
     needs: test
@@ -71,26 +119,31 @@ jobs:
         run: bash scripts/ci-sync-ai-env.sh
 
   deploy:
-    needs: [test, sync-ai-env]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_MODE != 'off'
+    needs: [release, sync-ai-env]
+    if: needs.release.result == 'success' && vars.DEPLOY_MODE != 'off'
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://axon.m3d.pro
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ needs.release.outputs.sha }}" }
       - name: Chave SSH
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
-      - name: Sincronizar código (rsync, preserva .env e data/)
+      - name: Enviar v${{ needs.release.outputs.version }} (rsync, preserva .env e data/)
         run: |
           rsync -az --delete --exclude '.git' --exclude '.env' --exclude 'data/' --exclude '__pycache__' \
             -e "ssh -i ~/.ssh/deploy_key" ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ env.APP_DIR }}/"
-      - name: Build e restart
-        run: ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "cd ${{ env.APP_DIR }} && bash scripts/deploy.sh ${{ github.sha }}"
-      - name: Health check público
+      - name: Build, restart e rollback automático se a saúde falhar
+        run: ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "cd ${{ env.APP_DIR }} && bash scripts/deploy.sh ${{ needs.release.outputs.sha }} ci"
+      - name: Conferir a versão no ar
         run: |
-          for i in $(seq 1 10); do curl -fsS https://${{ env.SUBDOMINIO }}/api/health && exit 0; sleep 6; done
-          echo "::warning::Stack ok internamente, mas https://${{ env.SUBDOMINIO }} não responde — verifique DNS/proxy do host."
+          V="${{ needs.release.outputs.version }}"
+          for i in $(seq 1 15); do
+            if curl -fsS "https://${{ env.SUBDOMINIO }}/api/health" | grep -q "\"version\":\"$V\""; then echo "::notice::axon v$V no ar em https://${{ env.SUBDOMINIO }}"; exit 0; fi
+            sleep 6
+          done
+          echo "::warning::A VPS não respondeu com v$V pelo domínio público — confira DNS/proxy do host (a stack interna foi verificada pelo deploy.sh)."

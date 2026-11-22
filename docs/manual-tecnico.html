@@ -22,7 +22,7 @@
     <div>
       <h1>Duas funções puras, um domínio verificado, uma semente fixa.</h1>
       <p>Referência de arquitetura, API, núcleo científico, frontend 3D, infraestrutura e processo de desenvolvimento do <b>axon</b> — para quem vai implantar, manter, auditar ou estender.</p>
-      <div class="meta">v0.1.0-alpha · Python 3.11 · FastAPI · NumPy/SciPy · Three.js r128 · Docker Compose · GitHub Actions</div>
+      <div class="meta">v0.2.0-alpha · Python 3.11 · FastAPI · NumPy/SciPy · Three.js r128 · Docker Compose · GitHub Actions</div>
     </div>
     <figure>
       <svg viewBox="0 0 700 380" role="img" aria-label="Arquitetura em camadas do axon">
@@ -48,7 +48,7 @@
   <div class="grp">Arquitetura</div><a href="#principios">Princípios</a><a href="#contexto">Contexto e containers</a><a href="#repo">Estrutura do repositório</a>
   <div class="grp">Ciência</div><a href="#nucleo">Núcleo nodal</a><a href="#verificacao">Verificação</a><a href="#modulos">Módulos científicos</a>
   <div class="grp">Interfaces</div><a href="#api">API REST</a><a href="#frontend">Frontend 3D</a><a href="#ia">IA contextual</a>
-  <div class="grp">Operação</div><a href="#infra">Implantação na VPS</a><a href="#cicd">CI/CD e SERVIDOR_ENV</a><a href="#seguranca">Segurança e LGPD</a><a href="#testes">Testes</a>
+  <div class="grp">Operação</div><a href="#infra">Implantação na VPS</a><a href="#cicd">CI/CD e SERVIDOR_ENV</a><a href="#entrega">Entrega contínua e versões</a><a href="#seguranca">Segurança e LGPD</a><a href="#testes">Testes</a>
   <div class="grp">Processo</div><a href="#contrib">Contribuição</a><a href="#adr">Decisões (ADR)</a><a href="#roadmap">Roadmap</a><a href="#problemas">Solução de problemas</a>
 </nav>
 <main>
@@ -104,10 +104,11 @@
 │   └── Dockerfile · requirements*.txt
 ├── frontend/                      # desktop 3D (HTML/CSS/JS, Three.js r128)
 │   ├── index.html · css/axon.css · nginx.conf · Dockerfile
-│   └── js/ model.js stage3d.js app.js charts.js i18n.js data.js icons.js reference.js
+│   ├── release.json               # versão no ar + changelog (gerado por scripts/release.py)
+│   └── js/ model.js stage3d.js textures.js app.js charts.js i18n.js data.js icons.js reference.js release.js
 ├── realtime/                      # sinalização WebRTC (Node + ws)
 ├── infra/traefik/ · infra/host-proxy/
-├── scripts/ setup_vps.sh deploy.sh merge-env.sh ci-sync-ai-env.sh lib-ports.sh build_standalone.py
+├── scripts/ setup_vps.sh deploy.sh autoupdate.sh release.py merge-env.sh ci-sync-ai-env.sh lib-ports.sh build_*.py
 ├── docs/ manual-usuario.html manual-tecnico.html · site/index.html
 ├── docker-compose.yml · .env.example · VERSION · CHANGELOG.md</code></pre>
 </section>
@@ -165,7 +166,7 @@ def Ith(D, r, **kw): return VTH / h(D, r, **kw)        # A</code></pre>
   <h2>Verificação e regressão</h2>
   <p>A suíte reproduz os valores do livro com o mesmo gerador (NumPy PCG64, semente 42). Saída obtida nesta versão:</p>
   <div class="scroll"><table>
-    <tr><th>Grandeza</th><th>axon v0.1.0-alpha</th><th>Livro</th><th>Tolerância</th></tr>
+    <tr><th>Grandeza</th><th>axon v0.2.0-alpha</th><th>Livro</th><th>Tolerância</th></tr>
     <tr><td>Expoente α (1 mm)</td><td class="n">1,126553</td><td class="n">1,1266</td><td class="n">± 1e-4</td></tr>
     <tr><td>Razão Aδ(3)/Aβ(9) a 1 mm</td><td class="n">3,207684</td><td class="n">3,2077</td><td class="n">± 1e-4</td></tr>
     <tr><td>Razão a 0,5 / 1,5 mm</td><td class="n">2,1714 / 4,0687</td><td class="n">2,17 / 4,07</td><td class="n">2 casas</td></tr>
@@ -238,14 +239,16 @@ def Ith(D, r, **kw): return VTH / h(D, r, **kw)        # A</code></pre>
   <p>Cinco grupos Three.js (<code>L1…L5</code>) com visibilidade exclusiva. A roda acumula intenção: ao exceder 0,55×/2,2× da distância nominal três vezes, <code>setLevel(±1)</code> dispara um <i>fade</i> de 260 ms, troca o grupo, interpola a câmera e emite <code>axon:scale</code>. Rótulos são <code>div</code> projetados por quadro (sem texto em textura).</p>
   <div class="scroll"><table class="stack">
     <tr><th>Grupo</th><th>Geometria</th><th>Dado do modelo</th></tr>
-    <tr><td>L1</td><td>Lathe/Cylinder + ShaderMaterial com faixas de dermátomo e fresnel; TubeGeometry para nervos</td><td>hotspots → <code>axon:select</code></td></tr>
-    <tr><td>L2</td><td>Camadas teciduais translúcidas; dispositivo por modalidade; plano com CanvasTexture</td><td>profundidade = f(r), campo ∝ 1/d</td></tr>
-    <tr><td>L3</td><td>Epineuro aberto, 7 fascículos, cuff; 182 fibras</td><td>recrutamento por <code>interp(T, D, r) ≤ I</code></td></tr>
-    <tr><td>L4</td><td>Mielina, nós, barras por nó</td><td><code>activation()</code> Δ²Vₑ</td></tr>
-    <tr><td>L5</td><td>InstancedMesh (cabeças lipídicas, íons); canais</td><td>didático</td></tr>
+    <tr><td>L1</td><td>Pele por <code>sweep()</code> (seção elíptica ao longo de CatmullRom) com atributo <code>derm</code> por vértice (30 dermátomos V1–S5) e ShaderMaterial fresnel; esqueleto (24 vértebras, 12 pares de costelas, ossos longos), órgãos, 29 pares de raízes com DRG, plexos e 16 nervos nomeados, vago, simpático</td><td>hotspots → <code>axon:select</code>; clique na pele → <code>axon:dermatome</code></td></tr>
+    <tr><td>L2</td><td>Epiderme deformável (120×70), derme com papilas, hipoderme com lóbulos, fáscia, músculo; pelos e capilares instanciados; feixe neurovascular com tampa histológica; 6 dispositivos</td><td>profundidade = f(r); cascas de campo ∝ √I; indentação ∝ pressão</td></tr>
+    <tr><td>L3</td><td>Epineuro recortado com colágeno, perineuro em 3 lamelas, vasa nervorum, cuff Pt/silicone; ~300 fibras instanciadas com cor e brilho por instância; corte com textura histológica da mesma amostra</td><td>recrutamento por <code>interp(T, D, r) ≤ I</code>; luva Δ²Vₑ por vértice</td></tr>
+    <tr><td>L4</td><td>Mielina em <code>LatheGeometry</code> com afunilamento paranodal e recorte de lamelas; alças paranodais; NaV, microvilos, núcleo de Schwann, incisuras, neurofilamentos, mitocôndrias</td><td><code>activation()</code> Δ²Vₑ por nó; PA saltatório</td></tr>
+    <tr><td>L5</td><td>Fosfolipídios (cabeças + 2 caudas), colesterol; NaV 4×6 hélices, Piezo2, TRPV1 com anquirinas, TRAAK; íons</td><td>didático</td></tr>
   </table></div>
   <h3>Gerenciador de janelas</h3>
   <p>Estados: <code>aberta → em foco ⇄ minimizada → fechada</code>. Arraste pela barra de título (pointer capture), redimensionamento CSS com <code>ResizeObserver</code> que chama <code>draw()</code>, duplo clique fora de <code>.win/.dock/.side/.menubar</code> fecha a janela em foco. Em telas ≤ 900 px só uma janela fica aberta.</p>
+  <h3>Realismo dos tecidos</h3>
+  <p><code>textures.js</code> gera em canvas, com ruído fbm e Voronoi em grade (Worley, 9 distâncias por pixel), mapas de cor e normais para pele (poros e sulcos), derme, gordura (lóbulos e septos), músculo (perimísio e estriação), colágeno (bandas de Fontana), mielina (lamelas), osso, córtex e vasos — cerca de 1 s no total, sob demanda e em cache. O corte histológico do nervo é desenhado a partir da mesma amostra de fibras do Nível 3 (anel de mielina com razão g ≈ 0,7, feixes de Remak, perineuro em camadas, adipócitos e vasos do epineuro). Materiais <code>MeshPhysicalMaterial</code> com clearcoat, iluminação por ambiente (<code>PMREMGenerator</code>), <code>ACESFilmicToneMapping</code> e sombras PCF suaves. Nada é imagem de paciente; a anatomia é esquemática em proporções médias.</p>
   <p><b>Biblioteca externa:</b> Three.js r128 via cdnjs. Para operação 100 % offline, coloque <code>three.min.js</code> em <code>frontend/vendor/</code> e troque a tag; <code>scripts/build_standalone.py</code> gera um HTML único.</p>
 </section>
 
@@ -323,6 +326,58 @@ AI_PROVIDERS=anthropic,groq,gemini</code></pre>
   <div class="note ok"><b>Garantias do <code>merge-env.sh</code>:</b> aceita só chaves da lista de IA (aliases como <code>CLAUDE_API_KEY → ANTHROPIC_API_KEY</code>); ignora <code>JWT_SECRET</code>, senhas de banco e quaisquer outras; valor vazio não apaga o existente; não imprime valores; reinicia só a <code>api</code> e só se algo mudou. Testado: <code>JWT_SECRET=hack</code> no payload foi ignorado e o arquivo ficou em 600.</div>
 </section>
 
+<section id="entrega">
+  <h2>Entrega contínua e versões</h2>
+  <p class="lead">Toda alteração enviada à <code>main</code> que passa nos testes vira uma versão numerada, com notas, e chega sozinha a axon.m3d.pro.</p>
+  <figure class="board">
+    <svg viewBox="0 0 800 300" role="img" aria-label="Fluxo de entrega contínua">
+      <defs><marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10z" fill="#ffd36b"/></marker></defs>
+      <g font-size="12" fill="#e9f3ef" text-anchor="middle">
+        <rect x="10" y="30" width="120" height="56" rx="10" fill="#1c3e48"/><text x="70" y="54">commit</text><text x="70" y="72" font-size="10.5" fill="#9fc">feat: · fix: · docs:</text>
+        <rect x="160" y="30" width="110" height="56" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="215" y="54">test</text><text x="215" y="72" font-size="10.5" fill="#9fc">regressão científica</text>
+        <rect x="300" y="20" width="180" height="76" rx="10" fill="#2a1f3a" stroke="#c084fc"/><text x="390" y="42">release</text><text x="390" y="59" font-size="10.5" fill="#dcbcff">release.py bump → VERSION</text><text x="390" y="74" font-size="10.5" fill="#dcbcff">CHANGELOG · tag · Release</text>
+        <rect x="510" y="20" width="130" height="76" rx="10" fill="#1c3e48" stroke="#ffb547"/><text x="575" y="42">deploy SSH</text><text x="575" y="59" font-size="10.5" fill="#9fc">imagens :vX</text><text x="575" y="74" font-size="10.5" fill="#9fc">saúde = vX?</text>
+        <rect x="670" y="30" width="120" height="56" rx="10" fill="#173a2a" stroke="#3ee6a0"/><text x="730" y="54">axon.m3d.pro</text><text x="730" y="72" font-size="10.5" fill="#bfe">vX no ar</text>
+        <rect x="510" y="170" width="130" height="76" rx="10" fill="#1c3e48" stroke="#4fb3ff"/><text x="575" y="192">VPS: autoupdate</text><text x="575" y="209" font-size="10.5" fill="#9fc">timer 2 min</text><text x="575" y="224" font-size="10.5" fill="#9fc">última tag aprovada</text>
+        <rect x="300" y="170" width="180" height="76" rx="10" fill="#3a1d1d" stroke="#ff5d5d"/><text x="390" y="192">rollback automático</text><text x="390" y="209" font-size="10.5" fill="#fbb">volta à última versão saudável</text><text x="390" y="224" font-size="10.5" fill="#fbb">e marca a tag como ruim</text>
+        <rect x="670" y="170" width="120" height="76" rx="10" fill="#1c3e48" stroke="#3ee6c5"/><text x="730" y="196">app</text><text x="730" y="213" font-size="10.5" fill="#9fc">pílula vX · janela</text><text x="730" y="228" font-size="10.5" fill="#9fc">“nova versão”</text>
+      </g>
+      <g stroke="#ffd36b" stroke-width="1.8" fill="none" marker-end="url(#a7)"><path d="M130 58h28"/><path d="M270 58h28"/><path d="M480 58h28"/><path d="M640 58h28"/><path d="M480 80 C500 130 520 150 560 168"/><path d="M640 208h28"/><path d="M730 86v82"/><path d="M510 220h-28"/><path d="M575 96v72" stroke-dasharray="4 3"/></g>
+      <g font-size="10.5" fill="#ffd36b"><text x="584" y="140">falhou</text><text x="455" y="140">tag</text></g>
+    </svg>
+  </figure>
+  <figcaption><b>Prancha T6.</b> Dois caminhos independentes levam a versão à VPS: o push por SSH (imediato) e o pull do timer (até 2 min, funciona mesmo sem secrets de SSH). Ambos comparam pelo arquivo <code>VERSION</code>, então não se duplicam.</figcaption>
+  <h3>Como a versão é decidida</h3>
+  <div class="scroll"><table class="stack">
+    <tr><th>Situação</th><th>O que o job <code>release</code> faz</th></tr>
+    <tr><td>Você subiu <code>VERSION</code> e escreveu a entrada no <code>CHANGELOG.md</code></td><td>Usa o que você escreveu; cria a tag e o Release com essas notas</td></tr>
+    <tr><td><code>VERSION</code> já tem tag e há commits novos</td><td>Sobe sozinho: <code>feat:</code> ou <code>BREAKING</code> → minor; demais → patch (sufixo <code>-alpha</code> preservado). Escreve a seção do changelog a partir dos assuntos dos commits</td></tr>
+    <tr><td>Nada mudou desde a última tag</td><td>Nenhuma versão nova; o deploy reenvia a mesma</td></tr>
+  </table></div>
+  <div class="scroll"><table class="stack">
+    <tr><th>Prefixo do commit</th><th>Seção do changelog</th></tr>
+    <tr><td><code>feat:</code></td><td>Adicionado</td></tr><tr><td><code>fix:</code></td><td>Corrigido</td></tr><tr><td><code>sci:</code></td><td>Científico (mudanças em parâmetros ou resultados do modelo)</td></tr>
+    <tr><td><code>perf:</code> · <code>refactor:</code> · <code>style:</code></td><td>Alterado</td></tr><tr><td><code>docs:</code></td><td>Documentação</td></tr><tr><td><code>test:</code></td><td>Testes</td></tr><tr><td><code>ci:</code> · <code>build:</code> · <code>chore:</code></td><td>Infraestrutura</td></tr>
+  </table></div>
+<pre><code>git commit -m "feat(stage): plexo cervical no Nível 1"
+git commit -m "fix(safety): CEM43 acima de 43 °C"
+git push origin main          # → v0.3.0-alpha no ar em poucos minutos, com notas
+
+python3 scripts/release.py current     # versão atual
+python3 scripts/release.py notes       # notas da versão atual
+python3 scripts/release.py json        # regenera frontend/release.json e js/release.js</code></pre>
+  <h3>Onde a versão aparece</h3>
+  <ul>
+    <li><b>App:</b> pílula <code>v0.2.0-alpha</code> no topo e ícone “Atualizações” no Dock — versão, commit, data do build e o histórico completo. A cada 3 min o app consulta <code>/release.json</code>; se a VPS já tiver versão nova, mostra um aviso com o número de alterações e o botão “Recarregar”.</li>
+    <li><b>API:</b> <code>GET /api/health</code> (campo <code>version</code>) e <code>GET /api/release</code> (registro completo).</li>
+    <li><b>GitHub:</b> tag <code>vX</code>, Release com as notas e resumo no job do Actions.</li>
+    <li><b>Página do projeto:</b> cada versão vira uma notícia na seção “Notícias e atualizações”.</li>
+    <li><b>VPS:</b> <code>data/status/deploy.json</code> (versão, commit, origem, hora), <code>data/status/autoupdate.json</code> e <code>autoupdate.log</code>; <code>journalctl -u axon-autoupdate</code>.</li>
+  </ul>
+  <div class="note"><b>Permissões necessárias.</b> O job <code>release</code> faz push do commit de versão e da tag com o <code>GITHUB_TOKEN</code> (<code>permissions: contents: write</code>). Se a <code>main</code> tiver proteção de branch, libere o bot do Actions ou troque por um token de app. Para desligar só o push por SSH, crie a variável <code>DEPLOY_MODE=off</code> — o timer da VPS continua atualizando. Para pausar tudo na VPS: <code>AUTOUPDATE=0</code> no <code>.env</code>.</div>
+  <div class="note ok"><b>Testado nesta versão:</b> a subida automática (correção → 0.2.1; recurso → 0.3.0) e o <code>autoupdate.sh</code> contra um repositório simulado — atualiza, não repete quando já está em dia e, diante de uma versão que falha na saúde, volta à anterior e marca a tag como ruim.</div>
+</section>
+
 <section id="seguranca">
   <h2>Segurança e LGPD</h2>
   <div class="scroll"><table class="stack">
@@ -398,7 +453,7 @@ python -m core.bio_model       # grava res.json e imprime os benchmarks</code></
 
 </main>
 </div>
-<footer>axon v0.1.0-alpha · Manual Técnico · <a href="../site/">página do projeto</a> · <a href="manual-usuario.html">manual do usuário</a> · autor do modelo: L. S. Teixeira (Ibilce/UNESP)</footer>
+<footer>axon v0.2.0-alpha · Manual Técnico · <a href="../site/">página do projeto</a> · <a href="manual-usuario.html">manual do usuário</a> · autor do modelo: L. S. Teixeira (Ibilce/UNESP)</footer>
 <script src="doc.js"></script>
 </body>
 </html>

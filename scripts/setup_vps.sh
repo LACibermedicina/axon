@@ -60,7 +60,7 @@ fi
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "/home/${DEPLOY_USER}/.ssh"; chmod 600 "/home/${DEPLOY_USER}/.ssh/authorized_keys"
 
 log "5/8 Código em ${APP_DIR}"
-install -d "$APP_DIR" "$APP_DIR/data"
+install -d "$APP_DIR" "$APP_DIR/data" "$APP_DIR/data/status"
 [[ "$SRC_DIR" != "$APP_DIR" ]] && rsync -a --delete --exclude '.env' --exclude 'data/' --exclude '.git/' "$SRC_DIR/" "$APP_DIR/"
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
 ok "Versão $(cat "$APP_DIR/VERSION")"
@@ -78,6 +78,8 @@ else
   ok ".env existente preservado (chaves de IA são mescladas pelo merge-env.sh)"
 fi
 [[ -n "${AXON_PROFILES:-}" ]] && env_set "$ENV" COMPOSE_PROFILES "$AXON_PROFILES"
+[[ -n "$(env_get "$ENV" AUTOUPDATE)" ]] || env_set "$ENV" AUTOUPDATE 1
+[[ -n "$(env_get "$ENV" AUTOUPDATE_REPO)" ]] || env_set "$ENV" AUTOUPDATE_REPO "https://github.com/LACibermedicina/axon.git"
 env_set "$ENV" API_WORKERS "$([[ "$MEM_MB" -lt 4000 ]] && echo 1 || echo 2)"
 chmod 600 "$ENV"
 
@@ -95,12 +97,36 @@ if [[ "${HARDEN_SSH:-0}" == "1" ]]; then
   systemctl reload ssh 2>/dev/null || systemctl reload sshd; warn "SSH por senha desativado."
 fi
 
+log "Atualização automática (timer systemd a cada 2 min, só tags aprovadas no CI)"
+cat > /etc/systemd/system/axon-autoupdate.service <<UNIT
+[Unit]
+Description=axon — aplica a última versão aprovada (tag v*) com rollback
+After=docker.service network-online.target
+[Service]
+Type=oneshot
+User=${DEPLOY_USER}
+WorkingDirectory=${APP_DIR}
+ExecStart=/bin/bash ${APP_DIR}/scripts/autoupdate.sh
+UNIT
+cat > /etc/systemd/system/axon-autoupdate.timer <<UNIT
+[Unit]
+Description=axon — verifica novas versões a cada 2 minutos
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+RandomizedDelaySec=20
+[Install]
+WantedBy=timers.target
+UNIT
+git config --system --add safe.directory "$APP_DIR" 2>/dev/null || true
+systemctl daemon-reload && systemctl enable --now axon-autoupdate.timer >/dev/null && ok "axon-autoupdate.timer ativo (journalctl -u axon-autoupdate)"
+
 log "8/8 Stack e HTTPS"
 cd "$APP_DIR"
 COMPOSE=(docker compose)
 [[ "${AXON_TRAEFIK:-0}" == "1" ]] && COMPOSE+=(-f docker-compose.yml -f infra/traefik/docker-compose.traefik.yml)
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
-  "${COMPOSE[@]}" build && "${COMPOSE[@]}" up -d --remove-orphans
+  export AXON_VERSION="$(cat VERSION)"; "${COMPOSE[@]}" build && "${COMPOSE[@]}" up -d --remove-orphans && echo "$AXON_VERSION" > data/status/last_good 2>/dev/null || true
   for i in $(seq 1 40); do
     curl -fsS "http://127.0.0.1:${HTTP_PORT}/api/health" >/dev/null 2>&1 && { ok "App em 127.0.0.1:${HTTP_PORT}"; break; }
     [[ $i -eq 40 ]] && die "App não respondeu. Veja: docker compose logs --tail=80 api web"; sleep 3

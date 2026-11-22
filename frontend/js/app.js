@@ -4,7 +4,8 @@
   const { TAG, REF, MODS, REGIONS, FIBERS, MECH, PHYS, PROTO, INSILICO, SCHEDULE, FAQ } = g.AxonData;
   const M = g.AxonModel, C = g.AxonCharts, t = k => g.I18N.t(k), $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const REFDATA = g.AXON_REFERENCE;
-  const VERSION = "0.1.0-alpha";
+  const REL = g.AXON_RELEASE || { version: "dev", releases: [] };
+  const VERSION = REL.version;
 
   // ---------------------------------------------------------------- estado
   const st = {
@@ -137,7 +138,7 @@
 
   // ---------------------------------------------------------------- mini-apps
   APPS.app1 = { title: "app1", w: 360, h: 420, render(b) {
-    b.innerHTML = `<div class="card"><h4>${t("layers")}</h4>${["dermatomes", "nerves", "autonomic", "acupoints"].map(k => `<label style="display:flex;gap:8px;align-items:center;margin:5px 0"><input type="checkbox" data-layer="${k}" checked> ${t(k)}</label>`).join("")}</div>
+    b.innerHTML = `<div class="card"><h4>${t("layers")}</h4>${["skin", "dermatomes", "skeleton", "organs", "nerves", "autonomic", "acupoints"].map(k => `<label style="display:flex;gap:8px;align-items:center;margin:5px 0"><input type="checkbox" data-layer="${k}" checked> ${t(k)}</label>`).join("")}</div>
       <div class="card"><h4>Escalas</h4>${[1, 2, 3, 4, 5].map(l => `<button class="btn ghost" style="width:100%;margin:3px 0;text-align:left" data-l="${l}">${l} · ${t("scale" + l)}</button>`).join("")}</div>
       <div class="card"><h4>Regiões</h4>${Object.entries(REGIONS).map(([k, R]) => `<button class="btn ghost" style="width:100%;margin:3px 0;text-align:left" data-r="${k}">${R.name}</button>`).join("")}</div>`;
     $$("[data-layer]", b).forEach(c => c.onchange = () => g.AxonStage.setLayer(c.dataset.layer, c.checked));
@@ -261,6 +262,29 @@
     chat.insertAdjacentHTML("beforeend", `<div class="m a"></div>`); chat.lastChild.textContent = ans; chat.lastChild.insertAdjacentHTML("beforeend", " " + tagHTML(tag)); chat.scrollTop = 1e6; botSay(ans.slice(0, 120) + (ans.length > 120 ? "…" : ""));
   }
 
+  // ---------------------------------------------------------------- Atualizações (versão + registro de alterações)
+  const esc = x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function relHTML(R, cur) {
+    return (R.releases || []).map(r => `<div class="rel ${r.version === cur ? "cur" : ""}"><h4>v${esc(r.version)} <small>${esc(r.date)}</small>${r.version === cur ? ' <span class="badge">no ar</span>' : ""}</h4>${r.summary ? `<p class="sum">${esc(r.summary)}</p>` : ""}${Object.entries(r.sections || {}).map(([k, v]) => `<h5>${esc(k)}</h5><ul>${v.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`).join("")}</div>`).join("");
+  }
+  APPS.updates = { title: "updates", w: 520, h: 520, render(b) {
+    b.innerHTML = `<div class="card"><h4>axon v${esc(REL.version)}</h4><p class="note">commit ${esc(REL.sha || "—")} · build ${esc((REL.built_at || "").replace("T", " ").replace("Z", " UTC"))}</p>
+      <p class="note">Cada atualização aprovada nos testes é publicada automaticamente em axon.m3d.pro: tag de versão, GitHub Release com estas notas e deploy na VPS (com rollback se a verificação de saúde falhar).</p></div>${relHTML(REL, REL.version)}`;
+  } };
+  let toastShown = "";
+  async function checkUpdate() {
+    try {
+      const r = await fetch("release.json?ts=" + Date.now(), { cache: "no-store" }); if (!r.ok) return; const j = await r.json();
+      if (j.version && j.version !== REL.version && j.version !== toastShown) {
+        toastShown = j.version; const top = (j.releases || [])[0] || {}, n = Object.values(top.sections || {}).flat().length;
+        const el = $("#toast"); el.hidden = false;
+        el.innerHTML = `<span>${esc(t("newVersion"))}: <b>v${esc(j.version)}</b> · ${n} alteração(ões)</span><button class="btn" id="tReload">${esc(t("reload"))}</button><button class="btn ghost" id="tSee">Ver notas</button><button class="btn ghost" id="tX" aria-label="Fechar">✕</button>`;
+        $("#tReload").onclick = () => location.reload(); $("#tX").onclick = () => el.hidden = true;
+        $("#tSee").onclick = () => { openApp("updates"); const w = WM.wins.updates; if (w) w.querySelector(".body").innerHTML = relHTML(j, j.version); };
+      }
+    } catch (e) { /* offline ou artefato estático: sem verificação */ }
+  }
+
   // ---------------------------------------------------------------- Axon Bot (mascote)
   let muted = false, botTimer;
   function botSay(s) { if (muted) return; const b = $("#bot"); b.querySelector(".bubble").textContent = s; b.classList.add("talk"); clearTimeout(botTimer); botTimer = setTimeout(() => b.classList.remove("talk"), 5200); }
@@ -273,6 +297,14 @@
     botSay(`${m.name}: ${m.desc}`);
   }
   function selectRegion(k) { st.region = k; const R = REGIONS[k]; leftTab = "anat"; setMod(R.mod); renderLeft(); botSay(`${R.name}. Fibras: ${R.fibers.map(f => FIBERS[f].n).join(", ")}.`); if (WM.wins.app6) APPS.app6.render(WM.wins.app6.querySelector(".body")); }
+  // dermátomo clicado na pele → região correspondente (mapa didático)
+  const DERM_REGION = c => /^V/.test(c) ? "trigeminal" : /^C[678]$/.test(c) ? "median" : /^T[4-6]$/.test(c) ? "visceral" : /^(L[45]|S1)$/.test(c) ? "L5S1" : null;
+  function selectDermatome(code) {
+    const reg = DERM_REGION(code);
+    if (reg) selectRegion(reg);
+    else { REGIONS["derm"] = { name: "Dermátomo " + code, structures: [`Raiz dorsal ${code}`, `Gânglio da raiz dorsal ${code}`, "Corno dorsal do segmento correspondente", "Território cutâneo com sobreposição dos vizinhos"], fibers: ["abeta", "adelta", "c"], symptoms: ["parestesia ou dor no território", "alodinia segmentar"], mod: "tens" }; st.region = "derm"; leftTab = "anat"; renderLeft(); }
+    botSay(`Dermátomo ${code}${reg ? " → " + REGIONS[reg].name : ""}. Mapa didático: há sobreposição e variação individual.`);
+  }
   let raf;
   function update() {
     cancelAnimationFrame(raf); raf = requestAnimationFrame(() => {
@@ -288,7 +320,7 @@
     // Dock
     const order = ["app1", "app2", "app3", "app4", "app5", "app6", "app7", "app8"];
     $("#dock").innerHTML = order.map(id => `<button data-app="${id}" aria-label="${t(id)}">${g.AxonIcons[id]}<span class="tip" data-i18n="${id}">${t(id)}</span></button>`).join("")
-      + `<span class="sep"></span><a href="docs/manual-usuario.html" target="_blank" rel="noopener"><button aria-label="Manuais">${g.AxonIcons.docs}<span class="tip">Manuais</span></button></a>`;
+      + `<button data-app="updates" aria-label="${t("updates")}">${g.AxonIcons.updates}<span class="tip" data-i18n="updates">${t("updates")}</span></button><span class="sep"></span><a href="docs/manual-usuario.html" target="_blank" rel="noopener"><button aria-label="Manuais">${g.AxonIcons.docs}<span class="tip">Manuais</span></button></a>`;
     $$("#dock button[data-app]").forEach(b => b.onclick = () => openApp(b.dataset.app));
     $("#bot .art").innerHTML = g.AxonIcons.bot;
     $("#bot").onclick = () => openApp("app8");
@@ -307,11 +339,15 @@
     $$("#scalebar [data-z]").forEach(b => b.onclick = () => g.AxonStage.setLevel(g.AxonStage.level + +b.dataset.z));
     document.addEventListener("axon:scale", e => { st.level = e.detail.level; $$("#scalebar [data-l]").forEach(b => b.classList.toggle("on", +b.dataset.l === st.level)); renderLeft(); });
     document.addEventListener("axon:select", e => selectRegion(e.detail.region));
+    document.addEventListener("axon:dermatome", e => selectDermatome(e.detail.code));
     g.AxonStage.init($("#stage"));
     $$("#scalebar [data-l]").forEach(b => b.classList.toggle("on", +b.dataset.l === 1));
     renderRight(); renderLeft(); update(); g.I18N.apply();
     if (innerWidth > 900) setTimeout(() => { openApp("app3"); openApp("app4"); }, 300);
     setTimeout(() => botSay("Clique num ponto pulsante do corpo ou use a roda do mouse para descer de escala."), 1200);
+    // versão e atualizações
+    $("#verPill").textContent = "v" + VERSION; $("#verPill").onclick = () => openApp("updates");
+    setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 180000);
     // API
     const ctl = new AbortController(); setTimeout(() => ctl.abort(), 2500);
     fetch("api/health", { signal: ctl.signal }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.project === "axon") { st.api = true; $("#apiPill").textContent = "API " + j.version; $("#apiPill").classList.add("on"); } }).catch(() => {});

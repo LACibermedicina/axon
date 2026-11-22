@@ -118,8 +118,8 @@ footer .legal{border-top:1px solid #24464f;margin-top:26px;padding-top:16px;font
   <div>
     <h1>Até onde a física deixa a neuromodulação chegar perto de uma única fibra?</h1>
     <p>O <b>axon</b> leva o modelo do livro <i>Biofísica da Neuromodulação</i> para um laboratório 3D no navegador: do dermátomo ao canal iônico, com cada número rastreável até a sua fonte.</p>
-    <div class="ctas"><a class="btn pri" href="https://axon.m3d.pro">Versão em produção</a><a class="btn sec" href="../">Demonstração v0.1.0-alpha</a><a class="btn sec" href="#docs">Manuais</a></div>
-    <div class="status"><span><span class="dot" style="background:#f0a93a"></span>axon.m3d.pro: <b>em implantação</b></span><span><span class="dot" style="background:#3ee6c5"></span>demonstração: <b>no ar</b></span><span>versão <b>0.1.0-alpha</b></span><span>testes <b>28/28</b></span></div>
+    <div class="ctas"><a class="btn pri" href="https://axon.m3d.pro">Versão em produção</a><a class="btn sec" href="../">Demonstração ao vivo</a><a class="btn sec" href="#docs">Manuais</a></div>
+    <div class="status"><span><span class="dot" style="background:#f0a93a"></span>axon.m3d.pro: <b>em implantação</b></span><span><span class="dot" style="background:#3ee6c5"></span>demonstração: <b>no ar</b></span><span>versão <b data-ver>0.2.0-alpha</b></span><span>atualização <b>automática</b></span><span>testes <b>28/28</b></span></div>
   </div>
   <div class="fig">
     <svg viewBox="0 0 640 420" role="img" aria-label="Fibra mielinizada com impulso saltando entre nós de Ranvier sob um eletrodo">
@@ -218,16 +218,22 @@ footer .legal{border-top:1px solid #24464f;margin-top:26px;padding-top:16px;font
 </div><div class="in legal">© 2026 Lucas da Silva Teixeira · Ibilce/UNESP · Não é dispositivo médico; não usar para calcular parâmetros de estimulação em pessoas. Dados tratados conforme a LGPD: a plataforma não coleta dados de pacientes.</div></footer>
 
 <script src="../js/model.js"></script>
+<script src="../js/release.js"></script>
 <script>
 {
   const NEWS = [
-    { d: "21/11/2026", c: "rel", t: "axon v0.1.0-alpha no ar como demonstração", p: "Primeira versão executável: desktop 3D com zoom semântico em cinco escalas, oito mini-apps, painéis retráteis, cinco idiomas e o Axon Bot. O núcleo nodal roda no navegador e no servidor." },
     { d: "21/11/2026", c: "pes", t: "Benchmarks do livro reproduzidos pela suíte de regressão", p: "α = 1,1266, razão 3,2077 a 1 mm, razão de medianas 3,10 (IC 95 % 2,98–3,22) e 0,38 % de Aδ com Aβ ≤ 10 %. 28 testes, semente 42." },
+    { d: "22/11/2026", c: "inf", t: "Entrega contínua: cada atualização vai sozinha para a VPS", p: "Testes aprovados geram versão, tag e notas no GitHub; o deploy por SSH e o timer da própria VPS aplicam a nova versão, com rollback automático se a verificação de saúde falhar." },
     { d: "21/11/2026", c: "inf", t: "CI/CD alinhado à VPS compartilhada", p: "Pipeline ci-axon: testes, sincronização das chaves de IA a partir do secret SERVIDOR_ENV e deploy via SSH. Nenhuma porta abaixo de 1024; HTTPS pelo proxy do host." },
     { d: "21/11/2026", c: "rel", t: "Manuais do usuário e técnico publicados", p: "Documentação ilustrada com pranchas, fluxogramas, diagramas de arquitetura e a referência completa da API." },
     { d: "nov/2026", c: "pes", t: "Edição consolidada 1.0 do livro", p: "117 páginas, Partes I a VI, 18 anexos, 24 pranchas. O código foi reexecutado e confirmou os valores das versões anteriores (Anexo F)." },
     { d: "nov/2026", c: "evt", t: "Submissão à XIV Semana da Física preparada", p: "Artigo resumido, pôster da Etapa 2 e slides, em versões com e sem identificação para avaliação cega." }
   ];
+  const REL = window.AXON_RELEASE || { releases: [] };
+  const br = d => d ? d.split("-").reverse().join("/") : "";
+  NEWS.unshift(...REL.releases.map(r => ({ d: br(r.date), c: "rel", t: `axon v${r.version} publicado`, p: (r.summary || "") + " " + Object.entries(r.sections || {}).map(([k, v]) => `${k}: ${v.length}`).join(" · ") })));
+  NEWS.sort((a, b) => (b.d.split("/").reverse().join("") || "0").localeCompare(a.d.split("/").reverse().join("") || "0"));
+  document.querySelectorAll("[data-ver]").forEach(e => e.textContent = REL.version || "");
   const lab = { rel: "Lançamento", pes: "Pesquisa", evt: "Evento", inf: "Infraestrutura" };
   const box = document.getElementById("news");
   const render = f => { box.innerHTML = NEWS.filter(n => f === "all" || n.c === f).map(n => `<article><time>${n.d}</time><div><span class="chip c-${n.c}">${lab[n.c]}</span><h3>${n.t}</h3><p>${n.p}</p></div></article>`).join(""); };

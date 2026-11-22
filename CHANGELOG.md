@@ -2,6 +2,27 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.2.0-alpha] — 2026-11-22
+
+Hiper-realismo anatômico no palco 3D e entrega contínua: cada atualização aprovada nos testes chega sozinha à VPS, com versão e registro de alterações visíveis no app.
+
+### Adicionado
+- **Corpo inteiro anatômico (Nível 1):** pele modelada por varredura elíptica com dermátomos por vértice (V1–S5) e seleção por clique; esqueleto (crânio, 24 vértebras com discos, 12 pares de costelas com cartilagens, esterno, clavículas, escápulas, pelve, ossos longos, mãos e pés); órgãos (encéfalo com giros, cerebelo, coração, pulmões, rins, estômago); 29 pares de raízes com gânglios da raiz dorsal; plexos braquial e lombossacral; mediano, ulnar, radial, musculocutâneo, intercostais, femoral, obturatório, ciático, tibial e fibular; trigêmeo (V1/V2/V3) e facial; vago com ramos cardíacos e pulmonares; ramo auricular (ABVN); tronco simpático e gânglio celíaco.
+- **Tecidos estratificados (Nível 2):** epiderme deformável com poros e pelos, derme com papilas e capilares, hipoderme com lóbulos adiposos, fáscia de colágeno, músculo estriado; feixe neurovascular (nervo, artéria e veias satélites) com corte histológico; dispositivos realistas (eletrodo de gel, agulha com cabo espiral, algômetro, transdutor focalizado, eletrodo SCS, fibra óptica); campo em cascas volumétricas e indentação da pele pela pressão.
+- **Fascículo histológico (Nível 3):** corte transversal procedural (azul de toluidina) gerado da mesma amostra das fibras 3D; perineuro em lamelas; vasa nervorum; feixes de Remak; eletrodo cuff de platina e silicone; luva da função de ativação.
+- **Nó de Ranvier (Nível 4):** mielina com lamelas e afunilamento paranodal, alças paranodais, canais NaV agrupados, microvilos de Schwann, núcleo da célula de Schwann, incisuras de Schmidt-Lanterman, neurofilamentos e mitocôndrias, potencial de ação saltatório.
+- **Membrana (Nível 5):** fosfolipídios com duas caudas, colesterol, NaV (4 domínios × 6 hélices, S4 destacado), Piezo2 em hélice-propulsor, TRPV1 com repetições de anquirina, TRAAK; íons atravessando cada canal.
+- **Texturas procedurais** (`textures.js`): pele, derme, gordura, músculo, colágeno, mielina, osso, córtex e vasos, com mapas normais; iluminação por ambiente (PMREM), ACES e sombras suaves.
+- **Entrega contínua:** job `release` cria a versão (SemVer), a tag e o GitHub Release com as notas; o deploy só roda depois dele e confere que a VPS respondeu com a versão nova.
+- **Atualização automática pela VPS** (`scripts/autoupdate.sh` + timer systemd a cada 2 min): aplica a última tag aprovada mesmo sem SSH, com rollback automático se a saúde falhar.
+- **Janela “Atualizações” no app:** versão atual, data, commit e o registro completo de alterações; aviso de nova versão com botão para recarregar.
+- `scripts/release.py`: gera `release.json`, sobe a versão a partir dos commits convencionais e escreve as notas.
+
+### Alterado
+- Enquadramento automático da câmera pela proporção da tela em todos os níveis.
+- Níveis 2–5 construídos sob demanda e pré-carregados em segundo plano.
+- Versão da API lida do arquivo `VERSION` (fonte única).
+
 ## [0.1.0-alpha] — 2026-11-21
 
 Primeira versão executável. Ferramenta de pesquisa e ensino in silico — **não é dispositivo médico**.

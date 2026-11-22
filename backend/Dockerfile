@@ -6,6 +6,7 @@ COPY backend/requirements.txt .
 RUN pip install -r requirements.txt && useradd -u 10001 -m axon
 COPY backend/ /srv/
 COPY VERSION /srv/VERSION
+COPY frontend/release.json /srv/release.json
 USER 10001
 EXPOSE 8000
 HEALTHCHECK --interval=20s --retries=5 CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')"

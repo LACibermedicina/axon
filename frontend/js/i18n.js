@@ -2,6 +2,7 @@
 (function (g) {
   const D = {
     pt: {
+      skin: "Pele (translúcida)", skeleton: "Esqueleto", organs: "Órgãos", updates: "Atualizações", newVersion: "Nova versão disponível", reload: "Recarregar",
       disclaimer: "Ferramenta de pesquisa, ensino e modelagem in silico (ASME V&V 40 · Res. CNS 510/2016). Não é dispositivo médico nem protocolo clínico.",
       leftTitle: "Anatomia, sintomas & protocolo", rightTitle: "Parâmetros & IA preditiva",
       tabAnat: "Anatomia", tabPhys: "Biofísica", tabProto: "Protocolo",
@@ -19,6 +20,7 @@
       provenance: "Procedência", version: "versão", seed: "semente"
     },
     en: {
+      skin: "Skin (translucent)", skeleton: "Skeleton", organs: "Organs", updates: "Updates", newVersion: "New version available", reload: "Reload",
       disclaimer: "Research, teaching and in silico modelling tool (ASME V&V 40 · CNS Res. 510/2016). Not a medical device or clinical protocol.",
       leftTitle: "Anatomy, symptoms & protocol", rightTitle: "Parameters & predictive AI",
       tabAnat: "Anatomy", tabPhys: "Biophysics", tabProto: "Protocol",
@@ -36,6 +38,7 @@
       provenance: "Provenance", version: "version", seed: "seed"
     },
     es: {
+      skin: "Piel (translúcida)", skeleton: "Esqueleto", organs: "Órganos", updates: "Actualizaciones", newVersion: "Nueva versión disponible", reload: "Recargar",
       disclaimer: "Herramienta de investigación, enseñanza y modelado in silico (ASME V&V 40 · Res. CNS 510/2016). No es un dispositivo médico ni un protocolo clínico.",
       leftTitle: "Anatomía, síntomas y protocolo", rightTitle: "Parámetros e IA predictiva",
       tabAnat: "Anatomía", tabPhys: "Biofísica", tabProto: "Protocolo",
@@ -53,6 +56,7 @@
       provenance: "Procedencia", version: "versión", seed: "semilla"
     },
     zh: {
+      skin: "皮肤（半透明）", skeleton: "骨骼", organs: "器官", updates: "更新", newVersion: "有新版本", reload: "重新加载",
       disclaimer: "科研、教学与计算机模拟（in silico）工具（ASME V&V 40 · CNS 第510/2016号决议）。非医疗器械，亦非临床方案。",
       leftTitle: "解剖、症状与方案", rightTitle: "参数与预测性 AI",
       tabAnat: "解剖", tabPhys: "生物物理", tabProto: "方案",
@@ -70,6 +74,7 @@
       provenance: "来源", version: "版本", seed: "随机种子"
     },
     hi: {
+      skin: "त्वचा (पारभासी)", skeleton: "कंकाल", organs: "अंग", updates: "अपडेट", newVersion: "नया संस्करण उपलब्ध", reload: "पुनः लोड करें",
       disclaimer: "अनुसंधान, शिक्षण और इन-सिलिको मॉडलिंग उपकरण (ASME V&V 40 · CNS संकल्प 510/2016)। यह चिकित्सा उपकरण या नैदानिक प्रोटोकॉल नहीं है।",
       leftTitle: "शरीर रचना, लक्षण और प्रोटोकॉल", rightTitle: "मापदंड और पूर्वानुमानी AI",
       tabAnat: "शरीर रचना", tabPhys: "जैवभौतिकी", tabProto: "प्रोटोकॉल",
