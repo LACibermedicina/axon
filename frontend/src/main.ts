@@ -28,13 +28,13 @@ import { mountVisualizer } from "./modules/visualizer";
 import { playerBar } from "./modules/playerbar";
 import { startTour, TOURS } from "./modules/tour";
 
-const VERSION = "0.6.1-alpha";
+const VERSION = "0.7.0-alpha";
 
 const APPS: Record<string, AppDef> = {
-  compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1180, innerWidth - 40 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 30, y: 44, mount: mountScoreEditor },
+  compose: { id: "compose", title: t("compose"), icon: ICONS.compose, width: Math.max(560, Math.min(1220, innerWidth - 24 - 312 - 24)), height: Math.max(520, innerHeight - 150), x: 16, y: 44, mount: mountScoreEditor },
   import: { id: "import", title: t("import"), icon: ICONS.import, width: 760, height: 560, mount: mountImporter },
   visualizer: { id: "visualizer", title: t("visualizer"), icon: ICONS.visualizer, width: Math.min(1000, innerWidth - 80), height: Math.min(640, innerHeight - 140), mount: mountVisualizer },
-  mixer: { id: "mixer", title: t("mixer"), icon: ICONS.mixer, width: 820, height: 460, mount: mountMixer },
+  mixer: { id: "mixer", title: t("mixer"), icon: ICONS.export, width: 820, height: 460, mount: mountMixer },
   library: { id: "library", title: t("library"), icon: ICONS.library, width: 900, height: 560, mount: mountLibrary },
   graph: { id: "graph", title: t("graph"), icon: ICONS.graph, width: 1100, height: 420, mount: mountGraph },
   agenda: { id: "agenda", title: t("agenda"), icon: ICONS.agenda, width: 820, height: 520, mount: mountAgenda },
@@ -116,7 +116,7 @@ function drawTray() {
       h("i", { class: "dot", "aria-hidden": "true" }), h("span", { class: "tray-ic", html: w.app.icon }), h("span", {}, w.app.title)));
   const peek = (cls: string, label: string, icon: string, on: () => void) => h("button", { class: "tray-chip hidden-side" + (document.body.classList.contains(cls) ? " on" : ""), title: `${label} — recolhido (clique para mostrar)`,
     onclick: (e: Event) => { e.stopPropagation(); on(); drawTray(); }, "data-ic": icon, "aria-label": label }, h("i", { class: "blur-dot", "aria-hidden": "true" }), h("span", {}, icon + " " + label));
-  if (document.body.classList.contains("hide-sidebar")) chips.push(peek("peek-sidebar", "Menu", "☰", () => document.body.classList.toggle("peek-sidebar")));
+
   if (panels?.isAway()) chips.push(peek("peek-rdock", "Painéis", "▦", () => document.body.classList.toggle("peek-rdock")));
   if (document.body.classList.contains("focus-mode") && document.querySelector(".panel.floating.discreet:not([hidden])"))
     chips.push(peek("peek-float", t("community"), "💬", () => document.body.classList.toggle("peek-float")));
@@ -132,7 +132,7 @@ function focusMode() {
     const top = vis[0];
     const any = !!top;
     document.body.classList.toggle("focus-mode", any);
-    document.body.classList.toggle("hide-sidebar", any);
+    document.body.classList.remove("hide-sidebar");
     panels?.setAway(any && top.app.id !== "compose"); // os painéis da partitura só fazem parte da Composição
     if (!any) document.body.classList.remove("peek-sidebar", "peek-rdock", "peek-float");
     drawTray();
@@ -217,7 +217,7 @@ function desktopIcons() {
   const box = h("div", { class: "desk-icons" });
   const fresh = h("button", { class: "desk-icon new", title: "Abrir uma pauta nova (clique)", onclick: newComposition },
     h("span", { class: "new-ic", html: ICONS.compose }), h("small", {}, "Nova composição"));
-  const draw = () => box.replaceChildren(fresh, ...["import", "library", "graph", "admin"].filter(allowed).map((id) =>
+  const draw = () => box.replaceChildren(fresh, ...([] as string[]).filter(allowed).map((id) =>
     h("button", { class: "desk-icon", ondblclick: () => open(id), onclick: (e: Event) => (e.currentTarget as HTMLElement).classList.toggle("sel") },
       h("span", { html: APPS[id].icon }), h("small", { "data-i18n": id }, t(id)))));
   addEventListener("auth", draw); draw();
@@ -341,14 +341,16 @@ async function boot() {
   const app = document.getElementById("app")!;
   const winLayer = h("div", { class: "win-layer", id: "main-content" });
   const skip = h("a", { class: "skip-link", href: "#main-content" }, "Pular para o conteúdo");
-  app.append(skip, menubar(), langbar(), sidebar(), desktopIcons(), winLayer, dock());
+  // o Dock é o único lançador (o menu lateral esquerdo repetia os mesmos itens e foi removido)
+  app.append(skip, menubar(), langbar(), desktopIcons(), winLayer, dock());
+  void sidebar;
   initWM(winLayer);
   panels = new PanelDock(app);
   panels.register([
     { id: "props", title: t("props"), icon: ICONS.props, mount: mountProperties },
     { id: "layers", title: t("layers"), icon: ICONS.layers, mount: mountLayers },
     { id: "notes", title: t("notes"), icon: ICONS.notes, mount: mountAnnotations },
-    { id: "mix", title: t("mixer"), icon: ICONS.mixer, mount: mountMixer },
+    { id: "mix", title: t("mixer"), icon: ICONS.export, mount: mountMixer, defaultCollapsed: true },
     // quadro discreto e móvel no fundo da área de trabalho; pode ser fechado ou acoplado ao menu lateral
     { id: "chat", title: t("community"), icon: ICONS.community, mount: mountCommunityPanel, defaultMode: "floating", discreet: true, defaultCollapsed: true,
       defaultRect: { x: 214, y: Math.max(120, innerHeight - 150), w: 300, h: 320 } },

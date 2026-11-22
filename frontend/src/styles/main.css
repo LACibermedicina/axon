@@ -947,3 +947,47 @@ body.mobile .m-player .playerbar.idle { display: none; }
 .rm-item:disabled { opacity: .45; cursor: not-allowed; }
 .rm-item b { display: block; font-size: 12.5px; font-weight: 600; } .rm-item small { display: block; font-size: 10.5px; color: var(--ink2); }
 .rm-ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: #fff1e6; flex: none; }
+
+/* ===================================================== v0.7 — interface enxuta + ícones 3D */
+.sidebar { display: none !important; }
+.win.max { left: 10px !important; width: calc(100vw - 20px - var(--rdock)) !important; }
+.panel.maxed { left: 16px !important; }
+.desk-icons { top: 70px; }
+/* ícones 3D: respiração leve, piscar e "squash & stretch" ao passar o mouse em qualquer botão */
+.ic3d { overflow: visible; }
+.ic3d .ic-eyes { transform-box: fill-box; transform-origin: center; animation: blink 5.5s infinite; }
+@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+button:hover .ic3d .ic-bounce, [role=button]:hover .ic3d .ic-bounce { animation: bounce .6s ease; }
+button:hover .ic3d .ic-pulse { animation: pulse .8s ease infinite; }
+.rail-pinned .btn .tb-ic svg { width: 30px; height: 30px; display: block; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .25)); }
+.rail-pinned .btn { background: #fff !important; color: var(--ink) !important; border: 1px solid var(--line) !important; box-shadow: 0 3px 10px rgba(60, 30, 140, .12) !important; }
+.rail-pinned .btn.big-rec { color: #c42b26 !important; } .rail-pinned .btn.imp { color: #1677c4 !important; }
+.rail-pinned .btn.big-rec.recording { background: #ffe9e8 !important; }
+.rail .seg > .tool span svg { width: 30px; height: 30px; display: block; margin: 0 auto; }
+.rail .seg > .tool.on { background: #efeaff !important; box-shadow: inset 0 0 0 2px var(--accent) !important; }
+.rail-btn .rail-ic { background: none !important; box-shadow: none !important; width: 42px; height: 42px; opacity: .95; }
+.rail-btn .rail-ic svg { width: 42px; height: 42px; display: block; }
+.rail-btn.on .rail-ic { transform: scale(1.08); filter: drop-shadow(0 0 6px var(--c)); box-shadow: none !important; }
+.fly-ic { background: none !important; box-shadow: none !important; width: 40px; height: 40px; } .fly-ic svg { width: 40px; height: 40px; display: block; }
+body.mobile .rail .seg > .tool span svg { width: 26px; height: 26px; }
+/* Exportar */
+.exporter .exp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-bottom: 8px; }
+.exporter .btn.go { width: 100%; }
+.desk-score { left: calc(50% - var(--rdock) / 2); }
+/* ferramentas em 2 colunas no trilho (menos rolagem) */
+body:not(.mobile) .rail { width: 88px; }
+body:not(.mobile) .rail .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+body:not(.mobile) .rail .seg > .tool span svg { width: 26px; height: 26px; }
+body:not(.mobile) .rail .seg > .tool small { font-size: 9px; }
+body:not(.mobile) .rail-pinned { flex-direction: row; gap: 4px; }
+body:not(.mobile) .rail-pinned .btn { padding: 6px 0 4px; }
+body:not(.mobile) .rail-pinned .btn .tb-ic svg { width: 28px; height: 28px; }
+body:not(.mobile) .rail-pinned .btn .tb-lb { font-size: 9px; }
+body:not(.mobile) .rail-btn { width: 70px; }
+body:not(.mobile) .rail-pinned { flex-direction: column; }
+body:not(.mobile) .rail-pinned .btn { flex-direction: row; gap: 3px; padding: 4px 2px; justify-content: flex-start; }
+body:not(.mobile) .rail-pinned .btn .tb-ic svg { width: 24px; height: 24px; }
+body:not(.mobile) .rail-pinned .btn .tb-lb { font-size: 10px; }
+body:not(.mobile) .rail-pinned .btn .tb-ic svg { width: 20px; height: 20px; }
+body:not(.mobile) .rail-pinned .btn { gap: 2px; padding: 4px 3px; letter-spacing: 0; }
+body:not(.mobile) .rail-pinned .btn .tb-lb { font-size: 9.5px; }

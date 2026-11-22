@@ -77,9 +77,6 @@ export function mountProperties(body: HTMLElement) {
         field("Efeito", h("select", { onchange: (e: Event) => edit((n) => (n.effect = (e.target as HTMLSelectElement).value || null)) },
           ...EFFECTS.map(([v, l]) => h("option", { value: v, selected: (one?.n.effect || "") === v }, l)))),
         field("Camada", layerSel),
-        h("div", { class: "row" },
-          h("button", { class: "btn ghost", title: "⌘⇧C", onclick: () => extract("copy", "notes") }, "⧉ Copiar p/ nova camada"),
-          h("button", { class: "btn ghost", title: "⌘⇧X", onclick: () => extract("cut", "notes") }, "✂ Recortar p/ nova camada")),
         h("button", { class: "btn danger", onclick: () => { store.mutate((x) => x.layers.forEach((l) => !l.locked && (l.notes = l.notes.filter((n) => !store.selectedNotes.has(n.id)))), "delete"); store.selectedNotes.clear(); store.emit("selection"); } }, "Apagar nota(s)")));
     }
 
@@ -99,10 +96,7 @@ export function mountProperties(body: HTMLElement) {
         field("Cifra", chordIn),
         h("div", { class: "row" },
           h("button", { class: "btn accent", onclick: () => dispatchEvent(new CustomEvent("harmonia:action", { detail: "harmonize" })) }, "✨ Harmonizar"),
-          h("button", { class: "btn", onclick: () => dispatchEvent(new CustomEvent("harmonia:action", { detail: "play-selection" })) }, "▶ Ouvir")),
-        h("div", { class: "row" },
-          h("button", { class: "btn ghost", onclick: () => extract("copy", "measures") }, "⧉ Copiar p/ nova camada"),
-          h("button", { class: "btn ghost", onclick: () => extract("cut", "measures") }, "✂ Recortar p/ nova camada")),
+          h("button", { class: "btn", onclick: () => dispatchEvent(new CustomEvent("harmonia:action", { detail: "play-selection" })) }, "▶ Ouvir trecho")),
         h("div", { class: "row" },
           h("button", { class: "btn ghost", onclick: () => store.insertMeasure(ms[0]) }, "+ antes"),
           h("button", { class: "btn ghost", onclick: () => store.insertMeasure(ms[ms.length - 1] + 1) }, "+ depois"),
@@ -121,10 +115,10 @@ export function mountProperties(body: HTMLElement) {
   const off = store.on((r) => {
     if (r === "autosave") return;
     const key = [store.score.title, store.score.tempo, store.score.timeSig, store.score.keySig, store.score.measures].join("|");
-    if (key !== lastKey || r === "load") { lastKey = key; renderScore(); }
+    if (key !== lastKey || r === "load") { lastKey = key; }
     if (!body.contains(document.activeElement) || r === "selection") renderSelection();
   });
-  renderScore(); renderSelection();
+  renderSelection(); void renderScore; void extract;
   return () => off();
 }
 

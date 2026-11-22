@@ -18,7 +18,7 @@ const D: Record<string, Record<Lang, string>> = {
   compose: { pt: "Composição", en: "Composition", es: "Composición", zh: "作曲", hi: "रचना" },
   import: { pt: "Importar", en: "Import", es: "Importar", zh: "导入", hi: "आयात" },
   layers: { pt: "Camadas", en: "Layers", es: "Capas", zh: "图层", hi: "परतें" },
-  mixer: { pt: "Mesa de Edição", en: "Mixing Desk", es: "Mesa de Edición", zh: "编辑台", hi: "संपादन डेस्क" },
+  mixer: { pt: "Exportar", en: "Export", es: "Exportar", zh: "导出", hi: "निर्यात" },
   library: { pt: "Biblioteca", en: "Library", es: "Biblioteca", zh: "曲库", hi: "पुस्तकालय" },
   graph: { pt: "Fluxo de IA", en: "AI Flow", es: "Flujo de IA", zh: "AI 流程", hi: "एआई प्रवाह" },
   agenda: { pt: "Agenda", en: "Calendar", es: "Agenda", zh: "日程", hi: "कैलेंडर" },

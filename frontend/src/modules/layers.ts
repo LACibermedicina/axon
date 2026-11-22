@@ -48,9 +48,7 @@ export function mountLayers(body: HTMLElement) {
       h("div", { class: "lname" },
         h("input", { value: l.name, "aria-label": "Nome", onclick: (e: Event) => e.stopPropagation(), onchange: (e: Event) => store.mutate(() => (l.name = (e.target as HTMLInputElement).value), "layer") }),
         h("small", {}, `${KIND_LABEL[l.kind]} · ${l.kind === "recording" ? "áudio" : l.notes.length + " notas"} · ${l.staff === "bass" ? "𝄢 Fá" : "𝄞 Sol"}`)),
-      toggle("visible", "👁", "◌", "Visível"), linkBtn(l), toggle("muted", "🔇", "🔈", "Mudo"), toggle("solo", "S", "S", "Solo"), toggle("locked", "🔒", "🔓", "Bloquear edição (cadeado)"),
-      h("input", { type: "range", min: 0, max: 1, step: 0.05, value: l.volume, class: "vol", "aria-label": "Volume", onclick: (e: Event) => e.stopPropagation(),
-        onchange: (e: Event) => store.mutate(() => (l.volume = +(e.target as HTMLInputElement).value), "layer") }),
+      toggle("visible", "👁", "◌", "Visível"), linkBtn(l), toggle("locked", "🔒", "🔓", "Trancar (cadeado)"),
       menu(l));
     li.addEventListener("dragstart", (e) => { dragId = l.id; li.classList.add("dragging"); e.dataTransfer!.effectAllowed = "move"; });
     li.addEventListener("dragend", () => { li.classList.remove("dragging"); dragId = null; });
@@ -157,7 +155,7 @@ export function mountLayers(body: HTMLElement) {
       h("span", { class: "grp-ic", "aria-hidden": "true" }, "🗂"),
       h("input", { class: "grp-name", value: g.name, "aria-label": "Nome do grupo", onchange: (e: Event) => store.mutate(() => (g.name = (e.target as HTMLInputElement).value), "layer") }),
       h("small", {}, `${members.length} camada(s)`),
-      toggle("visible", "👁", "◌", "Visível"), toggle("muted", "🔇", "🔈", "Mudo"), toggle("solo", "S", "S", "Solo"), toggle("locked", "🔒", "🔓", "Bloquear"),
+      toggle("visible", "👁", "◌", "Visível"), toggle("locked", "🔒", "🔓", "Trancar"),
       h("button", { class: "ic-btn", title: "Desfazer grupo (as camadas continuam)", onclick: () => store.mutate((s) => {
         s.layers.forEach((x) => { if (x.group === g.id) x.group = undefined; });
         s.layerGroups = (s.layerGroups || []).filter((x) => x.id !== g.id);

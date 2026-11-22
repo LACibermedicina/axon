@@ -9,6 +9,7 @@ import * as audio from "../core/audio";
 import { currentUser, runJob, upload } from "../core/api";
 import { t } from "../core/i18n";
 import { prefs } from "../core/prefs";
+import { ICONS } from "../core/icons";
 import { transcribeRecording, recordingSpan } from "../core/rectx";
 import type { Win } from "../core/wm";
 
@@ -80,12 +81,12 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const toolBtn = (id: Tool, icon: string, label: string, help: string) =>
     tip(h("button", { class: "tool" + (tool === id ? " on" : ""), "data-tool": id, "aria-label": label, onclick: () => setTool(id) }, h("span", { html: icon }), h("small", {}, label)), help);
   const tools = h("div", { class: "seg" },
-    toolBtn("select", "⤧", "Mover", "Selecionar e arrastar notas. ↑↓ transpõe, Shift+arrastar = cromático, Alt+arrastar = duplicar."),
-    toolBtn("pencil", "✎", "Nota", "Clique na pauta para inserir uma nota com a duração escolhida."),
-    toolBtn("erase", "⌫", "Apagar", "Clique numa nota para removê-la."),
-    toolBtn("chord", "C7", "Cifra", "Clique acima do compasso para escrever acordes (ex.: Am7 D7(9))."),
-    toolBtn("lyrics", "♪a", "Letra", "Clique numa nota para escrever a sílaba. Tab avança, '_' = melisma (prolonga)."),
-    toolBtn("annotate", "✦", "Nota+", "Adicionar anotação didática / de interpretação no compasso."));
+    toolBtn("select", ICONS.t_select, "Mover", "Selecionar e arrastar notas. ↑↓ transpõe, Shift+arrastar = cromático, Alt+arrastar = duplicar."),
+    toolBtn("pencil", ICONS.t_pencil, "Nota", "Clique na pauta para inserir uma nota com a duração escolhida."),
+    toolBtn("erase", ICONS.t_erase, "Apagar", "Clique numa nota para removê-la."),
+    toolBtn("chord", ICONS.t_chord, "Cifra", "Clique acima do compasso para escrever acordes (ex.: Am7 D7(9))."),
+    toolBtn("lyrics", ICONS.t_lyrics, "Letra", "Clique numa nota para escrever a sílaba. Tab avança, '_' = melisma (prolonga)."),
+    toolBtn("annotate", ICONS.t_annot, "Nota+", "Adicionar anotação didática / de interpretação no compasso."));
 
   const DURS: [number, string, string][] = [[4, "𝅝", "Semibreve (4 tempos)"], [2, "𝅗𝅥", "Mínima (2)"], [1, "♩", "Semínima (1)"], [0.5, "♪", "Colcheia (½)"], [0.25, "𝅘𝅥𝅯", "Semicolcheia (¼)"]];
   const durBox = h("div", { class: "seg durs" }, ...DURS.map(([d, g, n]) => {
@@ -98,7 +99,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const playBtn = h("button", { class: "btn primary", onclick: () => togglePlay() }, "▶ " + t("play"));
   const tempoIn = h("input", { type: "number", min: 30, max: 260, value: store.score.tempo, class: "num", "aria-label": "Andamento",
     onchange: (e: Event) => store.mutate((s) => (s.tempo = +(e.target as HTMLInputElement).value || 96), "tempo") });
-  const transport = h("div", { class: "seg" }, playBtn,
+  const transport = h("div", { class: "seg" },
     tip(h("button", { class: "btn" + (metronome ? " on" : ""), onclick: (e: Event) => { metronome = !metronome; (e.currentTarget as HTMLElement).classList.toggle("on", metronome); } }, "𝅘𝅥 Metrônomo"), "Clique a cada tempo; acento no tempo forte"),
     tip(h("button", { class: "btn", onclick: (e: Event) => { loop = !loop; (e.currentTarget as HTMLElement).classList.toggle("on", loop); } }, "⟲ Loop"), "Repete o trecho selecionado"),
     h("label", { class: "inline" }, "♩=", tempoIn));
@@ -124,10 +125,10 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const recMain = tip(h("button", { class: "btn rec big-rec", "aria-label": "Gravar", onclick: (e: Event) => {
     const b = e.currentTarget as HTMLButtonElement;
     if (freeRec || !store.selectedMeasures.size) recordFree(b); else recordSection(b);
-  } }, h("span", { class: "tb-ic" }, "●"), h("span", { class: "tb-lb" }, t("record"))),
+  } }, h("span", { class: "tb-ic", html: ICONS.record }), h("span", { class: "tb-lb" }, t("record"))),
     "🎙 GRAVAR — cante ou toque no microfone. Sem compassos selecionados: grava livremente uma nova voz por cima da partitura até você apertar ■. Com compassos selecionados (faixa numerada): grava só aquele trecho. Eu conto 1 compasso antes. A gravação vira uma camada nova e é transcrita em notas.") as HTMLButtonElement;
   const importBtn = tip(h("button", { class: "btn imp", "aria-label": "Importar", onclick: () => dispatchEvent(new CustomEvent("open-app", { detail: "import" })) },
-    h("span", { class: "tb-ic" }, "⇪"), h("span", { class: "tb-lb" }, t("import"))),
+    h("span", { class: "tb-ic", html: ICONS.import }), h("span", { class: "tb-lb" }, t("import"))),
     "⇪ IMPORTAR — traga um material para editar: arquivo de áudio (MP3, WAV…), foto ou scan de partitura, ou cifra em texto. A IA transcreve e o resultado entra aqui como camadas novas.");
   const titleIn = h("input", { class: "score-title", value: store.score.title, "aria-label": "Título",
     onchange: (e: Event) => store.mutate((s) => (s.title = (e.target as HTMLInputElement).value), "title") });
@@ -197,28 +198,25 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
   const field = (label: string, el: HTMLElement) => h("label", { class: "fly-field" }, h("span", {}, label), el);
   const playIn = h("button", { class: "btn primary", onclick: () => togglePlay() }, "▶ " + t("play"));
   const GROUPS: { id: string; icon: string; label: string; color: string; help: string; body: () => HTMLElement[] }[] = [
-    { id: "dur", icon: "♩", label: "Duração", color: "#8d72ff", help: "Escolha a figura antes de clicar na pauta — ou arraste a figura direto para o lugar. O ponto aumenta a duração pela metade.", body: () => [durBox] },
-    { id: "play", icon: "▶", label: "Ouvir", color: "#3db66e", help: "Toque a partitura (ou só os compassos selecionados). O metrônomo marca os tempos; o loop repete o trecho.", body: () => [transport] },
-    { id: "harm", icon: "✨", label: "Harmonia", color: "#ef4a80", help: "A IA cria acordes e o acompanhamento da mão esquerda a partir da melodia. Selecione compassos na faixa numerada para harmonizar só um trecho.", body: () => [
+    { id: "dur", icon: ICONS.dur, label: "Duração", color: "#8d72ff", help: "Escolha a figura antes de clicar na pauta — ou arraste a figura direto para o lugar. O ponto aumenta a duração pela metade.", body: () => [durBox] },
+    { id: "play", icon: ICONS.play, label: "Ouvir", color: "#3db66e", help: "Metrônomo, loop e andamento da reprodução. Para tocar, use ▶ no topo da partitura ou o player na barra de menus.", body: () => [transport] },
+    { id: "harm", icon: ICONS.harm, label: "Harmonia", color: "#ef4a80", help: "A IA cria acordes e o acompanhamento da mão esquerda a partir da melodia. Selecione compassos na faixa numerada para harmonizar só um trecho.", body: () => [
       explain(harmBtn, "Só nos compassos selecionados; o resto serve de contexto."),
       explain(harmAllBtn, "A música inteira, do primeiro ao último compasso."),
       field("Estilo do acompanhamento", styleSel),
       explain(melBtn, "Faz o caminho inverso: tira a melodia (voz mais aguda) dos acordes."),
       explain(cifBtn, "Lê as notas e escreve a cifra (C, Am7, G7…) acima dos compassos.")] },
-    { id: "rec", icon: "🎙", label: "Gravação", color: "#e8503a", help: "Grave com o microfone: eu conto um compasso antes e o metrônomo acompanha. Cada gravação vira uma camada nova e é transcrita em notas.", body: () => [
-      explain(recSecBtn, "Grava só os compassos selecionados (ou os primeiros vazios)."),
-      explain(recFreeBtn, "Grava livremente por cima da partitura até você apertar ■ — vira uma nova voz.")] },
-    { id: "staff", icon: "𝄞", label: "Pauta", color: "#2e86de", help: "Mão em edição, instrumento (a clave acompanha), tonalidade, compasso e quais pautas aparecem.", body: () => [
+    { id: "staff", icon: ICONS.staff, label: "Pauta", color: "#2e86de", help: "Mão em edição, instrumento (a clave acompanha), tonalidade, compasso e quais pautas aparecem.", body: () => [
       field("Mão em edição", handSel), field("Instrumento", instSel),
       h("div", { class: "fly-grid" }, field("Tonalidade", keySel), field("Compasso", tsSel)),
       field("Pautas visíveis", stavesSel), h("div", { class: "fly-grid" }, field("Clave de cima", upperClef), field("Clave de baixo", lowerClef)),
-      h("div", { class: "row" }, addMeasure, scratch)] },
-    { id: "edit", icon: "↶", label: "Editar", color: "#f39c12", help: "Desfazer (⌘Z), refazer (⇧⌘Z) e o zoom da partitura.", body: () => [metaBox] },
+      h("div", { class: "row" }, addMeasure)] },
+    { id: "edit", icon: ICONS.edit, label: "Editar", color: "#f39c12", help: "Desfazer (⌘Z), refazer (⇧⌘Z) e o zoom da partitura.", body: () => [metaBox] },
   ];
   const fly = h("div", { class: "fly", role: "dialog", hidden: true });
   let openGroup = "";
   const groupBtns = GROUPS.map((g) => tip(h("button", { class: "rail-btn", "data-group": g.id, style: { "--c": g.color }, "aria-label": g.label, "aria-expanded": "false",
-    onclick: () => toggleGroup(g.id) }, h("span", { class: "rail-ic", "aria-hidden": "true" }, g.icon), h("small", {}, g.label)), g.help));
+    onclick: () => toggleGroup(g.id) }, h("span", { class: "rail-ic", "aria-hidden": "true", html: g.icon }), h("small", {}, g.label)), g.help));
   function toggleGroup(id: string) {
     if (openGroup === id || !id) { openGroup = ""; fly.hidden = true; }
     else {
@@ -226,7 +224,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       openGroup = id;
       fly.style.setProperty("--c", g.color);
       fly.replaceChildren(
-        h("header", { class: "fly-head" }, h("span", { class: "fly-ic", "aria-hidden": "true" }, g.icon), h("b", {}, g.label),
+        h("header", { class: "fly-head" }, h("span", { class: "fly-ic", "aria-hidden": "true", html: g.icon }), h("b", {}, g.label),
           h("button", { class: "fly-x", "aria-label": "Fechar", onclick: () => toggleGroup("") }, "✕")),
         h("p", { class: "fly-help" }, g.help), h("div", { class: "fly-body" }, ...g.body()));
       fly.setAttribute("aria-label", g.label);
@@ -290,6 +288,7 @@ export function mountScoreEditor(body: HTMLElement, win: Win) {
       .map((x) => h("span", {}, x)));
   };
   const header = h("div", { class: "score-head" }, titleIn, summary, playIn);
+  void scratch; void recSecBtn; void recFreeBtn;
   syncStaffCtl(); drawSummary();
 
   const status = h("div", { class: "statusbar", "data-noi18n": "" });

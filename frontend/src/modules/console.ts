@@ -12,12 +12,13 @@ export function mountConsole(box: HTMLElement) {
   const master = h("input", { type: "range", min: 0, max: 1.2, step: 0.01, value: audio.masterVolume(), "aria-label": "Volume geral", oninput: (e: Event) => audio.setMasterVolume(+(e.target as HTMLInputElement).value) });
   const mMeter = h("i", { class: "cs-meter" }, h("b"));
   const chans = h("div", { class: "cs-chans" });
-  box.append(h("div", { class: "cs-top" }, play, stop, now), h("div", { class: "cs-row master" }, h("span", { class: "cs-name" }, "Geral"), master, mMeter), chans);
+  void play; void stop;
+  box.append(h("div", { class: "cs-top" }, now), h("div", { class: "cs-row master" }, h("span", { class: "cs-name" }, "Geral"), master, mMeter), chans);
 
   const drawNow = (st: audio.PlayerState) => {
     now.replaceChildren(h("i", { class: "pb-dot" + (st.playing ? " on" : "") }), h("span", {}, st.source ? `${st.source.icon ?? "🎧"} ${st.source.label}` : "Nada tocando"));
     now.onclick = () => st.source?.focus?.();
-    play.textContent = st.playing ? "⏸" : "▶";
+
   };
   const offP = audio.onPlayer(drawNow);
   const meters = new Map<string, HTMLElement>();

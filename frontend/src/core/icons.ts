@@ -8,12 +8,16 @@ const base = (id: string, c1: string, c2: string, inner: string) => {
   return `
 <svg viewBox="0 0 64 64" class="ic3d" aria-hidden="true">
   <ellipse cx="32" cy="59" rx="20" ry="3.2" fill="#000" opacity=".22"/>
-  <rect x="5" y="4" width="54" height="52" rx="15" fill="url(#hg${id})"/>
-  <rect x="5" y="4" width="54" height="52" rx="15" fill="none" stroke="#fff" stroke-opacity=".35"/>
-  <path d="M12 12 Q32 2 52 12 L52 22 Q32 14 12 22Z" fill="url(#hgshine)" opacity=".55"/>
+  <rect x="5" y="7" width="54" height="51" rx="15" fill="${c2}" opacity=".9"/>
+  <rect x="5" y="4" width="54" height="51" rx="15" fill="url(#hg${id})"/>
+  <rect x="5" y="4" width="54" height="51" rx="15" fill="url(#hgdepth)"/>
+  <rect x="5.5" y="4.5" width="53" height="50" rx="14.5" fill="none" stroke="#fff" stroke-opacity=".45"/>
+  <path d="M12 12 Q32 2 52 12 L52 22 Q32 14 12 22Z" fill="url(#hgshine)" opacity=".6"/>
+  <ellipse cx="17" cy="13" rx="4" ry="2.2" fill="#fff" opacity=".75" transform="rotate(-25 17 13)"/>
   ${inner}
 </svg>`;
 };
+DEFS.push(`<linearGradient id="hgdepth" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>`);
 DEFS.push(`<linearGradient id="hgshine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`);
 
 /** Injeta as definições de gradiente uma única vez no documento. */
@@ -27,6 +31,21 @@ export function installIconDefs() {
 const eyes = (x: number, y: number) => `<g class="ic-eyes"><circle cx="${x}" cy="${y}" r="3.2" fill="#fff"/><circle cx="${x + 10}" cy="${y}" r="3.2" fill="#fff"/><circle cx="${x + .8}" cy="${y + .6}" r="1.6" fill="#1b1b2f"/><circle cx="${x + 10.8}" cy="${y + .6}" r="1.6" fill="#1b1b2f"/></g>`;
 
 export const ICONS: Record<string, string> = {
+  // ---- barra de ferramentas da composição (personagens 3D)
+  record: base("rec", "#ffb0a8", "#e5322d", `<g class="ic-bounce"><rect x="24" y="12" width="16" height="25" rx="8" fill="#fff"/><path d="M19 31 q13 14 26 0" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><rect x="30.5" y="41" width="3" height="7" rx="1.5" fill="#fff"/><rect x="24" y="47" width="16" height="3.5" rx="1.75" fill="#fff"/>${eyes(26, 22)}</g>`),
+  play: base("ply", "#a8f5c4", "#18a957", `<g class="ic-bounce"><path d="M24 16 L46 30 L24 44 Z" fill="#fff" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>${eyes(26, 27).replace(/r="3.2"/g, 'r="2.4"').replace(/r="1.6"/g, 'r="1.2"')}</g>`),
+  dur: base("dur", "#d5c8ff", "#6a46f0", `<g class="ic-bounce"><ellipse cx="25" cy="42" rx="9" ry="6.5" fill="#fff" transform="rotate(-20 25 42)"/><rect x="31.5" y="14" width="4" height="28" rx="2" fill="#fff"/><path d="M35.5 14 q11 5 9 15 q-3-7-9-7z" fill="#ffd36e"/>${eyes(19, 40).replace(/r="3.2"/g, 'r="2.2"').replace(/r="1.6"/g, 'r="1.1"')}</g>`),
+  harm: base("hrm", "#ffc1dc", "#e0397a", `<g class="ic-pulse"><path d="M32 12 l4 10 l10 4 l-10 4 l-4 10 l-4-10 l-10-4 l10-4z" fill="#fff"/><path d="M46 36 l2 5 l5 2 l-5 2 l-2 5 l-2-5 l-5-2 l5-2z" fill="#ffe680"/><path d="M18 38 l1.5 3.5 l3.5 1.5 l-3.5 1.5 l-1.5 3.5 l-1.5-3.5 l-3.5-1.5 l3.5-1.5z" fill="#fff" opacity=".85"/></g>`),
+  staff: base("stf", "#b8dcff", "#2b6fd6", `<g class="ic-bounce">${[18, 25, 32, 39, 46].map((y) => `<rect x="12" y="${y - 0.8}" width="40" height="1.6" rx=".8" fill="#fff" opacity=".7"/>`).join("")}<text x="24" y="47" font-size="34" fill="#fff" font-family="serif">𝄞</text></g>`),
+  edit: base("edt", "#ffe1a0", "#f08c00", `<g class="ic-bounce"><path d="M22 26 h16 a9 9 0 0 1 0 18 h-10" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M27 17 l-9 9 l9 9" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>`),
+  export: base("exp", "#c9f7d9", "#1aa36a", `<g class="ic-bounce"><path d="M32 36 v-21" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M22 24 l10 -10 l10 10" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 38 v6 a4 4 0 0 0 4 4 h24 a4 4 0 0 0 4-4 v-6" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="46" cy="16" r="5" fill="#ffd36e"/></g>`),
+  t_select: base("tsl", "#e9e3ff", "#8b72f0", `<g class="ic-bounce"><path d="M22 14 L22 44 L30 37 L35 48 L40 46 L35 35 L45 35 Z" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></g>`),
+  t_pencil: base("tpn", "#fff0b3", "#f0a500", `<g class="ic-bounce"><path d="M18 46 l4-12 l20-20 l8 8 l-20 20 z" fill="#fff"/><path d="M42 14 l8 8" stroke="#ff8fb1" stroke-width="5" stroke-linecap="round"/><path d="M18 46 l4-12 l8 8z" fill="#3a2a12" opacity=".75"/></g>`),
+  t_erase: base("ter", "#ffd0e2", "#e54b8a", `<g class="ic-bounce"><path d="M16 38 l18-18 l14 14 l-12 12 h-12 z" fill="#fff"/><path d="M16 38 l8-8 l14 14 l-2 2 h-12z" fill="#ff8fb1"/><rect x="30" y="45" width="18" height="3" rx="1.5" fill="#fff" opacity=".8"/></g>`),
+  t_chord: base("tch", "#d9f7ff", "#1fa2c7", `<g class="ic-bounce"><text x="32" y="40" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="system-ui">C7</text></g>`),
+  t_lyrics: base("tly", "#ffe6cc", "#ff8a3d", `<g class="ic-bounce"><text x="21" y="41" font-size="22" fill="#fff" font-family="serif">♪</text><text x="35" y="41" font-size="18" font-weight="800" fill="#fff" font-family="system-ui">a</text></g>`),
+  t_annot: base("tan", "#fff7b8", "#e6b800", `<g class="ic-pulse"><rect x="16" y="16" width="30" height="28" rx="5" fill="#fff" transform="rotate(-6 31 30)"/><path d="M38 40 l3 7 l7 3 l-7 3 l-3 7 l-3-7 l-7-3 l7-3z" fill="#ff8fb1" transform="translate(0 -12)"/><path d="M21 25 h14 M21 31 h10" stroke="#e6b800" stroke-width="3" stroke-linecap="round" transform="rotate(-6 31 30)"/></g>`),
+
   compose: base("c", "#a58bff", "#5a35d6", `<g class="ic-bounce"><ellipse cx="25" cy="42" rx="8" ry="6" fill="#fff" transform="rotate(-20 25 42)"/><rect x="31" y="16" width="4" height="27" rx="2" fill="#fff"/><path d="M35 16 q10 4 9 13 q-3-6-9-6z" fill="#ffd36e"/>${eyes(20, 40)}</g>`),
   import: base("i", "#7fe3ff", "#1b8fd6", `<g class="ic-bounce"><path d="M32 14 v20" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M22 27 l10 10 l10-10" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="16" y="40" width="32" height="7" rx="3.5" fill="#fff" opacity=".9"/></g>`),
   layers: base("l", "#ffb3d1", "#e0397a", `<g class="ic-stack"><path d="M32 16 L50 25 L32 34 L14 25Z" fill="#fff"/><path d="M14 31 L32 40 L50 31" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" opacity=".85"/><path d="M14 37 L32 46 L50 37" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" opacity=".6"/></g>`),

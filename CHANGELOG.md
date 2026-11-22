@@ -2,6 +2,19 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.7.0-alpha] — 2026-11-22
+
+### Alterado — interface enxuta, sem controles repetidos
+- **Um lançador só**: o menu lateral esquerdo (que repetia o Dock) saiu; o Dock abre todos os quadros. No desktop fica só o ícone **Nova composição** (Importar, Biblioteca etc. estão no Dock).
+- **Um transporte só**: tocar/pausar/parar ficam no **player universal** (e o ▶ do topo da partitura). Saíram os botões repetidos de tocar da Mesa, do grupo "Ouvir" (que ficou com metrônomo, loop e andamento) e do "＋ Nova" do pentagrama do desktop.
+- **Uma mesa só**: volume, mudo e solo das camadas ficam na **🎚 Mesa de som** (Propriedades). O painel de Camadas ficou com o essencial — cor, nome, 👁, 🔗 vínculo, 🔒 cadeado e ⋯. A antiga "Mesa de Edição" virou **Exportar** (MIDI, MusicXML, PDF, WAV, MP3).
+- **Uma gravação só**: o ● Gravar fixo decide sozinho (com compassos selecionados grava o trecho; sem seleção, uma nova voz). O grupo "Gravação" repetido saiu.
+- **Dados da partitura num lugar só**: título no cabeçalho; tonalidade, compasso, pautas e claves no quadro **Pauta**. A seção "Partitura" repetida saiu de Propriedades, assim como o "⟲ Do zero" (use Nova composição) e os botões de copiar/recortar repetidos (ficam na barra de seleção da partitura e em ⌘⇧C / ⌘⇧X).
+- Barra de ferramentas mais compacta: ferramentas em duas colunas, cabe inteira sem rolar.
+
+### Adicionado — ícones 3D animados
+- Novos ícones estilo cartoon 3D (volume, profundidade, brilho especular, piscar de olhos e "squash & stretch" ao passar o mouse) para Gravar, Importar, Exportar, as seis ferramentas de escrita e os grupos Duração, Ouvir, Harmonia, Pauta e Editar; todos os ícones ganharam mais profundidade.
+
 ## [0.6.1-alpha] — 2026-11-22
 
 ### Adicionado

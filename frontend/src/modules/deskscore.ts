@@ -34,7 +34,8 @@ export function mountDeskScore(openEditor: () => void, newScore: () => void) {
   const edit = h("button", { class: "btn ds-edit", onclick: () => openEditor() }, "✎ Editar");
   const fresh = h("button", { class: "btn ghost", title: "Começar uma partitura nova", onclick: () => newScore() }, "＋ Nova");
   const minB = h("button", { class: "p-btn", title: "Recolher / expandir", onclick: () => { pos.min = !pos.min; save(); apply(); } });
-  const head = h("header", { class: "ds-head" }, h("span", { class: "ds-ic", "aria-hidden": "true" }, "🎼"), h("div", { class: "ds-tt" }, title, meta), play, edit, fresh, minB);
+  const head = h("header", { class: "ds-head" }, h("span", { class: "ds-ic", "aria-hidden": "true" }, "🎼"), h("div", { class: "ds-tt" }, title, meta), play, edit, minB);
+  void fresh;
   const svg = el("svg", { class: "ds-svg", role: "img" });
   const body = h("div", { class: "ds-body", title: "Duplo clique para editar" }, svg as unknown as HTMLElement);
   body.addEventListener("dblclick", () => openEditor());
