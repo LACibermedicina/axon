@@ -1,8 +1,24 @@
 {
- "version": "0.4.0-alpha",
+ "version": "0.5.0-alpha",
  "sha": "dev",
- "built_at": "2026-11-22T15:15:21Z",
+ "built_at": "2026-11-23T02:41:55Z",
  "releases": [
+  {
+   "version": "0.5.0-alpha",
+   "date": "2026-11-23",
+   "summary": "Página inicial de apresentação do projeto, com diorama voxel 3D animado e acesso direto ao simulador e à documentação.",
+   "sections": {
+    "Adicionado": [
+     "Página inicial em axon.m3d.pro: diorama voxel animado de um bloco de pele em corte (epiderme, derme com vasos, hipoderme, músculo) atravessado por um fascículo com fibras Aβ e Aδ, eletrodo de superfície e condução saltatória de nó em nó. A câmera muda de enquadramento a cada seção.",
+     "Demonstração interativa: controle de intensidade do estímulo que mostra as fibras do tato disparando antes das da dor, com limiares que seguem a lei de escala do modelo (expoente 1,1266) e a razão Aδ/Aβ de 3,21. Passar o mouse sobre uma fibra mostra o calibre e o limiar relativo.",
+     "Conteúdo do programa de pesquisa: problema, proposta, resultados do modelo, roadmap por fases com critérios de passagem, estado atual com marcos, registro de evolução ao lado das versões do simulador, materiais e galeria das 12 pranchas.",
+     "Pranchas reprodutíveis: os scripts que desenham as figuras e o modelo preditivo de referência entram em research/; o conteúdo do programa fica em research/conteudo-programa.json."
+    ],
+    "Alterado": [
+     "O simulador passou para /simulador.html (/simulador e /app redirecionam). O nome \"axon\" na barra do simulador volta à página inicial; os manuais e a página de notícias têm links para as duas."
+    ]
+   }
+  },
   {
    "version": "0.4.0-alpha",
    "date": "2026-11-22",

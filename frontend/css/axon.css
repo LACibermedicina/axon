@@ -17,7 +17,7 @@ button{cursor:pointer}
 .menubar{height:34px;display:flex;align-items:center;gap:14px;padding:0 12px;background:rgba(6,16,20,.75);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);position:relative;z-index:50}
 .lights{display:flex;gap:7px}.lights i{width:12px;height:12px;border-radius:50%;display:block}
 .lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
-.brand{position:absolute;left:50%;transform:translateX(-50%);font-weight:700;letter-spacing:.06em;font-size:15px;color:#bff7ee;display:flex;gap:8px;align-items:center}
+.brand{text-decoration:none;position:absolute;left:50%;transform:translateX(-50%);font-weight:700;letter-spacing:.06em;font-size:15px;color:#bff7ee;display:flex;gap:8px;align-items:center}
 .brand small{font:500 11px var(--mono);color:var(--muted);letter-spacing:0}
 .menubar .sp{flex:1}
 .flags{display:flex;gap:2px;background:rgba(255,255,255,.05);border-radius:20px;padding:2px}

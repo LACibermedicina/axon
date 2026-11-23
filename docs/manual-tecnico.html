@@ -14,7 +14,7 @@
   <span class="sp"></span>
   <input id="q" type="search" placeholder="Buscar (ex.: SERVIDOR_ENV)…" aria-label="Buscar no manual">
   <a class="b" href="manual-usuario.html">Manual do usuário</a>
-  <a class="b pri" href="../">Abrir o axon</a>
+  <a class="b" href="../">Início</a><a class="b pri" href="../simulador.html">Abrir o simulador</a>
 </header>
 
 <div class="hero" id="inicio">
@@ -22,7 +22,7 @@
     <div>
       <h1>Duas funções puras, um domínio verificado, uma semente fixa.</h1>
       <p>Referência de arquitetura, API, núcleo científico, frontend 3D, infraestrutura e processo de desenvolvimento do <b>axon</b> — para quem vai implantar, manter, auditar ou estender.</p>
-      <div class="meta">v0.3.0-alpha · Python 3.11 · FastAPI · NumPy/SciPy · Three.js r128 · Docker Compose · GitHub Actions</div>
+      <div class="meta">v0.5.0-alpha · Python 3.11 · FastAPI · NumPy/SciPy · Three.js r128 · Docker Compose · GitHub Actions</div>
     </div>
     <figure>
       <svg viewBox="0 0 700 380" role="img" aria-label="Arquitetura em camadas do axon">
@@ -90,6 +90,7 @@
 
 <section id="repo">
   <h2>Estrutura do repositório</h2>
+  <p><b>Página inicial (v0.5):</b> <code>frontend/index.html</code> apresenta o programa de pesquisa; o app passou a <code>frontend/simulador.html</code> (mesma pasta, mesmos caminhos relativos; <code>/simulador</code> e <code>/app</code> redirecionam). O diorama é <code>js/landing3d.js</code> (Three.js r128, voxels com bisel arredondado em <code>InstancedMesh</code> por material, sombras PCF suaves, ACES, PMREM de gradiente, deslocamento de quadro por seção via <code>setViewOffset</code>). Os limiares das fibras seguem <code>I ∝ D<sup>−1,1266</sup></code>, normalizados para que a razão das medianas Aδ/Aβ seja 3,21. O conteúdo do programa vem de <code>research/conteudo-programa.json</code> → <code>scripts/build_programa.py</code> → <code>js/programa.js</code>; as pranchas são desenhadas por <code>research/figuras/gerar.py</code> e copiadas para <code>frontend/img/programa/</code>.</p>
 <pre><code>axon/
 ├── .github/workflows/deploy.yml   # ci-axon: test → sync-ai-env → deploy (SSH)
 ├── backend/
@@ -574,7 +575,7 @@ python -m core.bio_model       # grava res.json e imprime os benchmarks</code></
 
 </main>
 </div>
-<footer>axon v0.3.0-alpha · Manual Técnico · <a href="../site/">página do projeto</a> · <a href="manual-usuario.html">manual do usuário</a> · autor do modelo: L. S. Teixeira (Ibilce/UNESP)</footer>
+<footer>axon v0.5.0-alpha · Manual Técnico · <a href="../site/">página do projeto</a> · <a href="manual-usuario.html">manual do usuário</a> · autor do modelo: L. S. Teixeira (Ibilce/UNESP)</footer>
 <script src="doc.js"></script>
 </body>
 </html>
