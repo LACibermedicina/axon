@@ -1,7 +1,7 @@
 {
  "version": "0.11.2-alpha",
  "sha": "dev",
- "built_at": "2026-11-23T22:44:59Z",
+ "built_at": "2026-11-23T23:01:23Z",
  "releases": [
   {
    "version": "0.11.2-alpha",
@@ -10,6 +10,9 @@
    "sections": {
     "Alterado": [
      "Abas laterais (orelhas): ficam visíveis com o painel aberto ou fechado; antes sumiam ao abrir o painel. - Ao passar o mouse, cada aba mostra ⇄ inverter, que leva o capítulo para o painel do outro lado, e ⇱ extrair, que o abre como janela flutuante (⇲ devolve). - A aba ⇄ do topo troca o painel inteiro de lado. - As escolhas ficam guardadas no navegador. - A altura das abas se ajusta para todas caberem ao lado do painel, também em telas menores."
+    ],
+    "Corrigido": [
+     "Infraestrutura: o setup_vps.sh devolvia a pasta do portal (data/portal) ao usuário de deploy, e a API ficava sem permissão para ler e gravar notícias (\"portal\": \"erro: PermissionError\" no /api/health). Agora a pasta volta a pertencer ao usuário do container (10001) ao fim do passo."
     ]
    }
   },

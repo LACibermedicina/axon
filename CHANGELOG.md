@@ -13,6 +13,9 @@ As abas laterais continuam visíveis com o painel aberto e permitem inverter ou 
   - As escolhas ficam guardadas no navegador.
   - A altura das abas se ajusta para todas caberem ao lado do painel, também em telas menores.
 
+### Corrigido
+- **Infraestrutura:** o `setup_vps.sh` devolvia a pasta do portal (`data/portal`) ao usuário de deploy, e a API ficava sem permissão para ler e gravar notícias (`"portal": "erro: PermissionError"` no `/api/health`). Agora a pasta volta a pertencer ao usuário do container (10001) ao fim do passo.
+
 ## [0.11.1-alpha] — 2026-11-23
 
 Página inicial e simulador passam a mostrar a versão nova logo após cada atualização, e as novidades do portal voltam a aparecer.

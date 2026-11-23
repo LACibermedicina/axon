@@ -64,6 +64,8 @@ install -d "$APP_DIR" "$APP_DIR/data" "$APP_DIR/data/status"
 install -d -o 10001 -g 10001 -m 750 "$APP_DIR/data/portal" "$APP_DIR/data/portal/media"   # volume do portal (usuário do container da API)
 [[ "$SRC_DIR" != "$APP_DIR" ]] && rsync -a --delete --exclude '.env' --exclude 'data/' --exclude '.git/' "$SRC_DIR/" "$APP_DIR/"
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
+# o volume do portal pertence ao usuário do container da API (10001); o chown acima não pode tomá-lo
+chown -R 10001:10001 "$APP_DIR/data/portal"; chmod 750 "$APP_DIR/data/portal" "$APP_DIR/data/portal/media"
 ok "Versão $(cat "$APP_DIR/VERSION")"
 
 log "6/8 Segredos (.env, chmod 600) — chaves de IA chegam do GitHub (SERVIDOR_ENV)"
