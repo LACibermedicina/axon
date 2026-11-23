@@ -12,14 +12,14 @@ ports_in_use() {
     if command -v ss >/dev/null 2>&1; then
       ss -Htanlu 2>/dev/null | awk '{print $5}' | sed -E 's/.*[:.]([0-9]+)$/\1/'
     else  # fallback sem iproute2: lê o kernel direto (TCP em LISTEN + UDP ligados)
-      { for f in /proc/net/tcp /proc/net/tcp6; do [[ -r $f ]] && awk 'NR>1 && $4=="0A" {split($2,a,":"); print a[2]}' "$f"; done
-        for f in /proc/net/udp /proc/net/udp6; do [[ -r $f ]] && awk 'NR>1 {split($2,a,":"); print a[2]}' "$f"; done
+      { for f in /proc/net/tcp /proc/net/tcp6; do if [[ -r $f ]]; then awk 'NR>1 && $4=="0A" {split($2,a,":"); print a[2]}' "$f"; fi; done
+        for f in /proc/net/udp /proc/net/udp6; do if [[ -r $f ]]; then awk 'NR>1 {split($2,a,":"); print a[2]}' "$f"; fi; done
       } | while read -r hx; do echo $((16#$hx)); done
     fi
     if command -v docker >/dev/null 2>&1; then
-      docker ps --format '{{.Ports}}' 2>/dev/null | grep -oE ':[0-9]+->' | tr -d ':->'
+      docker ps --format '{{.Ports}}' 2>/dev/null | { grep -oE ':[0-9]+->' || true; } | tr -d ':->'
     fi
-  } | grep -E '^[0-9]+$' | sort -un
+  } | { grep -E '^[0-9]+$' || true; } | sort -un
 }
 
 port_is_free() {
@@ -73,7 +73,7 @@ env_set() {
 own_ports() {
   command -v docker >/dev/null 2>&1 || return 0
   docker ps --filter label=com.docker.compose.project=axon --format '{{.Ports}}' 2>/dev/null \
-    | grep -oE ':[0-9]+->' | tr -d ':->' | sort -un
+    | { grep -oE ':[0-9]+->' || true; } | tr -d ':->' | sort -un
 }
 
 # A porta pertence ao axon se o /api/health dela responde como "axon"
