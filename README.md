@@ -7,27 +7,30 @@ fundamentada em *Biofísica da Neuromodulação: Resolução de Fibra Única e L
 > **Ferramenta de pesquisa, ensino e modelagem in silico** (ASME V&V 40 — verificado, não validado; Res. CNS 510/2016).
 > **Não é dispositivo médico** nem protocolo clínico. Não calcula parâmetros de estimulação para pessoas.
 
-Versão **0.2.0-alpha** (atualização automática — ver CHANGELOG) — ver [CHANGELOG](CHANGELOG.md).
+Versão **0.10.0-alpha** — ver [CHANGELOG](CHANGELOG.md).
 
 ## O que tem aqui
 
 | Pasta | Conteúdo |
 |---|---|
-| `backend/core/` | Núcleo verificado: modelo nodal de 41 nós (Anexo G), Monte Carlo (semente 42), 4 fronteiras de segurança, ruído/RE, modalidades integrativas, variações anatômicas |
-| `backend/app/` | API FastAPI (`/api/*`) e IA contextual com failover entre provedores |
-| `frontend/` | Desktop macOS 3D (Three.js r128): zoom semântico em 5 escalas, 8 mini-apps, painéis retráteis, 5 idiomas |
+| `backend/core/` | Núcleo verificado: modelo nodal de 41 nós (Anexo G), Monte Carlo (semente 42), 4 fronteiras de segurança, ruído/RE, modalidades integrativas, variações anatômicas, preditor morfométrico do axônio |
+| `backend/app/` | API FastAPI (`/api/*`), IA contextual com failover (Axon Bot, tradução da tela, paciente, plano), portal (notícias, agenda, podcast, boletim, apoio) |
+| `frontend/` | Portal (`index.html`), simulador (`simulador.html`), painel da coordenação (`admin.html`); Three.js r128 com cópia local em `vendor/` |
+| `frontend/anatomy/` | Pacote anatômico BodyParts3D (CC BY-SA 2.1 JP): pele, 258 ossos, 157 órgãos, 56 vasos, 457 músculos, 125 trajetos nervosos |
+| `docs/` | Manual do Usuário e Manual Técnico, com atlas visual (`docs/img/anat/`) |
+| `research/` | Conteúdo do programa de pesquisa, pranchas e scripts reprodutíveis |
+| `scripts/` | Instalação na VPS, deploy, release, builds autocontidos, captura das figuras da documentação |
 | `realtime/` | Sinalização WebRTC das salas de estudo (perfil `collab`) |
-| `docs/` | Manual do Usuário e Manual Técnico (HTML ilustrado) |
-| `site/` | Página de apresentação do projeto |
-| `scripts/` | `setup_vps.sh`, `deploy.sh`, `merge-env.sh`, `ci-sync-ai-env.sh`, builds autocontidos |
 
 ## Rodar localmente
 
 ```bash
-cd backend && pip install -r requirements-dev.txt && python -m pytest -q   # 28 testes de regressão
-uvicorn app.main:app --reload                                               # API em :8000
-python3 -m http.server -d ../frontend 8080                                  # desktop (funciona offline)
+cd backend && pip install -r requirements-dev.txt && python -m pytest -q   # 43 testes
+uvicorn app.main:app --reload --port 8000                                   # API
+cd ../frontend && python3 -m http.server 8080                               # http://localhost:8080/simulador.html
 ```
+
+Sem a API, o simulador funciona em modo local (sem IA). Com `docker compose up -d` sobe tudo junto.
 
 ## Implantar (VPS compartilhada)
 
