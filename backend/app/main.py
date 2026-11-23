@@ -320,3 +320,21 @@ def portal_admin_ticket(tid: str, p: TkIn, authorization: Optional[str] = Header
     if not portal.ticket_update(tid, p.state, p.notes):
         raise HTTPException(404, "chamado não encontrado")
     return {"ok": True}
+
+
+class PatIn(BaseModel):
+    text: str = Field(..., max_length=2000)
+
+
+@app.post("/api/ai/patient")
+def ai_patient(p: PatIn):
+    return ai.patient(p.text)
+
+
+class PlanIn(BaseModel):
+    facts: Dict = Field(...)
+
+
+@app.post("/api/ai/plan")
+def ai_plan(p: PlanIn):
+    return ai.plan_text(p.facts)

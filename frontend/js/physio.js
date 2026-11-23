@@ -53,6 +53,7 @@
     ["symp", "hr", 1], ["vagal", "hr", -1], ["symp", "hrv", -1], ["vagal", "hrv", 1], ["symp", "eda", 1]
   ];
   // pesos nominais [HIPÓTESE]; o Monte Carlo varia ±40 %
+  const CARRY = .07;   // fração da analgesia da sessão que persiste até a próxima [PREMISSA calibrada: curso de ~10 sessões → redução de ~30–45 % da EVA]
   const W0 = { gate: .38, opioid: .3, desc: .28, ai: .35, sens: .5, stimPain: 3.2, tolK: .6, hrSymp: 16, hrVagal: 7, hrvVagal: .5, hrvSymp: .35 };
   const TAU = { gate: .3, enk: 6, dyn: 4, nts: 1.5, desc: 7, vagal: 1, ai: 18, symp: 1.2, windup: 2.5, tol: 15 }; // minutos
 
@@ -106,16 +107,20 @@
   /* Desfecho hipotético: N sessões simuladas com pesos perturbados (±40 %), mesma entrada.
    * Retorna mediana e intervalo 10–90 % da EVA final e P(redução ≥ 30 %). */
   function outcome(cs, u, minutes = 20, sessions = 1, N = 300) {
-    const rng = mulberry(42), finals = [], hrs = [];
+    const rng = mulberry(42), finals = [], offs = [], hrs = [];
+    const carry = S => { S.base = Math.max(cs.pain.baseline * .25, S.base - CARRY * S.w.opioid / .3 * (S.base - S.out.pain)); };
     for (let k = 0; k < N; k++) {
       const w = Object.fromEntries(Object.entries(W0).map(([a, v]) => [a, v * (.6 + .8 * rng())]));
       let S = newState(cs, w);
-      for (let s2 = 0; s2 < sessions; s2++) { for (let t = 0; t < minutes; t += .5) step(S, u, .5); if (s2 < sessions - 1) { S.base = Math.max(0, S.base - .35 * (S.base - S.out.pain)); for (let t = 0; t < 60; t += 2) step(S, Object.assign({}, u, { on: false }), 2); } }
+      for (let s2 = 0; s2 < sessions; s2++) { for (let t = 0; t < minutes; t += .5) step(S, u, .5); if (s2 < sessions - 1) { carry(S); for (let t = 0; t < 60; t += 2) step(S, Object.assign({}, u, { on: false }), 2); } }
       finals.push(S.out.pain); hrs.push(S.out.hr);
+      // dor residual: 2 h após a última sessão, sem estímulo (o que persiste do curso)
+      carry(S); for (let t = 0; t < 120; t += 2) step(S, Object.assign({}, u, { on: false }), 2); offs.push(S.out.pain);
     }
-    finals.sort((a, b) => a - b); const q = p => finals[Math.floor(p * (N - 1))];
-    const resp = finals.filter(v => v <= cs.pain.baseline * .7).length / N;
-    return { median: q(.5), p10: q(.1), p90: q(.9), pResp: resp, baseline: cs.pain.baseline, hrMed: hrs.sort((a, b) => a - b)[N >> 1], N, seed: 42, tag: "HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO" };
+    finals.sort((a, b) => a - b); offs.sort((a, b) => a - b); const q = (arr, p) => arr[Math.floor(p * (N - 1))];
+    const resp = finals.filter(v => v <= cs.pain.baseline * .7).length / N, respOff = offs.filter(v => v <= cs.pain.baseline * .7).length / N;
+    return { median: q(finals, .5), p10: q(finals, .1), p90: q(finals, .9), pResp: resp, off: { median: q(offs, .5), p10: q(offs, .1), p90: q(offs, .9), pResp: respOff },
+      baseline: cs.pain.baseline, hrMed: hrs.sort((a, b) => a - b)[N >> 1], N, seed: 42, tag: "HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO" };
   }
   g.AxonPhysio = { NODES, EDGES, REF, W0, TAU, newState, step, activity, outcome };
 })(window);

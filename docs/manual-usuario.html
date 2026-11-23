@@ -87,7 +87,7 @@
 <nav class="toc" aria-label="Índice">
   <div class="grp">Começar</div><a href="#sobre">O que é o axon</a><a href="#acesso">Primeiros passos</a><a href="#tela">Anatomia da tela</a>
   <div class="grp">Navegar</div><a href="#escalas">Zoom semântico em 5 escalas</a><a href="#janelas">Janelas e Dock</a><a href="#paineis">Painéis laterais</a>
-  <div class="grp">Simular</div><a href="#apps">Os 8 mini-apps</a><a href="#simulacao">Modo Simulação</a><a href="#modalidades">Modalidades</a><a href="#integrativa">Medicina integrativa</a><a href="#reflexos">Pontos reflexos e camadas</a><a href="#portal">Portal, agenda e podcast</a><a href="#fluxos">Fluxos de trabalho</a>
+  <div class="grp">Simular</div><a href="#apps">Os 8 mini-apps</a><a href="#simulacao">Modo Simulação</a><a href="#modalidades">Modalidades</a><a href="#integrativa">Medicina integrativa</a><a href="#reflexos">Pontos reflexos e camadas</a><a href="#mesa">Mesa, imagens e plano</a><a href="#portal">Portal, agenda e podcast</a><a href="#fluxos">Fluxos de trabalho</a>
   <div class="grp">Interpretar</div><a href="#procedencia">Etiquetas de procedência</a><a href="#seguranca">4 fronteiras de segurança</a><a href="#limites">O que os números autorizam</a>
   <div class="grp">Referência</div><a href="#faq">Perguntas frequentes</a><a href="#atalhos">Atalhos</a><a href="#glossario">Glossário</a><a href="#versao">Versão e atualizações</a><a href="#privacidade">Privacidade e suporte</a>
 </nav>
@@ -354,6 +354,25 @@
   <div class="note warn">Os pontos são localizações de referência projetadas sobre um único corpo e servem para ensino. A correspondência com meridianos é a da tradição chinesa e não é mostrada como relação anatômica. Nada aqui indica onde ou como tratar um paciente.</div>
 </section>
 
+<section id="mesa">
+  <h2>Mesa de trabalho, dissecção, imagens e plano terapêutico <span class="mono">v0.8</span></h2>
+  <p class="lead">O simulador abre só com o modelo 3D. Tudo o mais fica nos ícones da barra superior; a tecla <span class="mono">\</span> oculta e mostra todos os painéis.</p>
+  <div class="scroll"><table class="stack">
+    <tr><th>Ícone</th><th>O que faz</th></tr>
+    <tr><td>Painéis E / D</td><td>Abrem as laterais. Recolhidas, viram trilhos de ícones; passe o mouse para ler a descrição de cada grupo. O botão ⇱ de um cartão o destaca como painel flutuante; ⇲ devolve à lateral.</td></tr>
+    <tr><td>Ferramentas</td><td>Tipo de exploração (anatomia, biofísica, simulação, planejamento) e paleta de instrumentos com ícones.</td></tr>
+    <tr><td>Guia</td><td>Sete passos com os parâmetros sugeridos para o caso ativo; cada passo marca-se sozinho quando feito.</td></tr>
+    <tr><td>Paciente</td><td>Sexo, idade, altura, peso e fototipo deformam a anatomia. Descreva o caso em texto ("Mulher, 52 anos, dor lombar irradiada…") e o sistema cria paciente e caso <b>fictícios</b>. Não informe nome, documentos ou datas de nascimento.</td></tr>
+    <tr><td>Profundidade</td><td>Seis níveis de dissecção (pele → esqueleto), opacidade por camada, plano de corte e pele realista.</td></tr>
+    <tr><td>Imagens</td><td>TC, RM T1/T2 no corte escolhido (o plano aparece no corpo), radiografia AP ou perfil e EMG de superfície sintética.</td></tr>
+    <tr><td>Mapas</td><td>Acupuntura e eletroacupuntura, craniopuntura de Yamamoto (YNSA) e aurículo, com pontos sugeridos para o caso (amarelo) e demais disponíveis, além das referências.</td></tr>
+    <tr><td>Relações</td><td>Clique num músculo: acendem o nervo e as raízes, os músculos do mesmo nervo e do mesmo segmento e os pontos reflexos indiretamente afetados.</td></tr>
+    <tr><td>SNC</td><td>Mapa do encéfalo à medula sacral com fibras aferentes e eferentes, cadeia simpática, vago e órgãos com dor referida; o caso ativo fica destacado.</td></tr>
+    <tr><td>Plano</td><td>Técnicas ordenadas por % de adequação, fatores e pesos ajustáveis, parâmetros, tempo de tratamento, riscos e benefícios, métricas objetivas e subjetivas e gráficos que se arrastam para mudar frequência, intensidade e número de sessões.</td></tr>
+  </table></div>
+  <p class="note"><b>Leia o plano como hipótese do modelo.</b> Porcentagens e desfechos vêm da rede fisiológica (Monte Carlo, semente 42) e da literatura citada; não são prescrição. A EVA mostrada é a dor residual 2 h após a última sessão.</p>
+</section>
+
 <section id="portal">
   <h2>Portal do projeto: novidades, agenda, podcast e boletim</h2>
   <p class="lead">A página inicial (<span class="mono">axon.m3d.pro</span>) reúne o que acontece no projeto. Tudo o que aparece ali foi publicado pela coordenação.</p>
@@ -528,7 +547,7 @@
 
 </main>
 </div>
-<footer>axon v0.7.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../#novidades">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
+<footer>axon v0.8.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../#novidades">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
 <script src="doc.js"></script>
 </body>
 </html>

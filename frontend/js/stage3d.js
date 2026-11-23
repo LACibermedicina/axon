@@ -92,20 +92,31 @@
   function skinMaterial() {
     const pal = PAL.map(c => V3(c.r, c.g, c.b));
     return new T.ShaderMaterial({
-      transparent: true, depthWrite: false, side: T.DoubleSide,
-      uniforms: { pal: { value: pal }, dermOn: { value: 1 }, sel: { value: -1 }, selHi: { value: -1 }, alphaK: { value: 1 }, selK: { value: 1 }, selCol: { value: V3(1, .95, .7) }, t: { value: 0 }, nmap: { value: ptex("skin", [1, 1]).normalMap } },
-      vertexShader: `attribute float derm; uniform vec3 pal[30]; uniform float sel; uniform float selHi;
+      transparent: true, depthWrite: false, side: T.DoubleSide, clipping: true,
+      uniforms: { tone: { value: V3(.86, .62, .52) }, real: { value: 0 }, pal: { value: pal }, dermOn: { value: 1 }, sel: { value: -1 }, selHi: { value: -1 }, alphaK: { value: 1 }, selK: { value: 1 }, selCol: { value: V3(1, .95, .7) }, t: { value: 0 }, nmap: { value: ptex("skin", [1, 1]).normalMap } },
+      vertexShader: `#include <clipping_planes_pars_vertex>
+        attribute float derm; uniform vec3 pal[30]; uniform float sel; uniform float selHi;
         varying vec3 vN; varying vec3 vV; varying vec3 vC; varying float vS; varying vec2 vUv;
         void main(){ int k=int(derm+.5); vec3 c=vec3(0.);
           for(int i=0;i<30;i++){ if(i==k) c=pal[i]; }
           vC=c; vS=(sel>-.5&&derm>sel-.5&&derm<max(sel,selHi)+.5)?1.:0.; vUv=uv;
-          vec4 mv=modelViewMatrix*vec4(position,1.); vV=-mv.xyz; vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*mv; }`,
-      fragmentShader: `uniform float dermOn; uniform float alphaK; uniform float selK; uniform vec3 selCol; uniform float t; uniform sampler2D nmap; varying vec3 vN; varying vec3 vV; varying vec3 vC; varying float vS; varying vec2 vUv;
-        void main(){ vec3 nb=texture2D(nmap,vUv*vec2(6.,14.)).xyz*2.-1.; vec3 N=normalize(vN+nb*.18); vec3 V=normalize(vV);
-          float f=pow(1.-abs(dot(N,V)),2.4); vec3 skin=vec3(.86,.62,.52); vec3 c=mix(skin,vC,dermOn*.62);
+          vec4 mvPosition=modelViewMatrix*vec4(position,1.); vV=-mvPosition.xyz; vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*mvPosition;
+          #include <clipping_planes_vertex>
+        }`,
+      fragmentShader: `#include <clipping_planes_pars_fragment>
+        uniform vec3 tone; uniform float real; uniform float dermOn; uniform float alphaK; uniform float selK; uniform vec3 selCol; uniform float t; uniform sampler2D nmap; varying vec3 vN; varying vec3 vV; varying vec3 vC; varying float vS; varying vec2 vUv;
+        void main(){
+          #include <clipping_planes_fragment>
+          vec3 nb=texture2D(nmap,vUv*vec2(6.,14.)).xyz*2.-1.; vec3 N=normalize(vN+nb*.18); vec3 V=normalize(vV);
+          float f=pow(1.-abs(dot(N,V)),2.4); vec3 skin=tone; vec3 c=mix(skin,vC,dermOn*.62);
           float spec=pow(max(dot(reflect(-V,N),normalize(vec3(.4,.8,.6))),0.),24.)*.35;
-          c=c*(.42+.9*f)+spec; c+=vS*selK*selCol*(.35+.25*sin(t*4.));
-          gl_FragColor=vec4(c, (.16+.6*f)*alphaK+vS*selK*.25); }`
+          c=c*(.42+.9*f)+spec;
+          // pele realista: difusa com 'wrap' (espalhamento subsuperficial aproximado), poros do mapa normal, brilho e borda avermelhada
+          vec3 Nr=normalize(mix(N,normalize(vN),.6)); if(dot(Nr,V)<0.) Nr=-Nr; vec3 Lk=normalize(vec3(.45,.75,.55)); float ndl=dot(Nr,Lk); float wrap=max(0.,(ndl+.5)/1.5);
+          vec3 sss=tone*vec3(1.,.42,.32)*pow(1.-max(0.,ndl),2.)*.32; float sh=pow(max(dot(reflect(-V,Nr),Lk),0.),38.)*.22+pow(f,3.)*.12;
+          vec3 cr=mix(tone*(.30+.82*wrap)+sss+sh, vC*(.35+.75*wrap), dermOn*.45);
+          c=mix(c,cr,real); c+=vS*selK*selCol*(.35+.25*sin(t*4.));
+          gl_FragColor=vec4(c, mix((.16+.6*f)*alphaK, alphaK, real)+vS*selK*.25); }`
     });
   }
 
@@ -326,7 +337,7 @@
   async function ensureMuscles() {
     if (!S.anat || S.musclesLoaded) return; S.musclesLoaded = true; const status = host.querySelector(".anat-status");
     if (status) { status.textContent = "Carregando 457 músculos…"; status.hidden = false; }
-    try { const m = await loadLayer(S.anat, "muscles"); S.layers.muscles.add(m); S.anatMeshes.push(m); S.meshByLayer.muscles = m; S.musclesReady = true; if (S.rxSel) applyReflex(S.rxSel); } catch (e) { S.musclesLoaded = false; }
+    try { const m = await loadLayer(S.anat, "muscles"); S.layers.muscles.add(m); S.anatMeshes.push(m); S.meshByLayer.muscles = m; S.musclesReady = true; if (S.rxSel) applyReflex(S.rxSel); else if (S.rxPending) { const sp = S.rxPending; S.rxPending = null; highlightSet(sp); } document.dispatchEvent(new CustomEvent("axon:muscles")); } catch (e) { S.musclesLoaded = false; }
     if (status) status.hidden = true;
   }
 
@@ -405,6 +416,29 @@
     document.dispatchEvent(new CustomEvent("axon:reflex", { detail: out }));
     return out;
   }
+  // destaque genérico: { parts:[{layer,name,color}], nerves:[nome], seg:[a,b] ou "L4–S1", points:[id], from:[x,y,z], reveal:true }
+  function highlightSet(spec) {
+    clearReflex(); S.rxSel = null; if (!spec) return null;
+    const out = { parts: [], nerves: [] }, from = spec.from ? V3(...spec.from) : null;
+    const link = (q, col) => { if (!from || !S.rx) return; const mid = from.clone().lerp(q, .5).add(V3(0, .04, 0)); const m = tube([from, mid, q], .0022, glow(lin(col), .9), 20, 5); m.material.blending = T.NormalBlending; m.material.depthTest = false; m.renderOrder = 19; S.rx.links.add(m); };
+    const rg = Array.isArray(spec.seg) ? spec.seg : segRange(spec.seg);
+    if (rg && S.skin) { S.skin.uniforms.sel.value = rg[0]; S.skin.uniforms.selHi.value = rg[1]; S.skin.uniforms.selCol.value.set(1, .83, .3); }
+    (spec.nerves || []).forEach(nm => { const tubes = [...S.layers.nerves.children, ...S.layers.autonomic.children].filter(m => m.userData.nerve === nm); if (!tubes.length) return;
+      if (spec.reveal !== false) showLayer(/simpático|vago/i.test(nm) ? "autonomic" : "nerves"); const hm = glow(lin(spec.nerveColor || RX_ASSOC.nerve), 1); hm.blending = T.NormalBlending;
+      tubes.forEach(m => { m.userData.mat0 = m.userData.mat0 || m.material; m.material = hm; S.rxNerve.push(m); }); out.nerves.push(nm);
+      if (from) { const nn = S.anat.nerves.find(n => n.name === nm); let best = null; nn.p.forEach(q => { const v = V3(...q), d = v.distanceTo(from); if (!best || d < best.d) best = { d, v }; }); link(best.v, spec.nerveColor || RX_ASSOC.nerve); } });
+    const byLayer = {}; (spec.parts || []).forEach(p => (byLayer[p.layer] = byLayer[p.layer] || []).push(p));
+    Object.entries(byLayer).forEach(([layer, ps]) => {
+      if (layer === "muscles" && !S.musclesReady) { if (spec.reveal !== false) showLayer("muscles"); ensureMuscles(); S.rxPending = spec; return; }
+      ps.forEach(p => partsOf(layer, [p.name]).forEach(o => { paintPart(o.mesh, o.p, o.k, p.color); (S.rxPaint = S.rxPaint || []).push(o); if (spec.reveal !== false) showLayer(layer);
+        S.rx && S.rx.links.add(overlayPart(o.mesh, o.p, p.color)); if (p.link !== false) link(centroid(o.mesh, o.p), p.color); out.parts.push({ name: o.p.pt || o.p.name, fma: o.p.fma, layer }); }));
+    });
+    if (S.rx && spec.points) S.rx.markers.forEach(k => { k.grp.visible = spec.points.includes(k.r.id) || S.rx.cat[k.r.cat]; if (spec.points.includes(k.r.id)) k.halo.scale.setScalar(2); });
+    if (S.skin && (S.rxPaint || []).length && spec.reveal !== false && S.skin.uniforms.alphaK.value > .5) { S.rxAlpha0 = S.skin.uniforms.alphaK.value; S.skin.uniforms.alphaK.value = .4; }
+    if (S.skin && (S.rxPaint || []).length) S.skin.uniforms.selK.value = .6;
+    return out;
+  }
+
   function focusOn(p, nrm, R = .5) { if (S.level !== 1) setLevel(1, true); const n = V3(...(nrm || [0, 0, 1])).normalize(); cam.target.set(...p);
     let th = Math.atan2(n.x, n.z); if (Math.hypot(n.x, n.z) < .3) th = cam.theta; while (th - cam.theta > Math.PI) th -= 2 * Math.PI; while (cam.theta - th > Math.PI) th += 2 * Math.PI;
     S.focusR = R; cam.goal = { d: fitDist(R), phi: Math.max(.35, Math.min(2.2, Math.acos(Math.max(-1, Math.min(1, n.y))) * .6 + 1.45 * .4)), th }; }
@@ -790,11 +824,14 @@
     stats: () => S.fascStats, pause(v) { S.paused = v; },
     placeTool, reflex, nearestNerve, setSimMode(v) { S.simMode = v; if (renderer) renderer.domElement.style.cursor = v ? "crosshair" : "grab"; }, branchComp: () => S.branchComp,
     setBranching(on) { if (S.branchGroup) S.branchGroup.visible = on; },
+    highlight(spec) { return highlightSet(spec); }, clearHighlight() { clearReflex(); S.rxSel = null; },
+    ext: () => ({ T, S, V3, camera, scene, renderer, cam, VIEWS, DERM, PAL, fitDist, focusOn, applyReflex, ensureMuscles }),
     reflexPoints: () => S.rx ? S.rx.list : [], RX_CAT: Object.fromEntries(Object.entries(RX_CAT).map(([k, v]) => [k, { label: v.label, color: hexCss(v.color) }])), RX_ASSOC: Object.fromEntries(Object.entries(RX_ASSOC).map(([k, v]) => [k, hexCss(v)])),
     selectReflex(id, focus) { const r = S.rx && S.rx.list.find(x => x.id === id); if (S.layers.acupoints) S.layers.acupoints.visible = true; syncLabels(); const o = applyReflex(r || null); if (r && focus) focusOn(r.p, r.n, r.cat === "head" ? .85 : r.cat === "aur" ? .3 : .5); return o; },
     reflexState: () => S.rx ? { cat: { ...S.rx.cat }, assoc: S.rx.assoc, reveal: S.rx.reveal, sel: S.rxSel ? S.rxSel.id : null, alpha: S.skin ? S.skin.uniforms.alphaK.value : 1 } : null,
     setReflex(o) { if (!S.rx) return; if (o.cat) Object.assign(S.rx.cat, o.cat); if ("assoc" in o) S.rx.assoc = o.assoc; if ("reveal" in o) S.rx.reveal = o.reveal; rxVisibility(); if (S.rxSel && !S.rx.cat[S.rxSel.cat]) applyReflex(null); else if (S.rxSel && ("assoc" in o || "reveal" in o)) applyReflex(S.rxSel); },
     setSkinOpacity(a) { if (S.skin) S.skin.uniforms.alphaK.value = a; },
+    setRealSkin(on) { if (!S.skin) return; S.skin.uniforms.real.value = on ? 1 : 0; S.skin.transparent = !on || S.skin.uniforms.alphaK.value < .98; S.skin.depthWrite = !!on && S.skin.uniforms.alphaK.value >= .98; S.skin.side = on ? T.FrontSide : T.DoubleSide; S.skin.needsUpdate = true; },
     resetView() { S.focusR = null; const v = VIEWS[S.level]; cam.target.set(...v.t); cam.goal = { d: fitDist(v.R), phi: v.phi, th: v.th }; },
     clearTool() { const G = S.groups.L1; if (G && S.tool) { G.remove(S.tool); S.tool = null; } if (G && S.toolLink) { G.remove(S.toolLink); S.toolLink = null; } }
   };

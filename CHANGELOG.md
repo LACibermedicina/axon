@@ -2,6 +2,30 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.8.0-alpha] — 2026-11-23
+
+Mesa de trabalho limpa com ícones, dissecção por profundidade, imagens simuladas (TC/RM/RX) e EMG, mapas de acupuntura, craniopuntura de Yamamoto e aurículo, modo músculo↔nervo, mapa completo do SNC e planejamento terapêutico a partir do caso.
+
+### Adicionado
+- **Mesa de trabalho:** o app abre só com o modelo 3D; ícones na barra superior para painéis, ferramentas, guia, paciente, plano, profundidade, imagens, mapas, relações e SNC; "ocultar tudo" (tecla `\`); painéis laterais recolhidos viram trilhos de ícones com descrição; cartões podem ser destacados das laterais (⇱) e devolvidos (⇲).
+- **Tipo de exploração e instrumentos:** escolha entre anatomia, biofísica, simulação e planejamento clínico; paleta de instrumentos com ícones (TENS, EA, acupuntura, taVNS, aurículo, YNSA, pressão, LIFU).
+- **Guia passo a passo** em 7 etapas com estado concluído e parâmetros sugeridos para o caso ativo.
+- **Dissecção por profundidade:** 6 níveis (pele → esqueleto), opacidade por camada, plano de corte sagital, coronal ou axial e modo de pele realista (opaca, com textura, brilho e espalhamento; tom pelo fototipo).
+- **Imagens simuladas e EMG:** cortes de TC e RM T1/T2 reconstruídos da malha 3D com o plano mostrado no corpo, radiografia AP e perfil por projeção, escala de 5 cm e orientação; sEMG sintética com onda M, artefato do estímulo e RMS.
+- **Paciente personalizável:** sexo, idade, altura, peso (IMC) e fototipo deformam a anatomia (contorno feminino, estatura, tecido adiposo); descrição do caso em texto gera paciente e caso fictícios (IA, com leitura local de reserva).
+- **Mapas:** acupuntura e eletroacupuntura (pares e frequências por região), craniopuntura de Yamamoto (YNSA: pontos básicos, Y e cerebrais) e aurículo (códigos GB/T 13734-2008, pontos NADA, inervação pelo ramo auricular do vago), com pontos sugeridos para o caso e pontos disponíveis, abordagens e referências.
+- **Modo músculo↔nervo:** ao clicar num músculo acendem o nervo e as raízes que o inervam, os músculos do mesmo nervo e do mesmo segmento e os pontos reflexos indiretamente afetados.
+- **Mapa do SNC:** córtex, tálamo, PAG, locus coeruleus e bulbo; segmentos C1–S5 com fibras aferentes e eferentes, cadeia simpática T1–L2, vago e parassimpático pélvico; órgãos com níveis simpáticos e zonas de dor referida; clicar destaca no 3D.
+- **Plano terapêutico:** a partir do caso, sugere alvo, técnica com % de adequação e a justificativa por fator (adequação à origem da dor, resposta do modelo, evidência, segurança e praticidade, com pesos ajustáveis), parâmetros, tempo de tratamento, riscos e benefícios; métricas objetivas (limiar de dor à pressão, EMG, RMSSD, FC) e subjetivas (EVA residual, mudança do ponto de referência da dor); gráficos interativos (mapa frequência × intensidade e trajetória da EVA por sessão, arrastáveis); "Aplicar ao simulador" e justificativa redigida por IA.
+- API: `/api/ai/patient` e `/api/ai/plan`.
+
+### Alterado
+- O desfecho do plano usa a dor residual 2 h após a última sessão; a analgesia que persiste entre sessões segue a parcela opioide (fração de 7 % por sessão, [PREMISSA] calibrada para cursos de ~10 sessões).
+- Barra superior compacta em telas estreitas.
+
+### Científico
+- Recomendações, pesos e desfechos do plano são [HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO] do modelo (Monte Carlo, semente 42), não prescrição. Imagens e EMG são reconstruções didáticas [PREMISSA]. Forma feminina é deformação aproximada da malha masculina BodyParts3D [PREMISSA].
+
 ## [0.7.0-alpha] — 2026-11-23
 
 Portal claro do projeto com notícias, linha do tempo, agenda, podcast, galeria, boletim e apoio, administrado com ajuda de IA; escopo deste projeto restrito à simulação in silico.

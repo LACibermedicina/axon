@@ -77,8 +77,8 @@
     if (mod.kind === "acou") ctl = slider("sF", t("freq"), .2, 10, .1, p.f, "MHz") + slider("sU", "I_SPTA", 0, 2000, 10, p.U, "mW/cm²");
     ctl += slider("sR", t("dist"), .3, 3, .05, p.r, "mm") + slider("sD", t("fiber"), 1, 16, .5, p.D, "µm");
     $("#rightBody").innerHTML = `
-      <div class="ctl"><label><span>${t("modality")}</span></label><div class="seg">${MODS.map(m => `<button data-mod="${m.id}" class="${m.id === st.mod ? "on" : ""}" title="${m.name}">${m.short || m.name}</button>`).join("")}</div><p class="note">${mod.desc}</p></div>
-      ${ctl}
+      <div class="card" data-key="params"><h4>Técnica e parâmetros</h4><div class="ctl"><label><span>${t("modality")}</span></label><div class="seg">${MODS.map(m => `<button data-mod="${m.id}" class="${m.id === st.mod ? "on" : ""}" title="${m.name}">${m.short || m.name}</button>`).join("")}</div><p class="note">${mod.desc}</p></div>
+      ${ctl}</div>
       <div class="card" style="margin-top:10px"><h4>${t("variations")}</h4>
         ${slider("vFat", t("fat"), 0, 1.2, .05, st.v.fat, "mm")}${slider("vDemy", t("demy"), 0, 1, .05, st.v.demy, "")}${slider("vSfl", t("sfl"), 0, .9, .05, st.v.sfl, "")}${slider("vPeri", t("peri"), 0, 1, .05, st.v.peri, "")}${slider("vFib", t("fib"), 0, 1, .05, st.v.fib, "")}
         <div class="note">${tagHTML("hip")} Motor de regras v0.1 · IA preditiva ainda não treinada.</div></div>
@@ -126,7 +126,7 @@
     new ResizeObserver(() => A.draw && A.draw(w.querySelector(".body"))).observe(w);
     A.render(w.querySelector(".body")); focus(w); dockState();
   }
-  function closeApp(id) { const w = WM.wins[id]; if (!w) return; w.remove(); delete WM.wins[id]; dockState(); }
+  function closeApp(id) { const w = WM.wins[id]; if (!w) return; try { APPS[id] && APPS[id].onClose && APPS[id].onClose(); } catch (e) {} w.remove(); delete WM.wins[id]; dockState(); }
   function focus(w) { $$(".win").forEach(x => x.classList.remove("focus")); w.classList.add("focus"); w.style.zIndex = ++WM.z; }
   function dockState() { $$(".dock button[data-app]").forEach(b => b.classList.toggle("open", !!WM.wins[b.dataset.app])); }
   // fechamento por duplo clique fora da janela (fecha a janela em foco)
@@ -363,7 +363,6 @@
     g.AxonStage.init($("#stage"));
     $$("#scalebar [data-l]").forEach(b => b.classList.toggle("on", +b.dataset.l === 1));
     renderRight(); renderLeft(); update(); g.I18N.apply();
-    if (innerWidth > 900) setTimeout(() => { openApp("app3"); openApp("app4"); }, 300);
     setTimeout(() => botSay("Clique num ponto pulsante do corpo ou use a roda do mouse para descer de escala."), 1200);
     // versão e atualizações
     $("#verPill").textContent = "v" + VERSION; $("#verPill").onclick = () => openApp("updates");

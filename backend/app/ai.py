@@ -232,3 +232,44 @@ def translate(texts: List[str], target: str, context: str = "") -> Dict:
             pass
     mode = "cache" if not miss else ("ia" if not failed else ("parcial" if failed < len(miss) else "offline"))
     return {"texts": [cache.get(x, x) for x in texts], "mode": mode, "provider": provider, "pending": failed}
+
+
+PATIENT_SYSTEM = (
+    "Extract a fictional teaching case from a Portuguese description for a neuromodulation simulator. Reply ONLY with JSON: "
+    '{"sex":"M"|"F"|null,"age":int|null,"height":cm|null,"weight":kg|null,"fitz":"I".."VI"|null,"eva":0-10|null,'
+    '"origin":"nociceptiva"|"neuropática"|"nociplástica","dermatomes":["L5",...],"site":"short body region in Portuguese",'
+    '"title":"short case title in Portuguese","mechanism":"one sentence","structures":["..."],"descriptors":["..."],'
+    '"inflammation":0-1,"sensitization":0-1}. Use only what the text states or clearly implies; unknown → null. '
+    "Dermatome codes must be among V1 V2 V3 C2..C8 T1..T12 L1..L5 S1..S5. Never include names or identifiers."
+)
+
+
+def patient(text: str) -> Dict:
+    r = complete(PATIENT_SYSTEM, text[:2000], max_tokens=500)
+    if not r:
+        return {"mode": "offline", "data": None}
+    t = r["text"]
+    try:
+        d = json.loads(t[t.find("{"): t.rfind("}") + 1])
+    except ValueError:
+        return {"mode": "erro", "data": None}
+    allowed = {"sex", "age", "height", "weight", "fitz", "eva", "origin", "dermatomes", "site", "title", "mechanism", "structures", "descriptors", "inflammation", "sensitization"}
+    return {"mode": "ia", "provider": r["provider"], "data": {k: v for k, v in d.items() if k in allowed and v is not None}}
+
+
+PLAN_SYSTEM = (
+    "Você redige, em português, a justificativa de um plano terapêutico SIMULADO (ensino in silico, não é prescrição). "
+    "Use somente os números e fatos do JSON recebido; não invente valores, estudos ou doses. Em 4 a 6 frases: por que a técnica "
+    "tem essa adequação (cite os fatores em %), o mecanismo, o desfecho estimado com a faixa p10–p90, os principais riscos e "
+    "benefícios, e lembre que o resultado vem de um modelo e não substitui avaliação profissional."
+)
+
+
+def plan_text(facts: Dict) -> Dict:
+    r = complete(PLAN_SYSTEM, json.dumps(facts, ensure_ascii=False)[:6000], max_tokens=600)
+    if not r:
+        f = facts
+        return {"mode": "offline", "text": f"{f.get('tecnica')} obteve {f.get('adequacao_pct')} % de adequação ao caso pela combinação de mecanismo ({f.get('mecanismo')}), "
+                f"analgesia prevista pelo modelo e força da evidência. EVA estimada {f.get('eva_final_mediana')} (p10–p90 {f.get('p10')}–{f.get('p90')}) com {f.get('tempo')}. "
+                "Resultado de modelo didático, não prescrição."}
+    return {"mode": "ia", "provider": r["provider"], "text": r["text"].strip()[:2000]}
