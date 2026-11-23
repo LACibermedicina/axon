@@ -6,6 +6,8 @@ cd "$(dirname "$0")/.."
 . scripts/lib-ports.sh
 SHA="${1:-manual}"; SOURCE="${2:-manual}"
 V="$(cat VERSION)"; STATUS=data/status; mkdir -p "$STATUS"
+# volume do portal: o setup_vps.sh (root) cria com dono 10001; se faltar, cria gravável para o container
+[[ -d data/portal/media ]] || { mkdir -p data/portal/media && chmod 0777 data/portal data/portal/media; echo "[deploy] aviso: data/portal criado sem dono 10001 — rode scripts/setup_vps.sh como root"; }
 echo "[deploy] axon v$V · commit ${SHA} · origem ${SOURCE}"
 [[ -f .env ]] || { echo ".env ausente — rode: sudo bash scripts/setup_vps.sh <email>"; exit 1; }
 HP="$(env_get .env HTTP_PORT)"

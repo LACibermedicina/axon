@@ -61,6 +61,7 @@ chown -R "$DEPLOY_USER:$DEPLOY_USER" "/home/${DEPLOY_USER}/.ssh"; chmod 600 "/ho
 
 log "5/8 Código em ${APP_DIR}"
 install -d "$APP_DIR" "$APP_DIR/data" "$APP_DIR/data/status"
+install -d -o 10001 -g 10001 -m 750 "$APP_DIR/data/portal" "$APP_DIR/data/portal/media"   # volume do portal (usuário do container da API)
 [[ "$SRC_DIR" != "$APP_DIR" ]] && rsync -a --delete --exclude '.env' --exclude 'data/' --exclude '.git/' "$SRC_DIR/" "$APP_DIR/"
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
 ok "Versão $(cat "$APP_DIR/VERSION")"
@@ -81,6 +82,10 @@ fi
 [[ -n "$(env_get "$ENV" AUTOUPDATE)" ]] || env_set "$ENV" AUTOUPDATE 1
 [[ -n "$(env_get "$ENV" AUTOUPDATE_REPO)" ]] || env_set "$ENV" AUTOUPDATE_REPO "https://github.com/LACibermedicina/axon.git"
 env_set "$ENV" API_WORKERS "$([[ "$MEM_MB" -lt 4000 ]] && echo 1 || echo 2)"
+if [[ -z "$(env_get "$ENV" ADMIN_TOKEN)" ]]; then
+  env_set "$ENV" ADMIN_TOKEN "$(openssl rand -hex 24)"
+  ok "ADMIN_TOKEN criado para o painel https://${SUBDOMINIO}/admin.html — veja com: grep ADMIN_TOKEN $ENV"
+fi
 chmod 600 "$ENV"
 
 log "7/8 Portas e firewall"

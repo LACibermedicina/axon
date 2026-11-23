@@ -3,362 +3,170 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>axon · Biofísica da Neuromodulação</title>
-<meta name="description" content="Programa de pesquisa sobre resolução de fibra única e limiares de segurança tecidual: por que o estímulo elétrico alcança o tato antes da dor. Simulador multiescala e documentação.">
-<meta property="og:title" content="axon · Biofísica da Neuromodulação">
-<meta property="og:description" content="Por que o estímulo chega ao tato antes da dor? Simulador biofísico multiescala, modelo nodal verificado e roadmap experimental.">
-<meta property="og:image" content="img/programa/lei_escala.jpg">
-<meta name="theme-color" content="#0b1d22">
+<title>axon · Biofísica da Neuromodulação in silico</title>
+<meta name="description" content="Projeto axon: simulação in silico da neuromodulação. Notícias, linha do tempo, agenda, podcast, newsletter, documentação e o simulador multiescala.">
+<meta property="og:title" content="axon · Biofísica da Neuromodulação in silico">
+<meta property="og:description" content="Por que o estímulo chega ao tato antes da dor? Simulador multiescala, notícias, agenda e resumos em áudio do projeto.">
+<meta property="og:image" content="img/app/sim-st36.jpg">
+<meta name="theme-color" content="#f4faf8">
+<link rel="alternate" type="application/rss+xml" title="axon · novidades" href="/feed.xml">
+<link rel="alternate" type="application/rss+xml" title="axon · podcast" href="/podcast.xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cardo:ital@0;1&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#0b1d22;--bg2:#10292f;--ink:#eaf6f3;--mute:#9fc0bb;--line:rgba(160,230,220,.16);--glass:rgba(10,28,33,.72);--teal:#3ee6c5;--ab:#7fe9ff;--ad:#ffb26b;--gold:#ffd36b;--pink:#ff7fb0;--violet:#b48cff;--red:#ff6b6b;--r:18px;--mono:"JetBrains Mono",ui-monospace,monospace;--serif:"Cardo",Georgia,serif}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;font:16px/1.6 Manrope,system-ui,sans-serif;color:var(--ink);background:radial-gradient(120% 90% at 70% 10%,#17414a 0%,#0e2a31 38%,#081519 100%) fixed;overflow-x:hidden}
-a{color:inherit}
-#gl{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0}
-.vignette{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(4,12,14,.55) 100%)}
-.nofx #gl{display:none}
-/* barra superior */
-.top{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;gap:18px;padding:12px 22px;background:linear-gradient(180deg,rgba(8,21,25,.85),rgba(8,21,25,0));backdrop-filter:blur(6px)}
-.logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.08em;text-decoration:none}
-.logo svg{width:30px;height:30px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
-.top nav{display:flex;gap:4px;margin-left:12px;flex-wrap:wrap}
-.top nav a{font-size:13px;color:var(--mute);text-decoration:none;padding:6px 10px;border-radius:999px;transition:.2s}
-.top nav a:hover,.top nav a.on{color:var(--ink);background:rgba(255,255,255,.07)}
-.top .sp{flex:1}
-.btn{display:inline-flex;align-items:center;gap:10px;border-radius:14px;padding:12px 20px;font-weight:700;text-decoration:none;font-size:15px;border:1px solid transparent;cursor:pointer;transition:transform .18s,box-shadow .18s,background .18s;white-space:nowrap}
-.btn:hover{transform:translateY(-2px)}
-.btn.pri{background:linear-gradient(180deg,#5ff3d6,#22b99c);color:#062a24;box-shadow:0 10px 30px rgba(62,230,197,.28),inset 0 1px 0 rgba(255,255,255,.5)}
-.btn.sec{background:rgba(255,255,255,.06);border-color:var(--line);color:var(--ink);backdrop-filter:blur(8px)}
-.btn.sm{padding:8px 14px;font-size:13px;border-radius:11px}
-.btn .ic{width:30px;height:30px;flex:none}
-/* seções */
-main{position:relative;z-index:2}
-section{min-height:100vh;display:flex;align-items:center;padding:110px 6vw 80px}
-section.r{justify-content:flex-end}
-.card{width:min(620px,100%);background:var(--glass);border:1px solid var(--line);border-radius:26px;padding:34px 36px;backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 30px 80px rgba(0,0,0,.35)}
-.card.wide{width:min(1180px,100%)}
-.kicker{font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
-h1{font:800 clamp(34px,4.6vw,62px)/1.04 Manrope;margin:12px 0 14px;letter-spacing:-.02em}
-h1 em{font-style:normal;background:linear-gradient(90deg,var(--ab),var(--ad));-webkit-background-clip:text;background-clip:text;color:transparent}
-h2{font:800 clamp(28px,3.6vw,44px)/1.1 Manrope;margin:10px 0 14px;letter-spacing:-.01em}
-h3{font-size:18px;margin:18px 0 6px}
-p.lead{font-size:clamp(16px,1.5vw,19px);color:#d5ebe7}
-.serif{font-family:var(--serif);font-style:italic}
-.mute{color:var(--mute)}
-.ctas{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0 8px}
-/* herói */
-#inicio{align-items:center;padding-top:96px;padding-bottom:70px}
-.hero{width:min(600px,100%)}
-.hero .card{width:100%}
-.pill{display:inline-flex;align-items:center;gap:8px;font:600 12px var(--mono);padding:6px 12px;border-radius:999px;background:rgba(62,230,197,.12);border:1px solid rgba(62,230,197,.35);color:#bff7ee;text-decoration:none}
-.pill i{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal);animation:pulse 1.8s infinite}
-@keyframes pulse{50%{opacity:.35}}
-.stim{margin-top:18px;padding:14px 18px;border-radius:18px;background:rgba(0,0,0,.25);border:1px solid var(--line)}
-.stim label{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
-.stim input{width:100%;accent-color:var(--teal);margin:10px 0 6px}
-.bars{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center;font-size:13px}
-.bar{height:10px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden}.bar b{display:block;height:100%;border-radius:6px;transition:width .35s}
-.bar.ab b{background:linear-gradient(90deg,#2aa7c4,var(--ab))}.bar.ad b{background:linear-gradient(90deg,#c46a2a,var(--ad))}
-.verdict{margin-top:10px;font-weight:700;min-height:1.6em}
-.tag{display:inline-block;font:600 10px var(--mono);letter-spacing:.04em;padding:3px 8px;border-radius:6px;vertical-align:middle;margin:2px 4px 2px 0}
-.t-lit{background:#173a2a;color:#bfe;border:1px solid #2d6a4e}.t-pre{background:#3a2f12;color:#ffe7a3;border:1px solid #6a5420}.t-der{background:#12304a;color:#bfe3ff;border:1px solid #24557c}.t-mod{background:#2c1a4a;color:#e2d2ff;border:1px solid #533a8a}.t-hip{background:#3a1f2a;color:#ffc2dc;border:1px solid #74384f}
-.scrollcue{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);font:600 11px var(--mono);color:var(--mute);letter-spacing:.2em;text-align:center}
-.scrollcue span{display:block;width:2px;height:34px;margin:8px auto 0;background:linear-gradient(var(--teal),transparent);animation:drop 1.8s infinite}
-@keyframes drop{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
-/* figuras */
-figure{margin:18px 0 0}figure img{width:100%;border-radius:14px;display:block;cursor:zoom-in;box-shadow:0 14px 40px rgba(0,0,0,.35);transition:transform .25s}
-figure img:hover{transform:scale(1.015)}
-figcaption{font-size:12.5px;color:var(--mute);margin-top:8px}
-.duo{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-/* métricas */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}
-.kpi{padding:18px;border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--line);position:relative;overflow:hidden}
-.kpi .v{font:800 clamp(26px,3vw,38px)/1 Manrope;background:linear-gradient(90deg,#fff,var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
-.kpi .l{font-weight:700;margin-top:8px}.kpi .n{font-size:12.5px;color:var(--mute)}
-/* fases */
-.phases{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}
-.ph{padding:18px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
-.ph .c{font:600 11px var(--mono);color:var(--mute)}.ph b{font-size:15px}
-.ph .st{font:600 11px var(--mono);padding:2px 8px;border-radius:999px;align-self:flex-start}
-.st.andamento{background:rgba(255,211,107,.15);color:var(--gold)}.st.planejada{background:rgba(255,255,255,.07);color:var(--mute)}
-.ph .prog{height:6px;border-radius:4px;background:rgba(255,255,255,.08)}.ph .prog i{display:block;height:100%;border-radius:4px;background:var(--gold)}
-.ph details{font-size:13px;color:#cfe3df}.ph summary{cursor:pointer;color:var(--teal);font-weight:600}
-.ph ul{padding-left:18px;margin:6px 0}
-/* estado */
-.status{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;margin:18px 0}
-.ring{--p:38;width:120px;height:120px;border-radius:50%;background:conic-gradient(var(--gold) calc(var(--p)*1%),rgba(255,255,255,.08) 0);display:grid;place-items:center;position:relative}
-.ring::after{content:"";position:absolute;inset:12px;border-radius:50%;background:#0d2329}
-.ring b{position:relative;z-index:1;font:800 28px Manrope}
-.sema{display:inline-flex;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.3);margin-bottom:8px}.sema i{width:12px;height:12px;border-radius:50%;background:#2a3a3e}.sema i.on.verde{background:#3ee68a;box-shadow:0 0 10px #3ee68a}.sema i.on.ambar{background:var(--gold);box-shadow:0 0 10px var(--gold)}.sema i.on.vermelho{background:var(--red);box-shadow:0 0 10px var(--red)}
-.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.trio div{padding:14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-size:14px}.trio b{display:block;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--teal);margin-bottom:4px}
-.trio .blk b{color:var(--ad)}
-.tl{position:relative;margin:24px 0 0;padding-left:22px;border-left:2px solid var(--line)}
-.tl .m{position:relative;margin:0 0 16px}.tl .m::before{content:"";position:absolute;left:-29px;top:6px;width:12px;height:12px;border-radius:50%;background:#2a3a3e;border:2px solid var(--line)}
-.tl .m.feito::before{background:var(--teal)}.tl .m.agora::before{background:var(--gold);box-shadow:0 0 12px var(--gold)}
-.tl .d{font:600 11px var(--mono);color:var(--mute)}
-/* registro */
-.log{display:grid;gap:10px;margin-top:16px;max-height:62vh;overflow:auto;padding-right:6px}
-.log article{padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
-.log .h{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.log .d{font:600 11px var(--mono);color:var(--mute)}
-.ty{font:600 10px var(--mono);padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.08em}
-.ty.entrega{background:rgba(62,230,197,.15);color:var(--teal)}.ty.publicacao{background:rgba(127,233,255,.14);color:var(--ab)}.ty.correcao{background:rgba(255,107,107,.15);color:#ffb3b3}.ty.decisao{background:rgba(180,140,255,.16);color:#dccbff}.ty.nota{background:rgba(255,255,255,.08);color:var(--mute)}
-.log p{margin:6px 0 0;font-size:14px;color:#cfe3df}
-/* documentação */
-.portal{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;margin-top:18px}
-.door{display:flex;flex-direction:column;gap:12px;padding:26px;border-radius:22px;text-decoration:none;border:1px solid var(--line);position:relative;overflow:hidden;min-height:240px;transition:transform .25s,box-shadow .25s}
-.door:hover{transform:translateY(-4px);box-shadow:0 24px 60px rgba(0,0,0,.4)}
-.door.sim{background:linear-gradient(150deg,rgba(62,230,197,.22),rgba(20,60,70,.55))}
-.door.doc{background:linear-gradient(150deg,rgba(255,211,107,.18),rgba(60,40,20,.5))}
-.door h3{font-size:24px;margin:0}.door p{margin:0;color:#d5ebe7}.door .go{margin-top:auto;font-weight:700}
-.door .art{width:84px;height:84px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
-.docs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
-.docs a,.docs div{display:block;padding:16px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line);text-decoration:none;font-size:14px}
-.docs a:hover{background:rgba(255,255,255,.08)}
-.docs b{display:block;margin-bottom:4px}.docs .f{font:600 10px var(--mono);color:var(--gold)}
-.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
-.gallery img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:12px;cursor:zoom-in;border:1px solid var(--line);transition:transform .2s}
-.gallery img:hover{transform:scale(1.03)}
-footer{position:relative;z-index:2;padding:40px 6vw 60px;color:var(--mute);font-size:13px;background:linear-gradient(transparent,rgba(4,12,14,.9) 40%)}
-footer .warn{color:#ffd9a8;margin-bottom:10px}
-/* caixa de luz e dica */
-.lb{position:fixed;inset:0;z-index:50;background:rgba(3,10,12,.9);display:none;place-items:center;padding:4vw;cursor:zoom-out}
-.lb.on{display:grid}.lb img{max-width:100%;max-height:84vh;border-radius:12px;box-shadow:0 30px 90px rgba(0,0,0,.6)}.lb p{color:var(--mute);text-align:center;font-size:14px}
-.tip{position:fixed;z-index:30;pointer-events:none;padding:8px 12px;border-radius:10px;background:rgba(6,18,22,.92);border:1px solid var(--line);font-size:12.5px;display:none;white-space:nowrap}
-.reveal{opacity:0;transform:translateY(26px);transition:opacity .8s,transform .8s}.reveal.in{opacity:1;transform:none}
-@media (max-width:980px){.kpis,.phases{grid-template-columns:1fr 1fr}.portal,.duo,.trio{grid-template-columns:1fr}.docs{grid-template-columns:1fr 1fr}.gallery{grid-template-columns:repeat(2,1fr)}.top nav{display:none}}
-@media (max-width:600px){section{padding:90px 14px 60px}#inicio{padding-top:40vh}.card{padding:22px 20px;border-radius:20px}.kpis,.phases,.docs{grid-template-columns:1fr}.top .btn.sec{display:none}.status{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/portal.css">
 </head>
 <body>
-<canvas id="gl" aria-hidden="true"></canvas><div class="vignette"></div>
-
 <header class="top">
-  <a class="logo" href="#inicio" aria-label="axon, início">
-    <svg viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7ff7e0"/><stop offset="1" stop-color="#1aa48a"/></linearGradient></defs><rect x="4" y="4" width="56" height="56" rx="16" fill="url(#lg)"/><path d="M12 36h8l4-12 6 22 5-16 4 6h13" stroke="#062a24" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    axon
-  </a>
-  <nav aria-label="Seções">
-    <a href="#problema">Problema</a><a href="#proposta">Proposta</a><a href="#resultados">Resultados</a><a href="#roadmap">Roadmap</a><a href="#estado">Estado</a><a href="#docs">Documentação</a>
+  <a class="logo" href="#inicio" aria-label="axon, início"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ff3d6"/><stop offset="1" stop-color="#0c9c80"/></linearGradient></defs><rect x="4" y="4" width="56" height="56" rx="17" fill="url(#lg)"/><path d="M12 36h8l4-12 6 22 5-16 4 6h13" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>axon</a>
+  <nav class="menu" aria-label="Seções">
+    <a href="#novidades">Novidades</a><a href="#roadmap">Linha do tempo</a><a href="#agenda">Agenda</a><a href="#podcast">Podcast</a><a href="#galeria">Galeria</a><a href="#programa">Programa</a><a href="#apoio">Apoio</a>
   </nav>
   <span class="sp"></span>
-  <a class="btn sec sm" href="docs/manual-usuario.html">Documentação</a>
-  <a class="btn pri sm" href="simulador.html">Abrir o simulador →</a>
+  <a class="btn ghost sm" href="docs/manual-usuario.html">Documentação</a>
+  <a class="btn pri sm" href="simulador.html">Simulador →</a>
 </header>
 
 <main>
-  <!-- 1 · herói -->
-  <section id="inicio" data-view="hero">
-    <div class="hero reveal">
-      <div class="card">
-        <a class="pill" id="verPill" href="#registro"><i></i><span>Simulador v—</span></a>
-        <div class="kicker" style="margin-top:16px">Programa de pesquisa · Biofísica da Neuromodulação</div>
-        <h1>Por que o estímulo chega ao <em>tato antes da dor</em>?</h1>
-        <p class="lead">Um programa de investigação sobre resolução de fibra única e limiares de segurança tecidual, e o que seria preciso para inverter essa ordem sem atravessar as fronteiras de segurança do tecido.</p>
-        <div class="ctas">
-          <a class="btn pri" href="simulador.html"><svg class="ic" viewBox="0 0 64 64"><rect x="6" y="10" width="52" height="38" rx="9" fill="#073a32"/><rect x="11" y="15" width="42" height="28" rx="5" fill="#0f5a4d"/><path d="M15 31h7l3-8 5 14 4-10 3 4h12" stroke="#7ff7e0" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="24" y="50" width="16" height="5" rx="2" fill="#073a32"/></svg>Ir para o simulador</a>
-          <a class="btn sec" href="#docs"><svg class="ic" viewBox="0 0 64 64"><path d="M14 10h26l10 10v34a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4z" fill="#ffe7a3"/><path d="M40 10v10h10" fill="#e9c46a"/><path d="M18 30h24M18 37h24M18 44h16" stroke="#8a6a1e" stroke-width="3.2" stroke-linecap="round"/></svg>Ir para a documentação</a>
-        </div>
-        <div class="stim" aria-label="Demonstração interativa de recrutamento">
-          <label for="iRange"><span>Intensidade do estímulo (× limiar mediano das Aβ)</span><b id="iVal">1,6×</b></label>
-          <input id="iRange" type="range" min="0.4" max="5" step="0.05" value="1.6">
-          <div class="bars">
-            <span style="color:var(--ab)">Aβ · tato</span><div class="bar ab"><b id="bAb"></b></div><span id="nAb">0/7</span>
-            <span style="color:var(--ad)">Aδ · dor</span><div class="bar ad"><b id="bAd"></b></div><span id="nAd">0/9</span>
-          </div>
-          <div class="verdict" id="verdict"></div>
-          <div class="mute" style="font-size:12px;margin-top:6px"><span class="tag t-mod">RESULTADO DE MODELO · SEMENTE 42</span> limiar ∝ D<sup>−1,13</sup> e razão Aδ/Aβ = 3,21 a 1 mm. Fibras e posições do diorama: <span class="tag t-pre">ILUSTRATIVO</span></div>
-        </div>
-      </div>
+<!-- ============================================================ herói -->
+<section id="inicio" class="hero">
+  <div class="hero-txt">
+    <a class="chip live" id="verPill" href="#novidades"><i></i><span>Simulador v—</span></a>
+    <h1>Por que o estímulo chega ao <span class="hl-ab">tato</span> antes da <span class="hl-ad">dor</span>?</h1>
+    <p class="lead">O axon é um projeto de <b>simulação in silico</b> da neuromodulação: um modelo nodal verificado e um simulador multiescala que vai do corpo inteiro à membrana do axônio. Acompanhe aqui as novidades, a agenda, os resumos em áudio e a linha do tempo do projeto.</p>
+    <div class="ctas">
+      <a class="btn pri lg" href="simulador.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>Abrir o simulador</a>
+      <a class="btn sec lg" href="docs/manual-usuario.html">Ler a documentação</a>
     </div>
-    <div class="scrollcue">ROLE PARA EXPLORAR<span></span></div>
-  </section>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="hero-3d">
+    <canvas id="gl" aria-label="Diorama 3D: bloco de pele em corte com fibras nervosas e eletrodo"></canvas>
+    <div class="stim card">
+      <label for="iRange"><span>Intensidade do estímulo</span><b id="iVal">1,6×</b></label>
+      <input id="iRange" type="range" min="0.4" max="5" step="0.05" value="1.6" aria-describedby="verdict">
+      <div class="bars"><span class="ab">Aβ · tato</span><div class="bar ab"><b id="bAb"></b></div><span id="nAb">0/7</span><span class="ad">Aδ · dor</span><div class="bar ad"><b id="bAd"></b></div><span id="nAd">0/9</span></div>
+      <p class="verdict" id="verdict"></p>
+      <p class="fine"><span class="tag t-mod">MODELO · SEMENTE 42</span> limiar ∝ D<sup>−1,13</sup>, razão Aδ/Aβ 3,21 a 1 mm · diorama ilustrativo</p>
+    </div>
+    <div class="tip" id="tip"></div>
+  </div>
+</section>
 
-  <!-- 2 · problema -->
-  <section id="problema" class="r" data-view="problema">
-    <div class="card reveal">
-      <div class="kicker">01 · O problema</div>
-      <h2>A ordem está invertida para quem trata dor</h2>
-      <p>Sob um eletrodo de superfície, o estímulo recruta primeiro as fibras <b style="color:var(--ab)">grossas</b> (Aβ, tato) e só depois as <b style="color:var(--ad)">finas</b> (Aδ e C, dor). O limiar cai com o calibre: quanto maior o diâmetro, mais longo o internodo e maior a diferença de potencial que o campo impõe entre dois nós de Ranvier.</p>
-      <p class="mute">No diorama, cada estímulo do eletrodo dispara um potencial que salta de nó em nó — mais rápido nas Aβ. Passe o mouse sobre uma fibra para ver calibre e limiar relativo.</p>
-      <figure><img src="img/programa/problema.jpg" alt="Prancha: fibra grossa com degrau grande entre nós distantes; fibra fina com degrau pequeno entre nós próximos" loading="lazy" data-cap="A régua do campo: nós distantes (fibra grossa) captam um degrau de potencial maior que nós próximos (fibra fina)."><figcaption>A régua do campo: nós distantes captam um degrau maior.</figcaption></figure>
-      <figure><img src="img/programa/via_dor.jpg" alt="Prancha XV: a via da dor da pele ao córtex e os pontos de intervenção" loading="lazy" data-cap="Prancha XV — a via da dor, da pele ao córtex, e onde cada técnica atua (TENS, bloqueio por kHz, SCS, LIFU, ETCC/EMT)."><figcaption>Prancha XV — a via da dor e onde cada técnica atua.</figcaption></figure>
-    </div>
-  </section>
+<!-- ============================================================ níveis do simulador (imagens reais do app) -->
+<section class="band levels" aria-label="O simulador em ação">
+  <div class="sec-head"><h2>O simulador em ação</h2><p>Capturas do app em execução. Cada cartão abre o simulador no mesmo ponto.</p></div>
+  <div class="lvl-row" id="levels"></div>
+</section>
 
-  <!-- 3 · proposta -->
-  <section id="proposta" data-view="proposta">
-    <div class="card reveal">
-      <div class="kicker">02 · A proposta</div>
-      <h2>Duas réguas: resolução contra penetração</h2>
-      <p>Inverter a ordem exigiria focalizar a energia na escala de um único axônio. Com ultrassom, isso pede comprimento de onda de ≈ 10 µm — cerca de <b>150 MHz</b> —, frequência em que a atenuação passa de <b>75 dB por centímetro</b>. O programa mapeia essa fronteira com números, e não com promessas.</p>
-      <div class="duo">
-        <figure><img src="img/programa/proposta.jpg" alt="Duas réguas: comprimento de onda e escala do axônio" loading="lazy" data-cap="As duas réguas do problema."><figcaption>As duas réguas do problema.</figcaption></figure>
-        <figure><img src="img/programa/difracao.jpg" alt="Gráfico: comprimento de onda e atenuação em função da frequência" loading="lazy" data-cap="O compromisso entre resolução e penetração: λ = 10 µm exige ≈ 150 MHz e ≈ 75 dB/cm."><figcaption>λ = 10 µm exige ≈ 150 MHz <span class="tag t-der">DERIVADO</span></figcaption></figure>
-      </div>
-      <figure><img src="img/programa/janela_terap.jpg" alt="Prancha XIV: por que a janela terapêutica se fecha antes de alcançar a fibra fina" loading="lazy" data-cap="Prancha XIV — curvas ilustrativas: o limiar de dano tecidual é atravessado antes do efeito nas fibras finas."><figcaption>Prancha XIV — a janela terapêutica se fecha antes da fibra fina (curvas ilustrativas).</figcaption></figure>
-    </div>
-  </section>
+<!-- ============================================================ novidades -->
+<section id="novidades" class="band">
+  <div class="sec-head"><h2>Novidades</h2><p>Atualizações do simulador, publicações, bastidores e o registro de evolução do programa.</p></div>
+  <div class="filters" id="newsFilters" role="tablist" aria-label="Filtrar notícias"></div>
+  <div class="news" id="news"></div>
+  <div class="more"><button class="btn ghost" id="newsMore" hidden>Mais notícias</button></div>
+</section>
 
-  <!-- 4 · resultados -->
-  <section id="resultados" data-view="resultados">
-    <div class="card wide reveal">
-      <div class="kicker">03 · Resultados do modelo</div>
-      <h2>O que o modelo nodal prevê</h2>
-      <p class="mute">Cadeia de 41 nós de Ranvier com membrana passiva e função de ativação de Rattay; Monte Carlo com 20 000 sorteios e bootstrap de 2 000 reamostragens. Semente fixa: a saída é idêntica a cada execução — e é a mesma que o simulador reproduz no navegador.</p>
-      <div class="kpis" id="kpis"></div>
-      <div class="duo">
-        <figure><img src="img/programa/lei_escala.jpg" alt="Gráfico do limiar de ativação em função do calibre para várias distâncias" loading="lazy" data-cap="Limiar previsto × diâmetro para cinco distâncias eletrodo–fibra; ajuste I ∝ D^−1,13."><figcaption>Limiar × calibre: ajuste I ∝ D<sup>−1,13</sup> <span class="tag t-mod">MODELO · SEMENTE 42</span></figcaption></figure>
-        <figure><img src="img/programa/janela.jpg" alt="Curvas de recrutamento de Aβ e Aδ em função da corrente" loading="lazy" data-cap="Janela de seletividade no fascículo hipotético: com 10 % das Aβ recrutadas, apenas 0,4 % das Aδ disparam."><figcaption>Com 10 % das Aβ, só 0,4 % das Aδ <span class="tag t-mod">MODELO · SEMENTE 42</span></figcaption></figure>
-      </div>
-    </div>
-  </section>
+<!-- ============================================================ linha do tempo e roadmap -->
+<section id="roadmap" class="band tint">
+  <div class="sec-head"><h2>Linha do tempo e roadmap</h2><p id="scopeNote"></p></div>
+  <div class="phases" id="phases"></div>
+  <div class="tl-wrap"><div class="tl" id="timeline" tabindex="0" aria-label="Linha do tempo"></div></div>
+  <div class="legend"><span><i class="dot in"></i>Este projeto (in silico)</span><span><i class="dot vin"></i>Projeto vinculado (fora do escopo, sujeito a aprovação)</span><span><i class="dot now"></i>Agora</span></div>
+</section>
 
-  <!-- 5 · roadmap -->
-  <section id="roadmap" data-view="roadmap">
-    <div class="card wide reveal">
-      <div class="kicker">04 · Roadmap</div>
-      <h2>Nenhuma fase começa sem o critério da anterior</h2>
-      <p class="mute">Do in silico à bancada, ao nervo isolado e ao modelo animal — com critérios de passagem declarados de antemão. Não há etapa em seres humanos em nenhum momento do programa.</p>
-      <div class="phases" id="phases"></div>
-      <div class="duo">
-        <figure><img src="img/programa/fases.jpg" alt="Diagrama da escada de evidência das fases 0 a 3" loading="lazy" data-cap="Diagrama 2 — escada de evidência: cada fase tem critério de passagem; se falhar, volta ao modelo."><figcaption>Escada de evidência com critérios de passagem.</figcaption></figure>
-        <figure><img src="img/programa/cronograma.jpg" alt="Cronograma de 48 meses" loading="lazy" data-cap="Diagrama 3 — cronograma de 48 meses (compacta para 24 no mestrado)."><figcaption>Cronograma de 48 meses.</figcaption></figure>
-      </div>
+<!-- ============================================================ agenda -->
+<section id="agenda" class="band">
+  <div class="sec-head"><h2>Agenda</h2><p>Eventos, apresentações, prazos e atividades. Assine para ver tudo no seu calendário.</p></div>
+  <div class="agenda">
+    <div class="cal card">
+      <div class="cal-h"><button class="ic-btn" id="calPrev" aria-label="Mês anterior">‹</button><b id="calTitle"></b><button class="ic-btn" id="calNext" aria-label="Próximo mês">›</button></div>
+      <div class="cal-g" id="calGrid"></div>
     </div>
-  </section>
+    <div class="upcoming"><h3>Próximas datas</h3><div id="upcoming"></div><a class="btn ghost sm" href="/agenda.ics" id="icsLink">Assinar a agenda (.ics)</a></div>
+  </div>
+</section>
 
-  <!-- 6 · estado + marcos -->
-  <section id="estado" class="r" data-view="estado">
-    <div class="card reveal">
-      <div class="kicker">05 · Estado atual</div>
-      <h2 id="faseAtual">—</h2>
-      <div class="status"><div class="ring" id="ring"><b id="ringV">0%</b></div><div><div class="sema" id="sema"><i class="verde"></i><i class="ambar"></i><i class="vermelho"></i></div><p id="resumo" style="margin:0"></p></div></div>
-      <div class="trio"><div><b>Agora</b><span id="agora"></span></div><div><b>Próxima</b><span id="proxima"></span></div><div class="blk"><b>Bloqueio</b><span id="bloqueio"></span></div></div>
-      <h3>Marcos</h3>
-      <div class="tl" id="marcos"></div>
-      <p class="mute" style="font-size:12px">Atualizado em <span id="atualizado"></span> · versão do programa <span id="versaoProg"></span></p>
+<!-- ============================================================ podcast -->
+<section id="podcast" class="band tint">
+  <div class="sec-head"><h2>Podcast · resumos em áudio</h2><p>Episódios curtos com resumos do material desenvolvido e das atividades. Só entram na playlist depois de liberados pela coordenação.</p></div>
+  <div class="pod">
+    <div class="player card" id="player">
+      <div class="disc" aria-hidden="true"><i></i></div>
+      <div class="pmeta"><span class="kick">Tocando agora</span><b id="pTitle">Escolha um episódio</b><p id="pSum"></p></div>
+      <div class="pctl"><button class="ic-btn big" id="pPlay" aria-label="Tocar">▶</button><div class="prog"><b id="pBar"></b></div><span id="pTime">0:00</span></div>
+      <p class="fine" id="pNote"></p>
+      <audio id="pAudio" preload="none"></audio>
     </div>
-  </section>
+    <ol class="playlist" id="playlist"></ol>
+  </div>
+  <div class="feeds"><a href="/podcast.xml">Feed do podcast (RSS)</a></div>
+</section>
 
-  <!-- 7 · registro -->
-  <section id="registro" data-view="estado">
-    <div class="card wide reveal">
-      <div class="kicker">06 · Registro de evolução</div>
-      <h2>O diário do programa e do simulador</h2>
-      <div class="duo">
-        <div><h3>Programa de pesquisa</h3><div class="log" id="log"></div></div>
-        <div><h3>Versões do simulador</h3><div class="log" id="rel"></div></div>
-      </div>
-    </div>
-  </section>
+<!-- ============================================================ galeria e registros -->
+<section id="galeria" class="band">
+  <div class="sec-head"><h2>Galeria e documentos de registro</h2><p>Fotos, vídeos, pranchas e os documentos que registram cada etapa do projeto.</p></div>
+  <div class="filters" id="galFilters"></div>
+  <div class="gallery" id="gallery"></div>
+  <h3 class="sub">Documentos de registro</h3>
+  <div class="docs" id="docs"></div>
+</section>
 
-  <!-- 8 · documentação e simulador -->
-  <section id="docs" data-view="docs">
-    <div class="card wide reveal">
-      <div class="kicker">07 · Por onde seguir</div>
-      <h2>Explore o simulador ou leia a documentação</h2>
-      <div class="portal">
-        <a class="door sim" href="simulador.html">
-          <svg class="art" viewBox="0 0 96 96"><defs><linearGradient id="s1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ff7e0"/><stop offset="1" stop-color="#139a80"/></linearGradient></defs><rect x="6" y="12" width="84" height="58" rx="14" fill="url(#s1)"/><rect x="14" y="20" width="68" height="42" rx="8" fill="#08332c"/><circle cx="34" cy="41" r="12" fill="#f2c8b4"/><path d="M28 41h12M34 35v12" stroke="#ff8a5c" stroke-width="2.4"/><path d="M50 30h26M50 38h20M50 46h24M50 54h14" stroke="#7ff7e0" stroke-width="3" stroke-linecap="round"/><rect x="36" y="72" width="24" height="8" rx="3" fill="#139a80"/></svg>
-          <h3>Simulador multiescala</h3>
-          <p>Do corpo inteiro com anatomia real à membrana com canais iônicos. Aplique TENS, eletroacupuntura, taVNS ou ultrassom focado, acompanhe o monitor do paciente e veja os pontos reflexos e as estruturas associadas em camadas.</p>
-          <span class="go">Abrir o simulador →</span>
-        </a>
-        <a class="door doc" href="docs/manual-usuario.html">
-          <svg class="art" viewBox="0 0 96 96"><path d="M20 12h40l16 16v52a6 6 0 0 1-6 6H20a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z" fill="#ffe7a3"/><path d="M60 12v16h16" fill="#e2b84f"/><path d="M26 40h36M26 50h36M26 60h26" stroke="#8a6a1e" stroke-width="4" stroke-linecap="round"/><circle cx="68" cy="68" r="14" fill="#3ee6c5"/><path d="M62 68l4 4 8-8" stroke="#06332b" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
-          <h3>Documentação</h3>
-          <p>Manual do usuário ilustrado, manual técnico do desenvolvimento, página de notícias e eventos, código e o histórico de versões.</p>
-          <span class="go">Abrir o manual do usuário →</span>
-        </a>
-      </div>
-      <div class="docs">
-        <a href="docs/manual-usuario.html"><span class="f">HTML</span><b>Manual do usuário</b><span class="mute">Telas, fluxos, níveis de escala, simulação e pontos reflexos.</span></a>
-        <a href="docs/manual-tecnico.html"><span class="f">HTML</span><b>Manual técnico</b><span class="mute">Arquitetura, modelo, pipeline anatômico, CI/CD e implantação.</span></a>
-        <a href="site/"><span class="f">HTML</span><b>Notícias, eventos e equipe</b><span class="mute">Atualizações em formato de portal e calculadora de limiar.</span></a>
-        <a href="https://github.com/LACibermedicina/axon" rel="noopener"><span class="f">GITHUB</span><b>Código-fonte</b><span class="mute">App, API científica, scripts de implantação e testes.</span></a>
-        <a href="https://github.com/LACibermedicina/axon/tree/main/research/modelo" rel="noopener"><span class="f">PY</span><b>Modelo preditivo de limiar</b><span class="mute">Cadeia nodal, Monte Carlo e bootstrap — o programa que produz os números.</span></a>
-        <a href="https://github.com/LACibermedicina/axon/tree/main/research/figuras" rel="noopener"><span class="f">PY</span><b>Ateliê de figuras</b><span class="mute">As pranchas desta página são desenhadas por código, a cada build.</span></a>
-      </div>
-      <h3>Materiais do programa</h3>
-      <div class="docs" id="materiais"></div>
-      <h3>Galeria de pranchas</h3>
-      <div class="gallery" id="gallery"></div>
+<!-- ============================================================ programa (resumo) -->
+<section id="programa" class="band tint">
+  <div class="sec-head"><h2>O programa em números</h2><p>Resultados do modelo nodal: cadeia de 41 nós, Monte Carlo com 20 000 sorteios, semente fixa — os mesmos valores que o simulador reproduz no navegador.</p></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="duo">
+    <figure class="card"><img src="img/programa/lei_escala.jpg" alt="Gráfico do limiar de ativação em função do calibre" loading="lazy" data-zoom><figcaption>Limiar × calibre: ajuste I ∝ D<sup>−1,13</sup> <span class="tag t-mod">MODELO · SEMENTE 42</span></figcaption></figure>
+    <figure class="card"><img src="img/programa/janela.jpg" alt="Curvas de recrutamento de Aβ e Aδ" loading="lazy" data-zoom><figcaption>Com 10 % das Aβ recrutadas, só 0,4 % das Aδ <span class="tag t-mod">MODELO · SEMENTE 42</span></figcaption></figure>
+  </div>
+  <div class="estado card" id="estado"></div>
+</section>
+
+<!-- ============================================================ acompanhe + apoio -->
+<section id="apoio" class="band">
+  <div class="two">
+    <div class="card follow">
+      <h2>Acompanhe</h2>
+      <p>Receba o boletim com as novidades, as próximas datas e os novos episódios. Só usamos o seu e-mail para isso; o cancelamento é por um link em cada envio.</p>
+      <form id="subForm" novalidate>
+        <label class="fld"><span>E-mail</span><input type="email" name="email" required autocomplete="email" placeholder="voce@exemplo.com"></label>
+        <fieldset class="topics"><legend>Temas</legend>
+          <label><input type="checkbox" name="t" value="novidades" checked> Novidades</label><label><input type="checkbox" name="t" value="agenda" checked> Agenda</label><label><input type="checkbox" name="t" value="podcast" checked> Podcast</label><label><input type="checkbox" name="t" value="publicacoes"> Publicações</label>
+        </fieldset>
+        <label class="consent"><input type="checkbox" name="consent" required> Autorizo o uso do meu e-mail apenas para o envio do boletim do projeto (LGPD).</label>
+        <button class="btn pri" type="submit">Inscrever</button><p class="msg" id="subMsg" role="status"></p>
+      </form>
+      <div class="feeds"><a href="/feed.xml">RSS de novidades</a><a href="/podcast.xml">RSS do podcast</a><a href="/agenda.ics">Agenda (.ics)</a></div>
     </div>
-  </section>
+    <div class="card support">
+      <h2>Apoio</h2>
+      <p>Dúvidas sobre o simulador, a documentação, colaborações ou o uso em aula. A equipe responde pelo e-mail informado.</p>
+      <form id="supForm" novalidate>
+        <div class="row2"><label class="fld"><span>Nome (opcional)</span><input name="name" autocomplete="name"></label><label class="fld"><span>E-mail para resposta</span><input type="email" name="email" autocomplete="email"></label></div>
+        <label class="fld"><span>Assunto</span><select name="topic"><option value="simulador">Uso do simulador</option><option value="documentacao">Documentação</option><option value="ensino">Uso em aula</option><option value="colaboracao">Colaboração</option><option value="erro">Relatar um erro</option><option value="geral">Outro</option></select></label>
+        <label class="fld"><span>Mensagem</span><textarea name="message" rows="4" required minlength="10"></textarea></label>
+        <button class="btn pri" type="submit">Enviar</button><p class="msg" id="supMsg" role="status"></p>
+      </form>
+      <details class="faq"><summary>O simulador pode ser usado para tratar pacientes?</summary><p>Não. O axon é uma ferramenta de pesquisa e ensino in silico, não é dispositivo médico e não deve ser usado para calcular parâmetros de estimulação em pessoas.</p></details>
+      <details class="faq"><summary>Os casos clínicos são reais?</summary><p>Não. São casos fictícios para ensino; o importador recusa campos de identificação pessoal.</p></details>
+      <details class="faq"><summary>E as etapas com tecido ou animais?</summary><p>Ficam num projeto vinculado, de mesma temática, que só começa após aprovação das entidades responsáveis e com laboratório credenciado. Este projeto é de simulação in silico.</p></details>
+    </div>
+  </div>
+</section>
 </main>
 
 <footer>
-  <div class="warn"><b>⚠ Ferramenta de pesquisa e ensino.</b> Não é dispositivo médico, não passou por avaliação regulatória e não deve ser usada para calcular parâmetros de estimulação em pessoas. As fases experimentais exigem supervisão técnica credenciada e, com animais, protocolo CEUA aprovado antes do início.</div>
-  <div><b>Lucas da Silva Teixeira</b> · Graduação em Física, Ibilce/UNESP — São José do Rio Preto · <a href="https://orcid.org/0000-0001-7541-5399" rel="noopener">ORCID 0000-0001-7541-5399</a></div>
-  <div>Anatomia 3D do simulador: BodyParts3D © DBCLS, CC BY-SA 2.1 JP · Figuras geradas por código a partir de <code>research/figuras</code> · <a href="simulador.html">Simulador</a> · <a href="docs/manual-usuario.html">Documentação</a></div>
+  <div class="warn"><b>Ferramenta de pesquisa e ensino in silico.</b> Não é dispositivo médico, não passou por avaliação regulatória e não deve ser usada para calcular parâmetros de estimulação em pessoas.</div>
+  <div><b>Lucas da Silva Teixeira</b> · Física, Ibilce/UNESP — São José do Rio Preto · <a href="https://orcid.org/0000-0001-7541-5399" rel="noopener">ORCID 0000-0001-7541-5399</a></div>
+  <div>Anatomia 3D: BodyParts3D © DBCLS, CC BY-SA 2.1 JP · <a href="simulador.html">Simulador</a> · <a href="docs/manual-usuario.html">Manual do usuário</a> · <a href="docs/manual-tecnico.html">Manual técnico</a> · <a href="https://github.com/LACibermedicina/axon" rel="noopener">Código</a> · <a href="admin.html">Área da coordenação</a></div>
 </footer>
 
-<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Figura ampliada"><div><img alt=""><p></p></div></div>
-<div class="tip" id="tip"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" hidden><div class="sheet"><button class="ic-btn close" data-close aria-label="Fechar">✕</button><div id="modalBody"></div></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/release.js"></script>
 <script src="js/programa.js"></script>
 <script src="js/landing3d.js"></script>
-<script>
-(function () {
-  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)], esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const P = window.AXON_PROGRAMA, R = window.AXON_RELEASE || { version: "—", releases: [] };
-  const fmtD = d => { const [y, m, dd] = d.split("-"); return `${dd}/${m}/${y}`; };
-  $("#verPill span").textContent = `Simulador v${R.version} · novidades`;
-
-  // --- métricas
-  const TAGK = { k1: ["t-mod", "MODELO · SEMENTE 42"], k2: ["t-mod", "MODELO · SEMENTE 42"], k3: ["t-mod", "MODELO · SEMENTE 42"], k4: ["t-der", "DERIVADO"] };
-  $("#kpis").innerHTML = Object.entries(P.metricas).sort((a, b) => a[1].ordem - b[1].ordem).map(([k, m]) => `<div class="kpi"><div class="v" data-v="${esc(m.valor)}">${esc(m.valor)}</div><div class="l">${esc(m.rotulo)}</div><div class="n">${esc(m.nota)}</div><span class="tag ${TAGK[k][0]}">${TAGK[k][1]}</span></div>`).join("");
-  // --- fases
-  $("#phases").innerHTML = Object.values(P.fases).sort((a, b) => a.ordem - b.ordem).map(f => `<div class="ph"><span class="c">${esc(f.codigo)} · ${esc(f.periodo)}</span><b>${esc(f.nome)}</b><span class="st ${f.estado}">${f.estado === "andamento" ? "em andamento" : "planejada"}</span><div class="prog"><i style="width:${f.progresso}%"></i></div><p style="font-size:13px;margin:4px 0;color:#cfe3df">${esc(f.descricao)}</p><details><summary>Critério e entregáveis</summary><p><b>Critério de passagem:</b> ${esc(f.criterio)}</p><ul>${f.entregaveis.split("\n").map(e => `<li>${esc(e)}</li>`).join("")}</ul></details></div>`).join("");
-  // --- estado e marcos
-  const E = P.conteudo.estado;
-  $("#faseAtual").textContent = E.fase_atual; $("#resumo").textContent = E.resumo; $("#agora").textContent = E.agora; $("#proxima").textContent = E.proxima; $("#bloqueio").textContent = E.bloqueio;
-  $("#atualizado").textContent = fmtD(E.atualizado_em); $("#versaoProg").textContent = E.versao;
-  $$("#sema i").forEach(i => i.classList.toggle("on", i.classList.contains(E.semaforo)));
-  $("#marcos").innerHTML = Object.values(P.marcos).sort((a, b) => a.data < b.data ? -1 : 1).map(m => `<div class="m ${m.estado}"><div class="d">${fmtD(m.data)} · ${m.estado === "feito" ? "concluído" : m.estado === "agora" ? "em curso" : "previsto"}</div><b>${esc(m.titulo)}</b><div class="mute" style="font-size:13.5px">${esc(m.descricao)}</div></div>`).join("");
-  // --- registros
-  $("#log").innerHTML = Object.values(P.registros).sort((a, b) => a.data < b.data ? 1 : -1).map(r => `<article><div class="h"><span class="ty ${r.tipo}">${r.tipo === "publicacao" ? "publicação" : r.tipo === "correcao" ? "correção" : r.tipo === "decisao" ? "decisão" : r.tipo}</span><span class="d">${fmtD(r.data)}</span></div><b>${esc(r.titulo)}</b><p>${esc(r.corpo)}</p></article>`).join("");
-  $("#rel").innerHTML = (R.releases || []).slice(0, 12).map(r => `<article><div class="h"><span class="ty entrega">v${esc(r.version)}</span><span class="d">${fmtD(r.date)}</span></div><p>${esc(r.summary || "")}</p></article>`).join("") || `<p class="mute">Sem versões publicadas.</p>`;
-  // --- materiais (PDFs entregues sob demanda; o simulador e o modelo estão online)
-  $("#materiais").innerHTML = Object.values(P.materiais).sort((a, b) => a.ordem - b.ordem).map(x => {
-    const href = x.formato === "PY" ? "https://github.com/LACibermedicina/axon/tree/main/research/modelo" : (x.arquivo ? "materiais/" + encodeURIComponent(x.arquivo) : "");
-    const tag = x.formato === "PDF" ? `<span class="mute" style="font-size:12px">disponível quando publicado em <code>materiais/</code></span>` : "";
-    return x.formato === "PY" ? `<a href="${href}" rel="noopener"><span class="f">${x.formato}</span><b>${esc(x.titulo)}</b><span class="mute">${esc(x.descricao)}</span></a>` : `<div data-pdf="${esc(href)}"><span class="f">${x.formato}</span><b>${esc(x.titulo)}</b><span class="mute">${esc(x.descricao)}</span><br>${tag}</div>`;
-  }).join("");
-  // PDF existe no servidor? então vira link
-  $$("[data-pdf]").forEach(d => { const u = d.dataset.pdf; if (!u) return; fetch(u, { method: "HEAD" }).then(r => { if (r.ok && /pdf/.test(r.headers.get("content-type") || "")) { const a = document.createElement("a"); a.href = u; a.innerHTML = d.innerHTML.replace(/<br>.*$/, ""); d.replaceWith(a); } }).catch(() => {}); });
-  // --- galeria
-  const FIGS = [["problema", "A régua do campo"], ["proposta", "Duas réguas"], ["lei_escala", "Limiar × calibre"], ["janela", "Janela de seletividade"], ["difracao", "Resolução × penetração"], ["via_dor", "A via da dor"], ["janela_terap", "Janela terapêutica"], ["timeline", "Noventa anos de um mesmo obstáculo"], ["fases", "Escada de evidência"], ["cronograma", "Cronograma"], ["metodos", "Três métodos declarados"], ["selecao", "Seleção da literatura"]];
-  $("#gallery").innerHTML = FIGS.map(([f, c]) => `<img src="img/programa/${f}.jpg" alt="${esc(c)}" loading="lazy" data-cap="${esc(c)}">`).join("");
-  // --- caixa de luz
-  const lb = $("#lb");
-  document.addEventListener("click", e => { const im = e.target.closest("figure img, .gallery img"); if (im) { lb.querySelector("img").src = im.src; lb.querySelector("img").alt = im.alt; lb.querySelector("p").textContent = im.dataset.cap || im.alt; lb.classList.add("on"); } else if (e.target.closest("#lb")) lb.classList.remove("on"); });
-  addEventListener("keydown", e => { if (e.key === "Escape") lb.classList.remove("on"); });
-
-  // --- revelar ao rolar + câmera por seção + estado do anel
-  let V = null; const sections = $$("section[data-view]");
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.querySelector(".reveal")?.classList.add("in"); if (e.intersectionRatio > .35) { V && V.view(e.target.dataset.view); $$(".top nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id));
-    if (e.target.id === "estado") { let p = 0; const goal = E.progresso, r = $("#ring"); const step = () => { p = Math.min(goal, p + 1.5); r.style.setProperty("--p", p); $("#ringV").textContent = Math.round(p) + "%"; if (p < goal) requestAnimationFrame(step); }; step(); } } } }), { threshold: [.12, .4] });
-  sections.forEach(s => io.observe(s));
-
-  // --- diorama 3D
-  const tip = $("#tip"), bAb = $("#bAb"), bAd = $("#bAd");
-  function onRec(r) {
-    bAb.style.width = (r.ab / r.nab * 100) + "%"; bAd.style.width = (r.ad / r.nad * 100) + "%"; $("#nAb").textContent = `${r.ab}/${r.nab}`; $("#nAd").textContent = `${r.ad}/${r.nad}`;
-    $("#verdict").innerHTML = r.ab === 0 ? `<span class="mute">Abaixo do limiar: nenhuma fibra dispara.</span>` : r.ad === 0 ? `<span style="color:var(--ab)">Só tato: as fibras grossas disparam, as finas não.</span>` : r.ad < r.nad ? `<span style="color:var(--ad)">Dor começando: as Aδ só entram muito acima do limiar das Aβ.</span>` : `<span style="color:var(--red)">Todas recrutadas — a seletividade se perdeu.</span>`;
-  }
-  try {
-    if (!window.THREE) throw new Error("three");
-    V = window.__axonV = AxonVoxel.create($("#gl"), { intensity: 1.6, onChange: onRec, onHover: h => { if (!h) { tip.style.display = "none"; return; } tip.style.display = "block"; tip.style.left = h.x + 14 + "px"; tip.style.top = h.y + 14 + "px"; tip.innerHTML = `<b style="color:${h.f.type === "Ab" ? "var(--ab)" : "var(--ad)"}">${h.f.type === "Ab" ? "Aβ" : "Aδ"}</b> · ${h.f.D.toFixed(1).replace(".", ",")} µm · limiar ${h.f.thr.toFixed(2).replace(".", ",")}× · ${h.f.type === "Ab" ? "tato" : "dor"}`; } });
-    const rg = $("#iRange"), set = () => { const v = +rg.value; $("#iVal").textContent = v.toFixed(1).replace(".", ",") + "×"; V.setIntensity(v); };
-    rg.addEventListener("input", set); set();
-  } catch (err) { document.body.classList.add("nofx"); $(".stim").style.display = "none"; }
-})();
-</script>
+<script src="js/portal.js"></script>
 </body>
 </html>

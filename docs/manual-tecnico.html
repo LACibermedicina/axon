@@ -22,7 +22,7 @@
     <div>
       <h1>Duas funções puras, um domínio verificado, uma semente fixa.</h1>
       <p>Referência de arquitetura, API, núcleo científico, frontend 3D, infraestrutura e processo de desenvolvimento do <b>axon</b> — para quem vai implantar, manter, auditar ou estender.</p>
-      <div class="meta">v0.5.0-alpha · Python 3.11 · FastAPI · NumPy/SciPy · Three.js r128 · Docker Compose · GitHub Actions</div>
+      <div class="meta">v0.7.0-alpha · Python 3.11 · FastAPI · NumPy/SciPy · Three.js r128 · Docker Compose · GitHub Actions</div>
     </div>
     <figure>
       <svg viewBox="0 0 700 380" role="img" aria-label="Arquitetura em camadas do axon">
@@ -47,7 +47,7 @@
 <nav class="toc" aria-label="Índice">
   <div class="grp">Arquitetura</div><a href="#principios">Princípios</a><a href="#contexto">Contexto e containers</a><a href="#repo">Estrutura do repositório</a>
   <div class="grp">Ciência</div><a href="#nucleo">Núcleo nodal</a><a href="#verificacao">Verificação</a><a href="#modulos">Módulos científicos</a>
-  <div class="grp">Interfaces</div><a href="#api">API REST</a><a href="#frontend">Frontend 3D</a><a href="#ia">IA contextual</a><a href="#anatomia">Anatomia real (BodyParts3D)</a><a href="#reflexos">Pontos reflexos</a><a href="#simulacao">Modo Simulação</a><a href="#casos">Casos clínicos (JSON)</a>
+  <div class="grp">Interfaces</div><a href="#api">API REST</a><a href="#frontend">Frontend 3D</a><a href="#ia">IA contextual</a><a href="#anatomia">Anatomia real (BodyParts3D)</a><a href="#reflexos">Pontos reflexos</a><a href="#portalapi">Portal e painel</a><a href="#simulacao">Modo Simulação</a><a href="#casos">Casos clínicos (JSON)</a>
   <div class="grp">Operação</div><a href="#infra">Implantação na VPS</a><a href="#cicd">CI/CD e SERVIDOR_ENV</a><a href="#entrega">Entrega contínua e versões</a><a href="#seguranca">Segurança e LGPD</a><a href="#testes">Testes</a>
   <div class="grp">Processo</div><a href="#contrib">Contribuição</a><a href="#adr">Decisões (ADR)</a><a href="#roadmap">Roadmap</a><a href="#problemas">Solução de problemas</a>
 </nav>
@@ -336,6 +336,14 @@ def Ith(D, r, **kw): return VTH / h(D, r, **kw)        # A</code></pre>
     <li><b>Tamanho na tela constante:</b> o marcador escala com a distância da câmera; rótulos e marcadores do lado oposto à câmera (normal · visão &lt; 0) esmaecem.</li>
   </ul>
   <div class="note"><b>Procedência.</b> Localizações e territórios: <span class="tag t-lit">LITERATURA</span> (OMS 2008; Peuker &amp; Filler 2002; Travell &amp; Simons 1999; Head 1893). Projeção na malha e trajetos nervosos: <span class="tag t-pre">PREMISSA</span>. Meridianos: <span class="tag t-hip">HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO</span>. Quando o mapa de dermátomos do app diverge do segmento citado, os dois são guardados (<code>seg</code>, <code>mapDerm</code>).</div>
+  <h3 id="portalapi">Portal, painel e feeds (v0.7)</h3>
+  <p><code>backend/app/portal.py</code> guarda notícias, agenda, linha do tempo, mídia, episódios, inscritos e chamados num único <code>portal.json</code> em <code>PORTAL_DIR</code> (volume <code>./data/portal:/srv/portal</code>, dono 10001, criado pelo <code>setup_vps.sh</code>), com trava <code>fcntl</code> e gravação atômica. O primeiro arranque usa <code>seed_portal.json</code> (gerado por <code>scripts/build_portal_seed.py</code>); cada versão nova de <code>release.json</code> vira notícia e marco automaticamente.</p>
+  <div class="scroll"><table class="stack"><tr><th>Rota</th><th>Uso</th></tr>
+  <tr><td><code>GET /api/portal/public</code></td><td>Só itens <code>publicado</code>.</td></tr>
+  <tr><td><code>/feed.xml</code> · <code>/podcast.xml</code> · <code>/agenda.ics</code></td><td>RSS 2.0, RSS com <code>enclosure</code> (só episódios com áudio) e iCalendar (fuso America/Sao_Paulo).</td></tr>
+  <tr><td><code>POST /api/portal/subscribe</code> · <code>/support</code></td><td>Consentimento obrigatório; limite por IP; descadastro por token apaga o registro.</td></tr>
+  <tr><td><code>/api/portal/admin/*</code></td><td><code>Authorization: Bearer ADMIN_TOKEN</code>: <code>all</code>, <code>apply</code> (create, update, publish, unpublish, archive, delete), <code>assist</code>, <code>upload</code> (corpo bruto, até 80 MB; MIME em lista fechada), <code>episodes/{id}/tts</code>, <code>newsletter/draft</code>, <code>newsletter/send</code>, <code>subscribers.csv</code>, <code>tickets/{id}</code>.</td></tr></table></div>
+  <p><b>Assistente:</b> o modelo recebe o esquema, um índice do conteúdo atual e o material colado, e responde JSON <code>{message, ops}</code>; <code>clean()</code> descarta campos fora do esquema e valores fora das listas, e o painel mostra cada operação com o valor anterior antes de aplicar. <b>Voz:</b> com <code>OPENAI_API_KEY</code>, <code>tts()</code> gera MP3 (<code>PODCAST_VOICE</code>); sem chave, a página lê o roteiro com <code>speechSynthesis</code>. <b>E-mail:</b> <code>SMTP_HOST/PORT/USER/PASS/FROM</code> (STARTTLS). O proxy do host e o nginx do container aceitam 100 MB em <code>/api/portal/admin/upload</code>.</p>
 </section>
 
 <section id="simulacao">
@@ -575,7 +583,7 @@ python -m core.bio_model       # grava res.json e imprime os benchmarks</code></
 
 </main>
 </div>
-<footer>axon v0.5.0-alpha · Manual Técnico · <a href="../site/">página do projeto</a> · <a href="manual-usuario.html">manual do usuário</a> · autor do modelo: L. S. Teixeira (Ibilce/UNESP)</footer>
+<footer>axon v0.7.0-alpha · Manual Técnico · <a href="../#novidades">página do projeto</a> · <a href="manual-usuario.html">manual do usuário</a> · autor do modelo: L. S. Teixeira (Ibilce/UNESP)</footer>
 <script src="doc.js"></script>
 </body>
 </html>

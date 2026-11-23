@@ -158,3 +158,165 @@ def translate(p: TrIn):
         return ai.translate([t[:600] for t in p.texts], p.target, p.context)
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+# ================================================================== portal: notícias, agenda, mídia, podcast, newsletter, apoio
+from fastapi import Header, Request  # noqa: E402
+from fastapi.responses import FileResponse, PlainTextResponse, Response  # noqa: E402
+from . import portal  # noqa: E402
+
+
+def _admin(authorization: Optional[str]) -> None:
+    if not os.getenv("ADMIN_TOKEN"):
+        raise HTTPException(503, "Painel desativado: defina ADMIN_TOKEN no .env do servidor.")
+    if not portal.check_admin(authorization or ""):
+        raise HTTPException(401, "Token de administrador inválido.")
+
+
+def _ip(req: Request) -> str:
+    return (req.headers.get("x-forwarded-for") or (req.client.host if req.client else "?")).split(",")[0].strip()
+
+
+@app.get("/api/portal/public")
+def portal_public():
+    return portal.public()
+
+
+@app.get("/api/portal/media/{name}")
+def portal_media(name: str):
+    p = portal.media_path(name)
+    if not p:
+        raise HTTPException(404, "arquivo não encontrado")
+    d = portal.load()
+    item = next((m for col in ("media", "episodes") for m in d[col] if name in (m.get("file"), m.get("audio"))), None)
+    if not item or item.get("status") != "publicado":
+        raise HTTPException(404, "arquivo não publicado")
+    return FileResponse(p, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/portal/feed.xml")
+def portal_rss():
+    return Response(portal.rss(), media_type="application/rss+xml; charset=utf-8")
+
+
+@app.get("/api/portal/podcast.xml")
+def portal_podcast():
+    return Response(portal.podcast_rss(), media_type="application/rss+xml; charset=utf-8")
+
+
+@app.get("/api/portal/calendar.ics")
+def portal_ics():
+    return Response(portal.ics(), media_type="text/calendar; charset=utf-8")
+
+
+class SubIn(BaseModel):
+    email: str = Field(..., max_length=254); topics: List[str] = []; consent: bool = False
+
+
+@app.post("/api/portal/subscribe")
+def portal_subscribe(p: SubIn, req: Request):
+    if not portal.throttle(_ip(req)):
+        raise HTTPException(429, "Muitas tentativas. Tente de novo em alguns minutos.")
+    try:
+        return portal.subscribe(p.email, p.topics, p.consent)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/portal/unsubscribe", response_class=PlainTextResponse)
+def portal_unsubscribe(token: str):
+    return "Inscrição cancelada. Seu e-mail foi apagado." if portal.unsubscribe(token) else "Link inválido ou já utilizado."
+
+
+class SupIn(BaseModel):
+    name: str = Field("", max_length=120); email: str = Field("", max_length=254); topic: str = Field("geral", max_length=40); message: str = Field(..., max_length=5000)
+
+
+@app.post("/api/portal/support")
+def portal_support(p: SupIn, req: Request):
+    if not portal.throttle("s:" + _ip(req), limit=4):
+        raise HTTPException(429, "Muitas mensagens seguidas. Tente de novo em alguns minutos.")
+    try:
+        return portal.support(p.name, p.email, p.topic, p.message)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+# ---- administração (Authorization: Bearer <ADMIN_TOKEN>)
+@app.get("/api/portal/admin/all")
+def portal_admin_all(authorization: Optional[str] = Header(None)):
+    _admin(authorization); d = portal.load()
+    return {**{k: d[k] for k in portal.SCHEMA}, "tickets": d["tickets"], "subscribers": len(d["subscribers"]), "log": d["log"][-30:],
+            "smtp": portal.smtp_ready(), "tts": bool(os.getenv("OPENAI_API_KEY")), "ai": ai.status() if hasattr(ai, "status") else None}
+
+
+class OpsIn(BaseModel):
+    ops: List[Dict] = Field(..., max_length=100)
+
+
+@app.post("/api/portal/admin/apply")
+def portal_admin_apply(p: OpsIn, authorization: Optional[str] = Header(None)):
+    _admin(authorization); return portal.apply_ops(p.ops)
+
+
+class AssistIn(BaseModel):
+    prompt: str = Field(..., max_length=4000); material: str = Field("", max_length=12000)
+
+
+@app.post("/api/portal/admin/assist")
+def portal_admin_assist(p: AssistIn, authorization: Optional[str] = Header(None)):
+    _admin(authorization); return portal.assist(p.prompt, p.material)
+
+
+@app.post("/api/portal/admin/upload")
+async def portal_admin_upload(req: Request, title: str = "", kind: str = "", category: str = "galeria", authorization: Optional[str] = Header(None)):
+    _admin(authorization)
+    raw = await req.body()
+    try:
+        return portal.store_upload(raw, (req.headers.get("content-type") or "").split(";")[0].strip(), title, kind, category)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/portal/admin/media/{name}")
+def portal_admin_media(name: str, authorization: Optional[str] = Header(None)):
+    _admin(authorization); p = portal.media_path(name)
+    if not p:
+        raise HTTPException(404, "arquivo não encontrado")
+    return FileResponse(p)
+
+
+@app.post("/api/portal/admin/episodes/{eid}/tts")
+def portal_admin_tts(eid: str, authorization: Optional[str] = Header(None)):
+    _admin(authorization); return portal.tts(eid)
+
+
+@app.get("/api/portal/admin/subscribers.csv", response_class=PlainTextResponse)
+def portal_admin_csv(authorization: Optional[str] = Header(None)):
+    _admin(authorization); return PlainTextResponse(portal.subscribers_csv(), media_type="text/csv; charset=utf-8")
+
+
+@app.get("/api/portal/admin/newsletter/draft")
+def portal_admin_nl_draft(authorization: Optional[str] = Header(None)):
+    _admin(authorization); return portal.newsletter_draft()
+
+
+class NlIn(BaseModel):
+    subject: str = Field(..., max_length=180); html: str = Field(..., max_length=60000); test_to: str = Field("", max_length=254)
+
+
+@app.post("/api/portal/admin/newsletter/send")
+def portal_admin_nl_send(p: NlIn, authorization: Optional[str] = Header(None)):
+    _admin(authorization); return portal.send_newsletter(p.subject, p.html, p.test_to)
+
+
+class TkIn(BaseModel):
+    state: str = Field(..., max_length=20); notes: str = Field("", max_length=5000)
+
+
+@app.post("/api/portal/admin/tickets/{tid}")
+def portal_admin_ticket(tid: str, p: TkIn, authorization: Optional[str] = Header(None)):
+    _admin(authorization)
+    if not portal.ticket_update(tid, p.state, p.notes):
+        raise HTTPException(404, "chamado não encontrado")
+    return {"ok": True}

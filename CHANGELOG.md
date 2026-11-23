@@ -2,6 +2,25 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.7.0-alpha] — 2026-11-23
+
+Portal claro do projeto com notícias, linha do tempo, agenda, podcast, galeria, boletim e apoio, administrado com ajuda de IA; escopo deste projeto restrito à simulação in silico.
+
+### Adicionado
+- **Página inicial clara e imersiva:** diorama 3D iluminado como estúdio, cartões de "níveis" com capturas reais do simulador, novidades em formato de portal com filtro e leitura em janela, roadmap e linha do tempo, agenda com calendário mensal, playlist do podcast, galeria de fotos e vídeos, documentos de registro, números do programa, boletim e apoio.
+- **Painel da coordenação** (`/admin.html`, protegido por `ADMIN_TOKEN`): assistente de IA que transforma pedidos em português numa proposta de alterações revisável antes de aplicar; edição, publicação e exclusão de notícias, eventos, marcos, mídias e episódios; envio de fotos, vídeos e documentos; histórico de alterações.
+- **Podcast:** episódios com roteiro gerado a partir do material do projeto, áudio por síntese de voz no servidor (quando configurada) ou leitura pelo navegador; só entram na playlist depois de liberados.
+- **Feeds e boletim:** RSS de novidades, RSS do podcast, agenda `.ics`; inscrição com consentimento (LGPD) e descadastro por link; rascunho do boletim montado com as novidades de 30 dias; envio por SMTP quando configurado ou exportação CSV.
+- **Apoio:** formulário com protocolo e acompanhamento dos chamados no painel.
+- Cada versão nova do simulador vira notícia e marco da linha do tempo automaticamente.
+
+### Alterado
+- **Escopo:** este projeto é de simulação in silico (Fase 0 modelo e verificação, Fase 1 simulador aberto, Fase 2 validação in silico e revisão sistemática). Bancada, ex vivo e in vivo passam a um projeto vinculado, de mesma temática, fora do escopo desta campanha e sujeito à aprovação das entidades responsáveis.
+- A antiga página de notícias (`/site/`) redireciona para a seção Novidades da página inicial.
+
+### Infraestrutura
+- Volume persistente `data/portal` para o conteúdo e as mídias; `ADMIN_TOKEN` gerado pelo `setup_vps.sh`; uploads de até 100 MB no proxy; variáveis `SMTP_*` e `PODCAST_VOICE` aceitas do `SERVIDOR_ENV`.
+
 ## [0.6.0-alpha] — 2026-11-23
 
 Axon Bot como personagem 3D e tradução da tela inteira por IA ao clicar nas bandeiras.

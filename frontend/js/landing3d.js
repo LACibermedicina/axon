@@ -39,11 +39,12 @@
     renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 800 ? 1.5 : 2));
     renderer.outputEncoding = T.sRGBEncoding; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.physicallyCorrectLights = false;
-    const scene = new T.Scene(); scene.fog = new T.Fog(0x0b1d22, 70, 150);
+    const light = opts.theme === "light";
+    const scene = new T.Scene(); scene.fog = new T.Fog(light ? 0xeef6f4 : 0x0b1d22, light ? 110 : 70, light ? 220 : 150);
     const camera = new T.PerspectiveCamera(34, 1, .5, 400);
 
     // ---- luz de estúdio: chave quente, contra-luz fria, céu/solo, preenchimento
-    scene.add(new T.HemisphereLight(0xcfeaff, 0x3a2418, .62));
+    scene.add(new T.HemisphereLight(0xe6f6ff, light ? 0xc9b8a8 : 0x3a2418, light ? .95 : .62));
     const key = new T.DirectionalLight(0xffe2c4, 1.35); key.position.set(-26, 44, 30); key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -34, right: 34, top: 30, bottom: -30, near: 1, far: 120 }); key.shadow.bias = -.0006; key.shadow.normalBias = .03;
     key.shadow.camera.updateProjectionMatrix(); scene.add(key);
@@ -57,7 +58,7 @@
       const pm = new T.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(t).texture; pm.dispose(); t.dispose(); }
 
     const root = new T.Group(); scene.add(root);
-    const ground = new T.Mesh(new T.CircleGeometry(60, 64), new T.ShadowMaterial({ opacity: .38 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -7.6; ground.receiveShadow = true; root.add(ground);
+    const ground = new T.Mesh(new T.CircleGeometry(60, 64), new T.ShadowMaterial({ opacity: light ? .16 : .38 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -7.6; ground.receiveShadow = true; root.add(ground);
 
     const BOX = roundedBox(.17, 2), SPH = new T.SphereGeometry(.5, 12, 9);
     const MAT = {
@@ -189,6 +190,7 @@
     }
 
     // ---- câmera: órbita suave, paralaxe do mouse e quadros-chave por seção
+    const FIT = opts.fit || 1;
     const VIEWS = { // off: deslocamento horizontal do quadro (fração da largura) para abrir espaço ao cartão de texto
       hero: { tgt: [5, -2.5, 0], az: .78, el: .32, d: 72, off: -.2 },
       problema: { tgt: [12, -3.6, 0], az: .92, el: .16, d: 50, off: .2 },
@@ -198,9 +200,10 @@
       estado: { tgt: [0, -2, 0], az: 2.6, el: .45, d: 66, off: .2 },
       docs: { tgt: [5, -2.5, 0], az: .6, el: .3, d: 76, off: 0 },
     };
+    if (opts.hero) Object.assign(VIEWS.hero, opts.hero);
     const cam = { tgt: new T.Vector3(...VIEWS.hero.tgt), az: VIEWS.hero.az, el: VIEWS.hero.el, d: VIEWS.hero.d, off: VIEWS.hero.off, goal: VIEWS.hero };
     const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
-    addEventListener("pointermove", e => { mouse.x = e.clientX / innerWidth - .5; mouse.y = e.clientY / innerHeight - .5; }, { passive: true });
+    addEventListener("pointermove", e => { if (opts.contained) { const r = canvas.getBoundingClientRect(); mouse.x = (e.clientX - r.left) / r.width - .5; mouse.y = (e.clientY - r.top) / r.height - .5; return; } mouse.x = e.clientX / innerWidth - .5; mouse.y = e.clientY / innerHeight - .5; }, { passive: true });
 
     // ---- dica ao passar o mouse sobre uma fibra
     const ray = new T.Raycaster(), ptr = new T.Vector2(); let hoverCb = opts.onHover || null;
@@ -211,7 +214,7 @@
     });
 
     function resize() { const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-    addEventListener("resize", resize); resize();
+    addEventListener("resize", resize); if (g.ResizeObserver) new ResizeObserver(resize).observe(canvas); resize();
 
     const tmpC = new T.Color(), O = new T.Object3D(); let last = performance.now(), running = true, ionT = 0;
     function frame(now) {
@@ -219,11 +222,11 @@
       const dt = Math.min(.05, (now - last) / 1000); last = now; S.clock += dt;
       // câmera
       const G = cam.goal, k = 1 - Math.pow(.0015, dt);
-      cam.tgt.lerp(new T.Vector3(...G.tgt), k); cam.az += (G.az + (reduce ? 0 : Math.sin(S.clock * .07) * .22) - cam.az) * k; cam.el += (G.el - cam.el) * k; cam.d += (G.d * (innerWidth < 700 ? 1.35 : 1) - cam.d) * k;
+      cam.tgt.lerp(new T.Vector3(...G.tgt), k); cam.az += (G.az + (reduce ? 0 : Math.sin(S.clock * .07) * .22) - cam.az) * k; cam.el += (G.el - cam.el) * k; cam.d += (G.d * FIT * (innerWidth < 700 ? 1.35 : 1) - cam.d) * k;
       mouse.sx += (mouse.x - mouse.sx) * .05; mouse.sy += (mouse.y - mouse.sy) * .05;
       const az = cam.az + mouse.sx * .25, el = Math.max(.02, cam.el - mouse.sy * .12);
       camera.position.set(cam.tgt.x + cam.d * Math.cos(el) * Math.sin(az), cam.tgt.y + cam.d * Math.sin(el), cam.tgt.z + cam.d * Math.cos(el) * Math.cos(az)); camera.lookAt(cam.tgt);
-      cam.off += ((innerWidth > 900 ? G.off : 0) - cam.off) * k; { const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; camera.setViewOffset(w, h, cam.off * w, innerWidth <= 600 ? h * .24 : 0, w, h); }
+      cam.off += ((innerWidth > 900 && !opts.noOffset ? G.off : 0) - cam.off) * k; { const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; camera.setViewOffset(w, h, cam.off * w, innerWidth <= 600 && !opts.noOffset ? h * .24 : 0, w, h); }
       // estímulo periódico
       if (S.clock - S.lastPulse > S.period) { S.lastPulse = S.clock; fire(); }
       shells.forEach(s => { s.t += dt; const u = Math.max(0, s.t); s.m.visible = u < 1.2 && s.t >= 0; const R = 1 + u * 9; s.m.scale.set(R * 1.15, R * .9, R); s.m.material.opacity = .32 * (1 - u / 1.2) * Math.min(1, S.I / 2); });

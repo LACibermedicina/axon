@@ -32,6 +32,9 @@ services:
     environment:
       GIT_SHA: ${GIT_SHA:-dev}
       SUBDOMINIO: ${SUBDOMINIO:-axon.m3d.pro}
+      PORTAL_DIR: /srv/portal
+    volumes:
+      - ./data/portal:/srv/portal   # notícias, agenda, mídia, podcast, newsletter (persistente; preservado nos deploys)
     read_only: true
     tmpfs: ["/tmp"]
     networks: [internal, egress]   # egress: provedores de IA (tradutor / Axon Bot)
