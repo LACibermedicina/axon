@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import functools
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from core import bio_model as bm
+from core import morphometry, bio_model as bm
 from core import safety, stochastic, integrative, anatomy
 from . import ai
 
@@ -122,6 +122,20 @@ def tavns(p: TaVNSIn):
 @app.get("/api/integrative/acupressure")
 def acupressure(pressure_kPa: float = 60, contact_area_cm2: float = 1):
     return envelope(integrative.acupressure(pressure_kPa, contact_area_cm2), "HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO")
+
+
+class MorphoIn(BaseModel):
+    nerve: str = "Nervo mediano"
+    patient: Dict[str, Any] = {}
+
+
+@app.post("/api/morpho/predict")
+def morpho_predict(p: MorphoIn):
+    """Diâmetros previstos por classe de fibra a partir de biometria e clínica (espelho de js/morpho.js)."""
+    try:
+        return envelope(morphometry.predict(morphometry.from_dict(p.patient), p.nerve), "DERIVADO")
+    except (TypeError, ValueError) as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/api/anatomy/predict")

@@ -1,8 +1,26 @@
 {
- "version": "0.8.0-alpha",
+ "version": "0.9.0-alpha",
  "sha": "dev",
- "built_at": "2026-11-23T07:10:20Z",
+ "built_at": "2026-11-23T13:43:21Z",
  "releases": [
+  {
+   "version": "0.9.0-alpha",
+   "date": "2026-11-23",
+   "summary": "Predição do calibre do axônio no feixe a partir de dados biométricos e clínicos, prolongamento do axônio até a placa motora e grafo 3D de correlações do ponto ou região até órgãos e sistemas.",
+   "sections": {
+    "Adicionado": [
+     "Preditor morfométrico (janela \"Calibre do axônio\"): para o nervo escolhido, distribuição prevista do diâmetro de cada classe de fibra (Aα, Aβ, Aγ, Aδ, B, C) com p10–p90, diâmetro do axônio, g-ratio, mielina, internodo, velocidade de condução, fração de axônios e limiar relativo pelo núcleo verificado. Entradas: idade, sexo, altura, peso (da janela Paciente), temperatura do membro, HbA1c, tempo de diabetes e as condições do caso (desmielinização, perda de fibras finas). Cada fator mostra o efeito aplicado, a procedência e a referência.",
+     "Prolongamento do axônio: traço animado no corpo da raiz ao nervo e à placa motora (zona de inervação no meio do ventre muscular), com comprimento ajustado à altura e latência raiz → contração; para pontos reflexos, trajeto aferente até o corno dorsal com o tempo de chegada de Aβ, Aδ e C.",
+     "Feixe do Nível 3 personalizado: composição e calibres das fibras seguem a predição para o paciente e o nervo; Aα, Aγ e B ganham cores próprias.",
+     "Grafo 3D de correlações: do foco (ponto reflexo, músculo ou segmento) ao tecido e receptores, nervo, fibras aferentes e eferentes (com o calibre previsto), gânglio, lâminas do corno dorsal, corno ventral, coluna intermediolateral, vias ascendentes e descendentes, tálamo, córtex, PAG/RVM/LC, NTS (pontos vagais), órgãos por convergência segmentar, sistemas (opioide endógeno, controle cardíaco vagal, via colinérgica anti-inflamatória) e pontos e músculos indiretamente correlacionados. Arestas em 4 níveis (anatômica, segmentar, reflexa/referida, neuromodulatória) com filtro; cada nó abre uma ficha com dados, correlações, literatura, \"mostrar no corpo\" e \"traçar o axônio\". Segue a seleção feita no corpo.",
+     "API: POST /api/morpho/predict (espelho exato do cálculo do navegador, com teste de paridade)."
+    ],
+    "Científico": [
+     "[LITERATURA] faixas de classe (Erlanger–Gasser, Lloyd); VC proporcional ao diâmetro (Hursh 1939; Boyd & Kalu 1979); g 0,62–0,75 (Arbuthnott et al. 1980); VC −0,9 m/s por década; correlação inversa com a altura só nos membros inferiores (Rivner 1990, 2001; Soudmand 1982); sexo sem efeito independente (Stetson 1992); −1,7 m/s por °C de resfriamento; perda axonal com HbA1c (Peterson 2017); placas motoras no meio da fibra muscular.",
+     "[PREMISSA] magnitudes calibradas (altura 2 %/10 cm, IMC, duração do diabetes, desmielinização), composição de cada nervo, internodo ≈ 100 × D, 0,8 ms de junção neuromuscular, fator 4,4 m/s/µm para α humano."
+    ]
+   }
+  },
   {
    "version": "0.8.0-alpha",
    "date": "2026-11-23",

@@ -24,6 +24,8 @@
     ["maps", "Mapas de acupuntura, eletroacupuntura, YNSA e auriculoterapia", () => A().openApp("maps")],
     ["relations", "Modo músculo ↔ nervo e estruturas indiretamente relacionadas", () => A().openApp("relations")],
     ["cns", "Sistema nervoso central e autônomo com órgãos e fibras", () => A().openApp("cns")],
+    ["morpho", "Calibre do axônio: predição por biometria e clínica, prolongamento até a placa motora", () => A().openApp("morpho")],
+    ["graph", "Grafo 3D: ponto/região → nervo → fibras → segmento → vias → órgãos e sistemas", () => A().openApp("graph")],
   ];
   function buildMenu() {
     const bar = $(".menubar"); if (!bar || $(".mbicons")) return;

@@ -537,10 +537,14 @@
   function fascLayout() {
     if (FL) return FL; const rng = g.AxonModel.mulberry32(42), nrm = () => { let u = 0; while (!u) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); };
     const fasc = [[0, 0, .27], [.5, .26, .21], [-.47, .3, .22], [.1, -.55, .23], [-.45, -.36, .19], [.55, -.3, .17], [-.05, .6, .18], [.25, .62, .12]], fibers = [];
-    fasc.forEach(([y0, z0, R], fi) => { const n = Math.round(R * R * 900); for (let k = 0; k < n; k++) {
-      const isA = rng() < .4, D2 = Math.min(16, Math.max(1, isA ? 9 + 1.5 * nrm() : 3 + .8 * nrm())); const a = rng() * 6.283, rad = Math.sqrt(rng()) * (R - .015);
-      fibers.push({ y: y0 + rad * Math.cos(a), z: z0 + rad * Math.sin(a), D: D2, isA, f: fi }); } });
-    return (FL = { fasc, fibers });
+    // composição e calibres: do preditor morfométrico do paciente (AxonMorpho) quando presente; senão Aβ 9 ± 1,5 µm (40 %) e Aδ 3 ± 0,8 µm
+    const spec = g.AxonMorpho && g.AxonMorpho.fascSpec ? g.AxonMorpho.fascSpec() : null;
+    const mix = spec ? spec.mix : [{ cls: "Aβ", p: .4, mu: 9, sd: 1.5, isA: true }, { cls: "Aδ", p: .6, mu: 3, sd: .8, isA: false }], dens = spec ? spec.density : 1;
+    const pick = () => { let u = rng(), acc = 0; for (const m of mix) { acc += m.p; if (u <= acc) return m; } return mix[mix.length - 1]; };
+    fasc.forEach(([y0, z0, R], fi) => { const n = Math.round(R * R * 900 * dens); for (let k = 0; k < n; k++) {
+      const m = pick(), D2 = Math.min(16, Math.max(1, m.mu + m.sd * nrm())); const a = rng() * 6.283, rad = Math.sqrt(rng()) * (R - .015);
+      fibers.push({ y: y0 + rad * Math.cos(a), z: z0 + rad * Math.sin(a), D: D2, isA: m.isA, cls: m.cls, f: fi }); } });
+    return (FL = { fasc, fibers, spec });
   }
   function buildFascicle() {
     const G = new T.Group(); G.name = "L3"; const Lx = 3.4, f = fascLayout();
@@ -606,7 +610,7 @@
     f.fibers.forEach((fb, i) => {
       const dist = Math.min(.15, Math.max(.03, .03 + .12 * (Math.hypot(fb.y, fb.z - 1.1) / 2.1) + (p.r - 1) * .02));
       const rec = I >= M.interp(Tg, fb.D, dist); fb.isA ? (nA++, rA += rec) : (nD++, rD += rec);
-      c.set(fb.isA ? COL.abeta : COL.adelta); if (!rec) c.lerp(white, .78); S.fibMesh.setColorAt(i, c);
+      c.set(fb.cls === "Aα" ? 0xd36cff : fb.cls === "Aγ" ? 0x3ee6c5 : fb.cls === "B" ? 0xffd166 : fb.isA ? COL.abeta : COL.adelta); if (!rec) c.lerp(white, .78); S.fibMesh.setColorAt(i, c);
       const r = fb.D * .0016 + .002, s = rec ? r * 1.7 : 1e-5; m4.compose(V3(0, fb.y, fb.z), q, V3(s, 1.001, s)); S.fibGlow.setMatrixAt(i, m4);
       S.fibGlow.setColorAt(i, c.set(rec ? (fb.isA ? 0x7fd0ff : 0xffa060) : 0));
     });
@@ -825,7 +829,9 @@
     placeTool, reflex, nearestNerve, setSimMode(v) { S.simMode = v; if (renderer) renderer.domElement.style.cursor = v ? "crosshair" : "grab"; }, branchComp: () => S.branchComp,
     setBranching(on) { if (S.branchGroup) S.branchGroup.visible = on; },
     highlight(spec) { return highlightSet(spec); }, clearHighlight() { clearReflex(); S.rxSel = null; },
-    ext: () => ({ T, S, V3, camera, scene, renderer, cam, VIEWS, DERM, PAL, fitDist, focusOn, applyReflex, ensureMuscles }),
+    ext: () => ({ T, S, V3, camera, scene, renderer, cam, VIEWS, DERM, PAL, fitDist, focusOn, applyReflex, ensureMuscles, partsOf, centroid, tube, glow, lin, showLayer, label }),
+    rebuildFascicle() { FL = null; const old = S.groups.L3; if (old) { scene.remove(old); S.labels = S.labels.filter(L => { if (L.group === old) { L.el.remove(); return false; } return true; }); delete S.groups.L3; S.built[3] = false; } if (S.level === 3) { ensure(3); S.groups.L3.visible = true; syncLabels(); } return fascLayout(); },
+    fascLayout: () => fascLayout(),
     reflexPoints: () => S.rx ? S.rx.list : [], RX_CAT: Object.fromEntries(Object.entries(RX_CAT).map(([k, v]) => [k, { label: v.label, color: hexCss(v.color) }])), RX_ASSOC: Object.fromEntries(Object.entries(RX_ASSOC).map(([k, v]) => [k, hexCss(v)])),
     selectReflex(id, focus) { const r = S.rx && S.rx.list.find(x => x.id === id); if (S.layers.acupoints) S.layers.acupoints.visible = true; syncLabels(); const o = applyReflex(r || null); if (r && focus) focusOn(r.p, r.n, r.cat === "head" ? .85 : r.cat === "aur" ? .3 : .5); return o; },
     reflexState: () => S.rx ? { cat: { ...S.rx.cat }, assoc: S.rx.assoc, reveal: S.rx.reveal, sel: S.rxSel ? S.rxSel.id : null, alpha: S.skin ? S.skin.uniforms.alphaK.value : 1 } : null,

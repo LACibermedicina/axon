@@ -311,3 +311,23 @@ ol.guide li.done .gn{background:var(--accent);color:#06221c}ol.guide p{margin:2p
 .menubar .pill{white-space:nowrap}
 @media (max-width:1380px){ .menubar .brand small{display:none} .modechip{max-width:150px} }
 @media (max-width:1200px){ #verPill,#apiPill{display:none} .modechip{max-width:110px} }
+/* v0.9: preditor morfométrico e grafo 3D */
+.morph-h{width:100%;height:auto;color:var(--ink,#cfe);margin:4px 0}.morph-h .hc{cursor:pointer;transition:stroke-width .15s}.morph-h .hc.on{stroke-width:3;fill-opacity:.45}
+.tbl.mo td,.tbl.mo th{white-space:nowrap;font-size:11px;padding:3px 6px}.tbl.mo tr[data-c]{cursor:pointer}.tbl.mo tr.on{background:rgba(62,230,197,.12)}
+.detail{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.05);font-size:12px;line-height:1.5}
+ol.refs{font-size:11px;line-height:1.45;padding-left:18px;margin:4px 0;opacity:.9}
+.gbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.gbar select{flex:1;min-width:220px}
+.gwrap{position:relative;height:420px;border-radius:14px;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#16313a 0%,#0a161b 70%)}
+.gwrap canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}.gwrap canvas:active{cursor:grabbing}
+.glabels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.gl-l{position:absolute;left:0;top:0;margin:9px 0 0 6px;font:600 10px/1.2 var(--sans,system-ui);color:#e9f6f8;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px #000,0 0 6px #000;pointer-events:auto;cursor:pointer}
+.gl-l.t-focus{font-size:12px;color:#fff}.gl-col{position:absolute;left:0;top:0;transform-origin:0 0;margin-left:-40px;width:80px;text-align:center;font:700 9px var(--mono);letter-spacing:.04em;color:#8fb3bd;text-transform:uppercase;white-space:normal}
+.glegend{position:absolute;left:8px;bottom:8px;display:flex;flex-direction:column;gap:2px;font-size:10.5px;color:#dceff2;background:rgba(5,14,18,.72);padding:6px 8px;border-radius:10px}
+.glegend label{display:flex;align-items:center;gap:6px;cursor:pointer}.glegend i{display:inline-block;width:18px;height:3px;border-radius:2px}.glegend i.dash{background-image:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)!important;color:#b48cff;background-color:transparent!important}
+.gtypes{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10.5px;margin:6px 0;opacity:.85}.gtypes span{display:flex;align-items:center;gap:4px}
+.gdot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle}
+.gdot.t-focus{background:#fff}.gdot.t-tissue{background:#f0b48a}.gdot.t-nerve{background:#3ee6c5}.gdot.t-aff{background:#4fb3ff}.gdot.t-eff{background:#d36cff}.gdot.t-seg{background:#ffd166}.gdot.t-path{background:#9fb8ff}.gdot.t-cns{background:#f4a6c6}.gdot.t-organ{background:#c084fc}.gdot.t-system{background:#7cf2a0}.gdot.t-point{background:#ff6fa8}.gdot.t-muscle{background:#ff8a3d}
+.gdet .gd-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}.gdet h5{margin:8px 0 3px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.7}
+.gd-l{list-style:none;padding:0;margin:0;font-size:11.5px;line-height:1.6}.gd-l a{color:var(--accent,#3ee6c5)}
+.lv{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;font:700 9.5px var(--mono);color:#081014}.lv1{background:#e8f4ff}.lv2{background:#3ee6c5}.lv3{background:#ffa24a}.lv4{background:#b48cff}
+.morph-h .zl{font-size:9px;fill:currentColor}
