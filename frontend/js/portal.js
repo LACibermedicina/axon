@@ -4,7 +4,7 @@
 (() => {
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const P = window.AXON_PROGRAMA || {}, R = window.AXON_RELEASE || { version: "—", releases: [] };
+  const P = window.AXON_PROGRAMA || {}; let R = window.AXON_RELEASE || { version: "—", releases: [] };
   const MES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
   const fmtD = d => { if (!d) return ""; const [y, m, dd] = d.slice(0, 10).split("-"); return `${dd}/${m}/${y}`; };
   const CATN = { novidade: "Novidade", atualizacao: "Atualização", publicacao: "Publicação", evento: "Evento", bastidores: "Bastidores" };
@@ -175,6 +175,8 @@
 
   // ------------------------------------------------------------ dados
   async function boot() {
+    // versão sempre a do servidor (release.json não vai para o cache), mesmo que o navegador guarde um release.js antigo
+    try { const r = await fetch("release.json?ts=" + Date.now(), { cache: "no-store" }); if (r.ok) { const j = await r.json(); if (j && j.version) R = j; } } catch (e) {}
     try { const r = await fetch("api/portal/public", { cache: "no-store" }); if (!r.ok) throw 0; D = await r.json(); ONLINE = true; }
     catch (e) { try { D = await (await fetch("data/portal-seed.json")).json(); } catch (e2) {} ONLINE = false; $$("a[href='/feed.xml'],a[href='/podcast.xml'],a[href='/agenda.ics']").forEach(a => a.href = "https://axon.m3d.pro" + a.getAttribute("href")); }
     const byD = (a, b) => (b.date || "").localeCompare(a.date || ""); D.news.sort(byD); D.media.sort(byD); D.episodes.sort(byD); D.events.sort((a, b) => (a.start || "").localeCompare(b.start || ""));

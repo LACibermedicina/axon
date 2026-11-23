@@ -2,6 +2,14 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.11.1-alpha] — 2026-11-23
+
+Página inicial e simulador passam a mostrar a versão nova logo após cada atualização, e as novidades do portal voltam a aparecer.
+
+### Corrigido
+- **Versão antiga na página inicial:** o navegador guardava os scripts por 7 dias, então a página e o simulador podiam continuar na versão anterior depois do deploy. Agora HTML, JS e CSS são revalidados a cada carga, e a página inicial lê a versão direto do servidor.
+- **Portal sem notícias:** um portal criado vazio, ou antes do conteúdo de base existir, ficava sem notícias, marcos e galeria. O conteúdo de base e as notas de cada versão passam a entrar automaticamente, sem trazer de volta o que o administrador apagou.
+
 ## [0.11.0-alpha] — 2026-11-23
 
 Catálogo completo de pontos na malha 3D, terminações nervosas até a placa motora, interação direta no corpo com explicação do cálculo, sessões de testes, notas e diário de bordo, livro teórico ao lado do experimento, cartão do paciente e barra de ferramentas única.

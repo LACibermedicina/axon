@@ -1,8 +1,19 @@
 {
- "version": "0.11.0-alpha",
+ "version": "0.11.1-alpha",
  "sha": "dev",
- "built_at": "2026-11-23T21:36:42Z",
+ "built_at": "2026-11-23T22:13:42Z",
  "releases": [
+  {
+   "version": "0.11.1-alpha",
+   "date": "2026-11-23",
+   "summary": "Página inicial e simulador passam a mostrar a versão nova logo após cada atualização, e as novidades do portal voltam a aparecer.",
+   "sections": {
+    "Corrigido": [
+     "Versão antiga na página inicial: o navegador guardava os scripts por 7 dias, então a página e o simulador podiam continuar na versão anterior depois do deploy. Agora HTML, JS e CSS são revalidados a cada carga, e a página inicial lê a versão direto do servidor.",
+     "Portal sem notícias: um portal criado vazio, ou antes do conteúdo de base existir, ficava sem notícias, marcos e galeria. O conteúdo de base e as notas de cada versão passam a entrar automaticamente, sem trazer de volta o que o administrador apagou."
+    ]
+   }
+  },
   {
    "version": "0.11.0-alpha",
    "date": "2026-11-23",

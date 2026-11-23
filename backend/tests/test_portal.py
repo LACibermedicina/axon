@@ -53,3 +53,15 @@ def test_assist_returns_proposal_without_applying(portal, monkeypatch):
     r = portal.assist("crie uma notícia")
     assert r["mode"] == "ia" and len(r["ops"]) == 1 and "hack" not in r["ops"][0]["data"]
     assert len(portal.load()["news"]) == before
+
+
+def test_empty_portal_gets_seed_and_respects_deletions(portal, monkeypatch):
+    # portal criado vazio (versão antiga): o conteúdo de base entra; o que o admin apagou não volta
+    (portal.PORTAL_DIR / "portal.json").write_text(json.dumps(portal._empty()), encoding="utf-8")
+    monkeypatch.setattr(portal, "_REL_SYNCED", False)
+    news = portal.public()["news"]
+    assert len(news) >= 10
+    gone = news[0]["id"]
+    portal.apply_ops([{"op": "delete", "collection": "news", "id": gone}])
+    monkeypatch.setattr(portal, "_REL_SYNCED", False)
+    assert gone not in {n["id"] for n in portal.public()["news"]}

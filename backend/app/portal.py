@@ -140,7 +140,7 @@ def sync_releases(d: Dict[str, Any]) -> bool:
             rel = json.loads(p.read_text(encoding="utf-8")); break
     if not rel:
         return False
-    have = {x.get("id") for x in d["news"]} | {x.get("id") for x in d["timeline"]}; changed = False
+    have = {x.get("id") for x in d["news"]} | {x.get("id") for x in d["timeline"]} | set(d.get("deleted") or []); changed = False
     for r in rel.get("releases", [])[:12]:
         v = r.get("version")
         if f"nw-v{v}" not in have:
@@ -153,13 +153,27 @@ def sync_releases(d: Dict[str, Any]) -> bool:
     return changed
 
 
+def sync_seed(d: Dict[str, Any]) -> bool:
+    """Conteúdo de base (seed_portal.json) que ainda não está no portal entra publicado, exceto o que o
+    administrador apagou (lista "deleted"). Corrige portais criados vazios ou antes do conteúdo de base existir."""
+    if not SEED.exists():
+        return False
+    seed = json.loads(SEED.read_text(encoding="utf-8")); gone = set(d.get("deleted") or []); changed = False
+    for col in SCHEMA:
+        have = {x.get("id") for x in d[col]}
+        for it in seed.get(col) or []:
+            if it.get("id") and it["id"] not in have and it["id"] not in gone:
+                d[col].append(dict(it)); changed = True
+    return changed
+
+
 # ------------------------------------------------------------------ leitura pública
 def public() -> Dict[str, Any]:
     global _REL_SYNCED
     d = load()
     if not _REL_SYNCED:
         _REL_SYNCED = True
-        if sync_releases(d):
+        if sync_seed(d) | sync_releases(d):
             try:
                 save(d)
             except OSError:
@@ -209,7 +223,7 @@ def apply_ops(ops: List[Dict[str, Any]], actor: str = "admin") -> Dict[str, Any]
             if kind == "publish" and col == "episodes" and not it.get("date"):
                 it["date"] = _today()
         elif kind == "delete":
-            items.remove(it)
+            items.remove(it); d["deleted"] = (d.get("deleted") or [])[-2000:] + [it["id"]]
             if it.get("file") and media_path(it["file"]):
                 try:
                     (PORTAL_DIR / "media" / it["file"]).unlink()
