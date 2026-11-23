@@ -65,3 +65,11 @@ def test_empty_portal_gets_seed_and_respects_deletions(portal, monkeypatch):
     portal.apply_ops([{"op": "delete", "collection": "news", "id": gone}])
     monkeypatch.setattr(portal, "_REL_SYNCED", False)
     assert gone not in {n["id"] for n in portal.public()["news"]}
+
+
+def test_unreadable_volume_still_serves_seed(portal, monkeypatch):
+    def boom():
+        raise PermissionError("volume")
+    monkeypatch.setattr(portal, "load", boom)
+    assert len(portal.public()["news"]) >= 10
+    assert portal.status().startswith("erro")

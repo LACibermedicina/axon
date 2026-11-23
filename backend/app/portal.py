@@ -168,9 +168,24 @@ def sync_seed(d: Dict[str, Any]) -> bool:
 
 
 # ------------------------------------------------------------------ leitura pública
+def status() -> str:
+    """Diagnóstico para /api/health: o volume do portal pode ser lido e gravado?"""
+    try:
+        load(); PORTAL_DIR.mkdir(parents=True, exist_ok=True)
+        t = PORTAL_DIR / ".w"; t.write_text("1"); t.unlink()
+        return "ok"
+    except Exception as e:  # noqa: BLE001
+        return f"erro: {type(e).__name__}"
+
+
 def public() -> Dict[str, Any]:
     global _REL_SYNCED
-    d = load()
+    try:
+        d = load()
+    except Exception:  # noqa: BLE001 — volume ilegível: serve o conteúdo de base em vez de falhar
+        d = _empty()
+        sync_seed(d); sync_releases(d)
+        return _public_view(d)
     if not _REL_SYNCED:
         _REL_SYNCED = True
         if sync_seed(d) | sync_releases(d):
@@ -178,6 +193,10 @@ def public() -> Dict[str, Any]:
                 save(d)
             except OSError:
                 pass
+    return _public_view(d)
+
+
+def _public_view(d: Dict[str, Any]) -> Dict[str, Any]:
     pub = lambda xs: [x for x in xs if x.get("status") == "publicado"]
     by_date = lambda xs, key="date": sorted(xs, key=lambda x: x.get(key) or "", reverse=True)
     return {

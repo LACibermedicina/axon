@@ -28,7 +28,7 @@ def envelope(data: Dict, tag: str) -> Dict:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "project": "axon", "version": bm.__version__, "git_sha": os.getenv("GIT_SHA", "dev")}
+    return {"status": "ok", "project": "axon", "version": bm.__version__, "git_sha": os.getenv("GIT_SHA", "dev"), "portal": portal.status()}
 
 
 @app.get("/api/release")

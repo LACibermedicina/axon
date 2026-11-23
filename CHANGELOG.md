@@ -9,6 +9,7 @@ Página inicial e simulador passam a mostrar a versão nova logo após cada atua
 ### Corrigido
 - **Versão antiga na página inicial:** o navegador guardava os scripts por 7 dias, então a página e o simulador podiam continuar na versão anterior depois do deploy. Agora HTML, JS e CSS são revalidados a cada carga, e a página inicial lê a versão direto do servidor.
 - **Portal sem notícias:** um portal criado vazio, ou antes do conteúdo de base existir, ficava sem notícias, marcos e galeria. O conteúdo de base e as notas de cada versão passam a entrar automaticamente, sem trazer de volta o que o administrador apagou.
+- **Portal com falha no servidor:** se o volume do portal não puder ser lido, a página recebe o conteúdo de base em vez de erro, e o arquivo de reserva da página inicial (`data/portal-seed.json`) passa a ir para o servidor. `/api/health` mostra o estado do portal (`"portal": "ok"` ou o erro).
 
 ## [0.11.0-alpha] — 2026-11-23
 
