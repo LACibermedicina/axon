@@ -191,8 +191,9 @@
     $("#plMap", b).onclick = () => A().openApp("maps");
     $("#plWhy", b).onclick = async () => { const out = $("#plWhyOut", b); out.textContent = "redigindo…";
       const facts = { caso: { titulo: cs.title, origem: cs.pain.origin, eva: cs.pain.baseline, segmentos: cs.pain.dermatomes }, tecnica: t.n, adequacao_pct: Math.round(rows.find(r => r.id === id).score * 100), fatores_pct: Object.fromEntries(Object.entries(rows.find(r => r.id === id).F).map(([k, v]) => [k, Math.round(v * 100)])), parametros: t.par, tempo: `${o.min} min, ${o.spw}x/sem, ${o.wk} sem`, eva_final_mediana: +m.last.med.toFixed(1), p10: +m.last.p10.toFixed(1), p90: +m.last.p90.toFixed(1), prob_resposta_30: Math.round(m.resp * 100), riscos: t.risk, beneficios: t.ben, mecanismo: t.mech };
-      try { const r = await fetch("api/ai/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ facts }) }).then(x => x.json()); out.innerHTML = esc(r.text || "") + " " + tag(r.mode === "ia" ? "der" : "pre"); }
-      catch (e) { out.innerHTML = esc(`${t.n} obteve ${facts.adequacao_pct} % porque o mecanismo (${t.mech}) combina com dor ${cs.pain.origin} e o modelo prevê EVA ${facts.eva_final_mediana} após ${nS} sessões; a evidência clínica e os riscos (${t.risk[0].toLowerCase()}) pesam no resultado.`) + " " + tag("pre"); } };
+      const tk = g.AxonBoot && g.AxonBoot.task("ai-plan", "Redigindo a justificativa do plano por IA", 10, "a IA só redige: os números vêm do modelo"); tk && tk.progress(.3, "enviando os fatos calculados…");
+      try { const r = await fetch("api/ai/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ facts }) }).then(x => x.json()); out.innerHTML = esc(r.text || "") + " " + tag(r.mode === "ia" ? "der" : "pre"); tk && tk.done(r.mode === "ia" ? "redigido" : "texto local"); }
+      catch (e) { tk && tk.done("texto local"); out.innerHTML = esc(`${t.n} obteve ${facts.adequacao_pct} % porque o mecanismo (${t.mech}) combina com dor ${cs.pain.origin} e o modelo prevê EVA ${facts.eva_final_mediana} após ${nS} sessões; a evidência clínica e os riscos (${t.risk[0].toLowerCase()}) pesam no resultado.`) + " " + tag("pre"); } };
   }
   function applyToSim(id, o) {
     const t = TECH[id], a = A(); a.setMod(t.mod); const p = a.state.p;

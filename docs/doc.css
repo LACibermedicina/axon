@@ -79,3 +79,22 @@ footer{border-top:1px solid var(--line);padding:28px max(4vw,16px);color:var(--m
 @media(max-width:600px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}.top input{display:none}table{font-size:13px}
  .stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;font-weight:700;color:var(--muted);font-size:12px}.stack td:empty{display:none}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+/* atlas visual: render do simulador + camada esquemática */
+figure.anat{margin:22px 0;border-radius:18px;overflow:hidden;background:#0b161b;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.anat-cb{position:absolute;opacity:0;pointer-events:none}
+.anat-st{position:relative;line-height:0}.anat-st img{width:100%;height:auto;display:block}
+.anat-st .anat-ov{position:absolute;inset:0;opacity:.5;mix-blend-mode:color;transition:opacity .3s}
+.anat-sv{position:absolute;inset:0;width:100%;height:100%;transition:opacity .3s}
+.anat-cb:not(:checked)+.anat-st .anat-sv,.anat-cb:not(:checked)+.anat-st .anat-ov{opacity:0}
+.anat-sv .ld{fill:none;stroke:var(--c);stroke-width:2.2;opacity:.9}
+.anat-sv .an{fill:var(--c);stroke:#0b161b;stroke-width:2}.anat-sv .ar{fill:none;stroke:var(--c);stroke-width:2;opacity:.55}
+.anat-sv .lb{fill:rgba(8,18,22,.82);stroke:var(--c);stroke-width:1.6}
+.anat-sv .nb{fill:var(--c)}.anat-sv .nt{fill:#0b161b;font:700 15px system-ui,sans-serif;text-anchor:middle}
+.anat-sv .tx{fill:#eef8fa;font:600 19px system-ui,sans-serif}
+figure.anat figcaption{padding:14px 18px 16px;color:#dfecef;line-height:1.5;font-size:14px}
+figure.anat figcaption p{margin:6px 0 8px;opacity:.9}
+.anat-h{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.anat-tg{cursor:pointer;font:600 12px var(--mono,monospace);padding:4px 10px;border-radius:999px;border:1px solid #3ee6c5;color:#3ee6c5;user-select:none}
+.anat-lg{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px}.anat-lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+@media (max-width:700px){.anat-sv .tx{display:none}.anat-sv .lb{width:40px}}
+figure.anat figcaption b{color:#fff;font-size:15px}

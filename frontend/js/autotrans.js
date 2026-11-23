@@ -20,15 +20,24 @@
   const load = l => { try { return JSON.parse(localStorage.getItem("axon.tr." + l) || "{}"); } catch (e) { return {}; } };
   function skip(el) { return !el || !!el.closest(SKIP) || el.closest("[contenteditable]"); }
 
-  // ---- indicador ao lado das bandeiras
-  const pill = document.createElement("span"); pill.className = "trpill notr"; pill.hidden = true; pill.setAttribute("role", "status");
+  (function css() { const st = document.createElement("style"); st.textContent = `.flags button{position:relative}
+.flags button.trbusy::after{content:"";position:absolute;inset:-2px;border-radius:14px;padding:2px;background:conic-gradient(#3ee6c5 var(--p,0%),rgba(255,255,255,.12) 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.flags button.troff::after{content:"";position:absolute;right:1px;top:1px;width:6px;height:6px;border-radius:50%;background:#ffb36b}
+.trflags{position:fixed;right:14px;bottom:14px;z-index:9999;display:flex;gap:2px;padding:3px;border-radius:20px;background:rgba(10,24,29,.82);backdrop-filter:blur(6px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.trflags button{border:0;background:none;border-radius:14px;padding:3px 7px;font-size:16px;line-height:1.2;cursor:pointer}.trflags button.on{background:rgba(62,230,197,.3)}`; (document.head || document.documentElement).appendChild(st); })();
+  // ---- progresso no anel da bandeira ativa (sem painel) e, na troca de idioma, na tela de carregamento
+  const NAMES = { pt: "Português", en: "English", es: "Español", zh: "中文", hi: "हिन्दी" };
+  let task = null;
   function showStat() {
-    const host = document.getElementById("flags"); if (host && !pill.isConnected) host.after(pill);
-    if (lang === SRC) { pill.hidden = true; return; }
-    pill.hidden = false;
-    if (apiOK === false) { pill.className = "trpill notr off"; pill.textContent = "IA indisponível · só rótulos fixos"; return; }
-    if (stat.done < stat.total) { pill.className = "trpill notr busy"; pill.innerHTML = `<i></i>IA traduzindo a tela · ${stat.done}/${stat.total}`; }
-    else { pill.className = "trpill notr ok"; pill.textContent = "Tela traduzida por IA"; clearTimeout(pill._t); pill._t = setTimeout(() => { if (stat.done >= stat.total) pill.hidden = true; }, 2600); }
+    const host = document.getElementById("flags"), btn = host && host.querySelector(`button[data-l="${lang}"]`);
+    if (host) host.querySelectorAll("button").forEach(x => { x.classList.remove("trbusy", "troff"); x.style.removeProperty("--p"); });
+    const p = stat.total ? stat.done / stat.total : 1;
+    if (btn && lang !== SRC) { if (apiOK === false) { btn.classList.add("troff"); btn.title = "IA indisponível: só os rótulos fixos foram traduzidos"; }
+      else if (stat.done < stat.total) { btn.classList.add("trbusy"); btn.style.setProperty("--p", (p * 100).toFixed(0) + "%"); btn.title = `IA traduzindo a tela: ${stat.done} de ${stat.total} textos`; }
+      else btn.title = `${NAMES[lang] || lang} · tela traduzida por IA`; }
+    if (task) { if (apiOK === false) { task.fail("IA indisponível: só os rótulos fixos"); task = null; }
+      else if (stat.total && stat.done >= stat.total && !pend.size && !inflight) { task.done(`${stat.total} textos traduzidos`); task = null; }
+      else task.progress(stat.total ? p * .98 : .02, stat.total ? `${stat.done} de ${stat.total} textos` : "coletando o texto da tela…"); }
   }
 
   // ---- coleta
@@ -89,8 +98,11 @@
   }
   function setLang(l) {
     restore(); nodes.forEach((r, n) => { if (!n.isConnected) nodes.delete(n); }); attrs.forEach((r, el) => { if (!el.isConnected) attrs.delete(el); });
-    lang = l; mem = load(l); pend.clear(); stat = { total: 0, done: 0 }; apiOK = null; showStat();
-    if (l !== SRC) setTimeout(() => collect(document.body), 30); // depois que app.js redesenha os painéis no novo idioma
+    lang = l; mem = load(l); pend.clear(); stat = { total: 0, done: 0 }; apiOK = null;
+    document.documentElement.lang = l === "pt" ? "pt-BR" : l;
+    task = l !== SRC && g.AxonBoot ? g.AxonBoot.task("tr", `Tradução da tela por IA · ${NAMES[l] || l}`, 8, "contextual, com cache no servidor e no navegador") : null;
+    showStat();
+    if (l !== SRC) setTimeout(() => { collect(document.body); if (!pend.size && task) { task.done(stat.total ? "em cache" : "nada a traduzir"); task = null; } showStat(); }, 30); // depois que app.js redesenha os painéis no novo idioma
   }
 
   // ---- observa a tela: janelas que abrem, painéis redesenhados, valores ao vivo, balão do bot
@@ -102,8 +114,16 @@
       else m.addedNodes.forEach(n => collect(n));
     }
   });
+  // páginas sem i18n.js (portal, manuais): bandeiras próprias, mesmo armazenamento de idioma
+  function shim() {
+    const FL = { pt: "🇧🇷", en: "🇬🇧", es: "🇪🇸", zh: "🇨🇳", hi: "🇮🇳" }; let cur = "pt"; try { const s0 = localStorage.getItem("axon.lang"); if (s0 && FL[s0]) cur = s0; } catch (e) {}
+    g.I18N = { FLAGS: FL, langs: Object.keys(FL), get lang() { return cur; }, set(l) { cur = l; try { localStorage.setItem("axon.lang", l); } catch (e) {} draw(); document.dispatchEvent(new CustomEvent("axon:lang", { detail: l })); }, t: k => k, apply() {}, shim: true };
+    let host = document.getElementById("flags"); if (!host) { host = document.createElement("div"); host.id = "flags"; host.className = "flags trflags"; host.setAttribute("role", "group"); host.setAttribute("aria-label", "Idioma"); document.body.appendChild(host); }
+    function draw() { host.innerHTML = Object.entries(FL).map(([l, f]) => `<button data-l="${l}" class="${l === cur ? "on" : ""}" title="${NAMES[l]}">${f}</button>`).join(""); host.querySelectorAll("button").forEach(b2 => b2.onclick = () => g.I18N.set(b2.dataset.l)); }
+    draw();
+  }
   function boot() {
-    if (!g.I18N) return setTimeout(boot, 50);
+    if (!g.I18N) { if (document.querySelector('script[src*="i18n.js"]')) return setTimeout(boot, 50); shim(); }
     mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
     document.addEventListener("axon:lang", e => setLang(e.detail));
     if (g.I18N.lang !== SRC) setTimeout(() => setLang(g.I18N.lang), 400);

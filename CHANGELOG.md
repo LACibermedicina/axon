@@ -2,6 +2,24 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.10.0-alpha] — 2026-11-23
+
+Atlas visual nos manuais, carregamento com porcentagem e detalhamento, e tradução por IA só pelas bandeiras em todas as páginas.
+
+### Adicionado
+- **Atlas visual na documentação:** nove figuras em alta resolução renderizadas pelo próprio simulador (corpo com pele realista e dermátomos, membro inferior com o axônio motor até a placa, membro superior com o plexo braquial, tronco com vísceras, vago e cadeia simpática, cabeça com trigêmeo, facial e ramo auricular do vago, e os níveis 2 a 5), cada uma com camada esquemática que pode ser ligada e desligada: âncoras 3D projetadas, linhas de chamada, numeração, cores por tipo de estrutura, legenda e procedência. Manual do Usuário com as nove; Manual Técnico com três e o método.
+- `scripts/doc_capture/` (captura reprodutível com Playwright, câmera e âncoras) e `scripts/build_doc_figures.py` (composição e inserção nos manuais).
+- **Tela de carregamento com porcentagem:** etapa por etapa (interface, motor 3D, núcleo biofísico, manifesto anatômico, pele, esqueleto, nervos e pontos, órgãos, vasos, músculos, níveis 2 a 5, servidor), com bytes recebidos e estruturas montadas. A interação só é liberada quando tudo termina; etapas indisponíveis são marcadas e o app segue sem elas.
+- A mesma tela reaparece, compacta, para o que o usuário pede depois: tradução da tela, interpretação do caso por IA e justificativa do plano.
+- **Bandeiras de idioma no portal e nos manuais**, com a mesma tradução da tela inteira por IA do simulador.
+
+### Alterado
+- Não há mais indicador de texto do tradutor: o progresso aparece como um anel na bandeira ativa e na tela de carregamento.
+- Os 457 músculos passam a ser carregados no início, junto com o resto da anatomia.
+
+### Corrigido
+- As seções técnicas da v0.8 e da v0.9 não tinham entrado no Manual Técnico (só os links do índice); agora estão lá.
+
 ## [0.9.0-alpha] — 2026-11-23
 
 Predição do calibre do axônio no feixe a partir de dados biométricos e clínicos, prolongamento do axônio até a placa motora e grafo 3D de correlações do ponto ou região até órgãos e sistemas.

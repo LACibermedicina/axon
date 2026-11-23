@@ -213,7 +213,9 @@
   }
   async function fromPrompt(txt) {
     let r = null;
-    try { const res = await fetch("api/ai/patient", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: txt }) }); if (res.ok) { const j = await res.json(); if (j.mode === "ia") r = j.data; } } catch (e) {}
+    const tk = g.AxonBoot && g.AxonBoot.task("ai-patient", "Interpretando a descrição do caso por IA", 10, "paciente e caso fictícios · sem dados identificáveis"); tk && tk.progress(.3, "enviando ao servidor…");
+    try { const res = await fetch("api/ai/patient", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: txt }) }); tk && tk.progress(.8, "recebendo…"); if (res.ok) { const j = await res.json(); if (j.mode === "ia") r = j.data; } } catch (e) {}
+    tk && (r ? tk.done("interpretado pela IA") : tk.done("leitura local (IA indisponível)"));
     const loc = parseLocal(txt), d = Object.assign({}, loc, r || {});
     if (d.sex) PT.sex = d.sex; if (d.age) PT.age = clamp(d.age, 1, 110); if (d.height) PT.height = clamp(d.height, 120, 215);
     if (d.weight) PT.weight = clamp(d.weight, 30, 220); else if (d.bmi) PT.weight = Math.round(d.bmi * Math.pow(PT.height / 100, 2));

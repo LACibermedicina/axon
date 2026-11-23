@@ -274,7 +274,11 @@
   function b64(t) { const s2 = atob(t.trim()), u = new Uint8Array(s2.length); for (let i = 0; i < s2.length; i++) u[i] = s2.charCodeAt(i); return u.buffer; }
   async function loadLayer(man, key) {
     const info = man.layers[LAYER_FILES[key]]; if (!info) return null;
-    const buf = await fetch(info.file).then(r => { if (!r.ok) throw new Error(r.status); return /\.txt$/.test(info.file) ? r.text().then(b64) : r.arrayBuffer(); });
+    const LB = { skin: "Pele e dermátomos", skeleton: "Esqueleto (258 ossos e discos)", organs: "Órgãos e encéfalo (157)", vessels: "Vasos (56)", muscles: "Músculos (457)" }, B = g.AxonBoot, txt = /\.txt$/.test(info.file), hint = info.bytes ? (txt ? Math.ceil(info.bytes / 3) * 4 : info.bytes) : 0;
+    const buf = B ? await B.fetchProgress(info.file, "anat-" + key, LB[key] || key, txt ? "text" : "arrayBuffer", hint).then(v => txt ? b64(v) : v)
+      : await fetch(info.file).then(r => { if (!r.ok) throw new Error(r.status); return txt ? r.text().then(b64) : r.arrayBuffer(); });
+    const ld = (frac, info2, done) => document.dispatchEvent(new CustomEvent("axon:load", { detail: { key: "anat-" + key, label: LB[key] || key, frac, info: info2, done } }));
+    ld(.95, "montando a malha…");
     const lo = man.lo, sp = man.span; let nv = 0, ni = 0; info.parts.forEach(p => { nv += p.nv; ni += p.ni; });
     const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), pid = new Float32Array(nv), derm = new Float32Array(nv), idx = new Uint32Array(ni);
     let v0 = 0, i0 = 0; const c = new T.Color();
@@ -297,6 +301,7 @@
     else if (key === "vessels") mat = phys(0xffffff, { vertexColors: true, roughness: .3, clearcoat: .9 });
     else mat = phys(0xffffff, { vertexColors: true, roughness: .62, clearcoat: .25 });
     const mesh = new T.Mesh(gm, mat); mesh.userData = { layer: key, parts: info.parts }; if (key === "skin") mesh.renderOrder = 10;
+    ld(1, `${info.parts.length} estruturas · ${(nv / 1000).toFixed(0)} mil vértices`, true);
     return mesh;
   }
   function realSkinMaterial() {
@@ -308,7 +313,11 @@
   async function loadAnatomy(G, L) {
     const status = host.querySelector(".anat-status");
     const say = t => { if (status) { status.textContent = t; status.hidden = !t; } };
-    let man; try { man = await fetch("anatomy/anatomy.json").then(r => { if (!r.ok) throw 0; return r.json(); }); } catch (e) { say(""); return; } // sem pacote: mantém o corpo procedural
+    const ev = d => document.dispatchEvent(new CustomEvent("axon:load", { detail: d }));
+    let man; try { man = g.AxonBoot ? await g.AxonBoot.fetchProgress("anatomy/anatomy.json", "anat-man", "Manifesto anatômico (FMA, dermátomos, nervos)", "json")
+      : await fetch("anatomy/anatomy.json").then(r => { if (!r.ok) throw 0; return r.json(); }); }
+    catch (e) { say(""); ["anat-man", "anat-skin", "anat-skeleton", "anat-nerves", "anat-organs", "anat-vessels", "anat-muscles"].forEach(k => ev({ key: k, error: "pacote anatômico ausente: corpo procedural" })); return; } // sem pacote: mantém o corpo procedural
+    ev({ key: "anat-man", done: true, info: `${Object.values(man.layers).reduce((a, l) => a + l.parts.length, 0)} estruturas · ${man.nerves.length} trajetos` });
     S.anat = man;
     say("Carregando anatomia BodyParts3D: pele e esqueleto…");
     try {
@@ -322,6 +331,7 @@
         if (n.kind === "root") { const g2 = new T.Mesh(new T.SphereGeometry(.008, 8, 8), phys(0xffe08a, { emissive: 0xffc65c, emissiveIntensity: .6 })); g2.position.set(...n.p[n.p.length - 1]); g2.scale.set(1.4, 1, 1); L.nerves.add(g2); } });
       Object.entries(man.hotspots || {}).forEach(([k, p]) => moveHotspot(k, p));
       buildReflex(L.acupoints, man);
+      ev({ key: "anat-nerves", done: true, info: `${man.nerves.length} trajetos · ${(man.reflex || []).length} pontos reflexos` });
       if (S.hotReg && S.hotReg.acupoint) { const h = S.hotReg.acupoint; h.m.visible = h.ring.visible = false; if (h.lb) h.lb.dataset.hidden = "1"; S.hot = S.hot.filter(x => x !== h.m); }
       say("Carregando órgãos e vasos…");
       const org = await loadLayer(man, "organs"); L.organs.add(org); S.anatMeshes.push(org); S.meshByLayer = { skin, skeleton: bone, organs: org };
@@ -329,15 +339,16 @@
       const ves = await loadLayer(man, "vessels"); L.vessels.add(ves); S.anatMeshes.push(ves); S.meshByLayer.vessels = ves;
       if (!L.muscles) { L.muscles = new T.Group(); L.muscles.name = "muscles"; L.muscles.visible = false; G.add(L.muscles); }
       say(""); S.anatReady = true; if (S.rxSel) applyReflex(S.rxSel);
+      ensureMuscles();   // pré-carga completa: o app só libera a interação com tudo carregado
       document.dispatchEvent(new CustomEvent("axon:anatomy", { detail: { parts: Object.values(man.layers).reduce((a, l) => a + l.parts.length, 0) } }));
-    } catch (e) { console.warn("anatomia BodyParts3D indisponível:", e); say(""); }
+    } catch (e) { console.warn("anatomia BodyParts3D indisponível:", e); say(""); ["anat-skin", "anat-skeleton", "anat-nerves", "anat-organs", "anat-vessels", "anat-muscles"].forEach(k => ev({ key: k, error: "indisponível" })); }
   }
   const nerveEnd = (man, name) => { const n = man.nerves.find(x => x.name === name); return n ? n.p[n.p.length - 1] : null; };
   const nerveAt = (man, name, t) => { const n = man.nerves.find(x => x.name === name); return n ? n.p[Math.min(n.p.length - 1, Math.round(t * (n.p.length - 1)))] : null; };
   async function ensureMuscles() {
     if (!S.anat || S.musclesLoaded) return; S.musclesLoaded = true; const status = host.querySelector(".anat-status");
-    if (status) { status.textContent = "Carregando 457 músculos…"; status.hidden = false; }
-    try { const m = await loadLayer(S.anat, "muscles"); S.layers.muscles.add(m); S.anatMeshes.push(m); S.meshByLayer.muscles = m; S.musclesReady = true; if (S.rxSel) applyReflex(S.rxSel); else if (S.rxPending) { const sp = S.rxPending; S.rxPending = null; highlightSet(sp); } document.dispatchEvent(new CustomEvent("axon:muscles")); } catch (e) { S.musclesLoaded = false; }
+    if (status && !g.AxonBoot) { status.textContent = "Carregando 457 músculos…"; status.hidden = false; }
+    try { const m = await loadLayer(S.anat, "muscles"); S.layers.muscles.add(m); S.anatMeshes.push(m); S.meshByLayer.muscles = m; S.musclesReady = true; if (S.rxSel) applyReflex(S.rxSel); else if (S.rxPending) { const sp = S.rxPending; S.rxPending = null; highlightSet(sp); } document.dispatchEvent(new CustomEvent("axon:muscles")); } catch (e) { S.musclesLoaded = false; document.dispatchEvent(new CustomEvent("axon:load", { detail: { key: "anat-muscles", label: "Músculos (457)", error: "indisponível" } })); }
     if (status) status.hidden = true;
   }
 
@@ -750,7 +761,10 @@
       else if (cam.dist > base * 1.9) { if (--acc < -3 && S.level > 1) { acc = 0; setLevel(S.level - 1); } cam.dist = base * 1.9; } else acc = 0; }, { passive: false });
     new ResizeObserver(resize).observe(el); resize();
     setLevel(1, true); loop();
-    [2, 3, 4, 5].forEach((l, i) => setTimeout(() => { ensure(l); S.groups["L" + l].visible = S.level === l; syncLabels(); }, 1500 + i * 400)); // pré-construção em segundo plano
+    const LVN = { 2: "Nível 2 · região e tecidos", 3: "Nível 3 · fascículo e fibras", 4: "Nível 4 · axônio e nós de Ranvier", 5: "Nível 5 · membrana e canais" };
+    [2, 3, 4, 5].forEach((l, i) => setTimeout(() => { try { ensure(l); S.groups["L" + l].visible = S.level === l; syncLabels();
+      document.dispatchEvent(new CustomEvent("axon:load", { detail: { key: "lvl" + l, label: LVN[l], done: true, info: "construído" } })); }
+      catch (e) { document.dispatchEvent(new CustomEvent("axon:load", { detail: { key: "lvl" + l, label: LVN[l], error: e.message } })); } }, 300 + i * 250)); // pré-construção
   }
   function pick(e) {
     const r = renderer.domElement.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);

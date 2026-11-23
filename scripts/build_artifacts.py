@@ -13,6 +13,12 @@ def inline(page: pathlib.Path) -> str:
             f = root / "frontend" / m.group(1).lstrip("./")
         return "<script>\n" + f.read_text(encoding="utf-8") + "\n</script>"
     html = re.sub(r'<script src="((?!https?:)[^"]+)"></script>', js, html)
+    if page.parent.name == "docs":   # figuras do atlas embutidas (artefatos não servem arquivos relativos)
+        import base64
+        def img(m):
+            f = base / m.group(1)
+            return f'src="data:image/jpeg;base64,{base64.b64encode(f.read_bytes()).decode()}"' if f.exists() else m.group(0)
+        html = re.sub(r'src="(img/[^"]+\.jpg)"', img, html)
     for rel, url in links.items():
         html = html.replace(f'href="{rel}"', f'href="{url}"')
     return html

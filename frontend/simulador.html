@@ -10,6 +10,21 @@
 <link rel="stylesheet" href="css/axon.css">
 </head>
 <body>
+<script src="js/boot.js"></script>
+<script>AxonBoot.start([
+  ["mods", "Interface e módulos do simulador", 6, "janelas, painéis, ícones, idiomas, casos"],
+  ["three", "Motor 3D (Three.js r128)", 6, "WebGL, materiais e iluminação"],
+  ["core", "Núcleo biofísico verificado", 4, "grade de limiares 1–16 µm · 0,3–1,5 mm"],
+  ["anat-man", "Manifesto anatômico (FMA, dermátomos, nervos)", 3],
+  ["anat-skin", "Pele e dermátomos", 10],
+  ["anat-skeleton", "Esqueleto (258 ossos e discos)", 14],
+  ["anat-nerves", "Nervos periféricos e pontos reflexos", 4],
+  ["anat-organs", "Órgãos e encéfalo (157)", 12],
+  ["anat-vessels", "Vasos (56)", 3],
+  ["anat-muscles", "Músculos (457)", 16],
+  ["lvl2", "Nível 2 · região e tecidos", 3], ["lvl3", "Nível 3 · fascículo e fibras", 3], ["lvl4", "Nível 4 · axônio e nós de Ranvier", 3], ["lvl5", "Nível 5 · membrana e canais", 3],
+  ["api", "Servidor e IA", 3, "versão, tradução e Axon Bot (opcional)"]
+], { title: "Preparando o <b>axon</b>", sub: "Simulador in silico de neuromodulação · anatomia BodyParts3D" });</script>
 <header class="menubar">
   <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
   <button class="pill" id="simBtn" onclick="AxonSim.toggle()" title="Modo Simulação: instrumento + caso clínico + monitor">▶ Simulação</button><button class="pill" id="verPill" title="Versão e registro de alterações">v…</button><span class="pill" id="apiPill">offline</span>
@@ -71,6 +86,9 @@
 <script src="js/bot3d.js"></script>
 <script src="js/axongraph.js"></script>
 <script src="js/autotrans.js"></script>
-<script>{ try { AxonApp.init(); } catch (e) { console.error(e); document.body.insertAdjacentHTML("beforeend", '<div class="warnbox" style="position:fixed;top:80px;left:20px;z-index:99">Falha ao iniciar o palco 3D: ' + e.message + '</div>'); } }</script>
+<script>{ const B = AxonBoot; B.task("mods").done(); window.THREE ? B.task("three").done("r" + THREE.REVISION) : B.task("three").fail("indisponível");
+  const ac = new AbortController(); setTimeout(() => ac.abort(), 5000);
+  fetch("/api/health", { signal: ac.signal }).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => B.task("api").done("online · " + (j.version || ""))).catch(() => B.task("api").done("offline: modo local"));
+  try { AxonApp.init(); window.AxonModel ? B.task("core").done("verificado (semente 42)") : B.task("core").fail("indisponível"); } catch (e) { B.task("core").fail(e.message); console.error(e); document.body.insertAdjacentHTML("beforeend", '<div class="warnbox" style="position:fixed;top:80px;left:20px;z-index:99">Falha ao iniciar o palco 3D: ' + e.message + '</div>'); } }</script>
 </body>
 </html>
