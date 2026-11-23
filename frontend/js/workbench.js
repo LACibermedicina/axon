@@ -71,7 +71,7 @@
     const it = INSTR.find(x => x.id === id); WB.instr = id; const mod = it.mod || it.id;
     if (A().MODS.some(m => m.id === mod)) A().setMod(mod);
     if (it.map && g.AxonMaps) { A().openApp("maps"); const b = A().body("maps"); const btn = b && b.querySelector(`.mtabs [data-t="${it.map}"]`); if (btn) btn.click(); }
-    updateChip();
+    updateChip(); document.dispatchEvent(new CustomEvent("axon:instr", { detail: { id } }));
   }
   function toolsWin(b) {
     b.innerHTML = `<div class="card"><h4>1. Tipo de exploração</h4><div class="modes">${MODES.map(m => `<button class="mode ${WB.mode === m.id ? "on" : ""}" data-mo="${m.id}"><b>${esc(m.n)}</b><span>${esc(m.d)}</span></button>`).join("")}</div></div>

@@ -256,6 +256,63 @@ def portal_support(p: SupIn, req: Request):
         raise HTTPException(422, str(e))
 
 
+# ---- diário de bordo publicado (link só-leitura) e comentários
+from . import logbook  # noqa: E402
+
+
+class LogIn(BaseModel):
+    title: str = ""
+    author: str = ""
+    html: str
+    notes: int = 0
+    sessions: int = 0
+
+
+class ComIn(BaseModel):
+    name: str = ""
+    text: str
+
+
+@app.post("/api/logbook")
+def logbook_publish(p: LogIn, req: Request):
+    if not portal.throttle("lb:" + _ip(req), limit=10, window=3600):
+        raise HTTPException(429, "Muitas publicações seguidas. Tente de novo mais tarde.")
+    try:
+        return logbook.publish(p.title, p.author, p.html, p.notes, p.sessions)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/api/logbook/{pid}")
+def logbook_get(pid: str):
+    try:
+        return logbook.get(pid)
+    except KeyError:
+        raise HTTPException(404, "diário não encontrado")
+
+
+@app.post("/api/logbook/{pid}/comments")
+def logbook_comment(pid: str, c: ComIn, req: Request):
+    if not portal.throttle("lc:" + _ip(req), limit=12, window=600):
+        raise HTTPException(429, "Muitos comentários seguidos.")
+    try:
+        return logbook.comment(pid, c.name, c.text)
+    except KeyError:
+        raise HTTPException(404, "diário não encontrado")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.delete("/api/logbook/{pid}")
+def logbook_delete(pid: str, token: str = Header("", alias="X-Edit-Token")):
+    try:
+        return {"ok": logbook.delete(pid, token)}
+    except KeyError:
+        raise HTTPException(404, "diário não encontrado")
+    except PermissionError:
+        raise HTTPException(403, "token inválido")
+
+
 # ---- administração (Authorization: Bearer <ADMIN_TOKEN>)
 @app.get("/api/portal/admin/all")
 def portal_admin_all(authorization: Optional[str] = Header(None)):

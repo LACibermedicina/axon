@@ -1,8 +1,41 @@
 {
- "version": "0.10.0-alpha",
+ "version": "0.11.0-alpha",
  "sha": "dev",
- "built_at": "2026-11-23T15:02:35Z",
+ "built_at": "2026-11-23T21:36:42Z",
  "releases": [
+  {
+   "version": "0.11.0-alpha",
+   "date": "2026-11-23",
+   "summary": "Catálogo completo de pontos na malha 3D, terminações nervosas até a placa motora, interação direta no corpo com explicação do cálculo, sessões de testes, notas e diário de bordo, livro teórico ao lado do experimento, cartão do paciente e barra de ferramentas única.",
+   "sections": {
+    "Adicionado": [
+     "Atlas de pontos: 361 acupontos dos 14 meridianos (códigos e nomes da OMS 2008) e 14 pontos extras, posicionados na malha do paciente a partir de marcos ósseos e proporções em cun. Para cada ponto o simulador calcula dermátomo, nervo mais próximo, músculo e osso subjacentes, com as profundidades. A ficha mostra alertas de segurança (pneumotórax, vasos, região periorbital, suboccipital, gestação).",
+     "Craniopuntura: YNSA completa (pontos básicos A–I com subpontos A1–A7, D1–D6, E1–E12, G1–G3, sensoriais, cerebrais e 12 pontos Y) e as 14 linhas do padrão internacional (MS1–MS14), traçadas sobre o crânio 3D.",
+     "Aurículo: 91 pontos da norma GB/T 13734-2008 num desenho detalhado da orelha, com inervação pelo ramo auricular do vago e marcação do protocolo NADA.",
+     "Terminações nervosas por grupo anatômico: escolha a região e o grupo de músculos (ou um dermátomo da pele). O simulador desenha: - o ponto motor e a ramificação até as placas motoras na zona de inervação; - os fusos com Ia, II e γ, os órgãos tendinosos (Ib) e as terminações livres; - os receptores da pele: Meissner, Merkel, Ruffini, Pacini e terminações livres. - A tabela traz nervo, raízes, comprimento, calibre Aα previsto e unidades motoras (Feinstein 1955).",
+     "Gestos no corpo: - um clique seleciona; - o segundo clique no mesmo ponto, após uma pausa, aplica a ferramenta (ou abre a escolha da ferramenta); - clicar e segurar aplica com rampa de intensidade e conta o tempo de exposição, com a sensação prevista ao lado do cursor; - clique duplo segurando entra no nível seguinte; - quatro cliques rápidos abrem o painel do que fica visível; - a lupa amplia sem trocar de nível, e um aviso aparece quando as estruturas ficam pequenas na tela.",
+     "Assistente que explica cada aplicação: - o que foi calculado, por quê, o que está acontecendo e o que se busca descobrir; - fibras envolvidas, com o menor diâmetro recrutado (D*) e a fração de cada classe; - seletor de diâmetro, limitações em linguagem simples e detalhamento avançado; - o trajeto nervoso ativado aparece no corpo com pulso.",
+     "Iniciar testes: cada interação vai para um registro com todas as variáveis (exportável em CSV e JSON) e, ao encerrar, para as notas.",
+     "Notas: - post-its sempre à mão, minimizáveis e agrupáveis por data, caso, método, instrumento, desfecho ou grupo livre; - clique triplo em parâmetros e parágrafos cria nota; - capturas de tela podem ser anexadas; - passar o mouse sobre um parâmetro mostra o que ele é e o efeito com o valor atual.",
+     "Manuscrito / diário de bordo: - reúne linha do tempo, métodos e cálculos, fenômenos por caso, limitações e referências; - exporta PDF; - publica link só-leitura com comentários (/api/logbook, página diario.html, conteúdo isolado sem scripts).",
+     "Livro teórico: 9 capítulos com procedência em cada afirmação. O livro acompanha o experimento: abre o capítulo correspondente e mostra os valores do momento.",
+     "Cartão do paciente (fictício): - criado por texto livre ou a partir do caso ativo; - mostra queixa principal e métodos mais indicados; - traz a adequação e a resposta simulada pelo modelo e, separada, a âncora da literatura (por exemplo, acupuntura em dor crônica ≈ 50 % de resposta; Vickers 2012). - Ícones na área de trabalho: Novo caso, Paciente, Instrumentos.",
+     "Bandeja 3D de instrumentos: TENS, eletroacupuntura, sonda de pressão, clipe auricular e transdutor de ultrassom, animados. Ao passar o mouse aparece a descrição; ao escolher aparecem o passo a passo e os parâmetros sugeridos para o caso.",
+     "Rede fisiológica clicável: ficha de cada nó, com a atividade atual, as ligações e os pontos ou estruturas relacionadas destacadas no corpo.",
+     "Pergunta ao assistente num campo junto ao robô."
+    ],
+    "Alterado": [
+     "Barra de ferramentas única: agrupada em Teoria, Caso (com submenu do caso ativo), Experimento, Anatomia e Vista, mais o botão Iniciar testes.",
+     "Painéis laterais: os capítulos viram abas verticais (orelhas), visíveis com o painel aberto ou fechado.",
+     "Parâmetros: o painel mostra só os básicos; o restante abre no ícone ⚙.",
+     "Guia passo a passo: cada passo tem “▶ reproduzir”, que executa o passo com parâmetros demonstrativos. A intensidade de demonstração é a menor que recruta cerca de 40 % das Aβ no ponto."
+    ],
+    "Científico": [
+     "[LITERATURA] códigos e localizações (OMS 2008; GB/T 13734-2008; OMS 1991 para MS1–MS14), inervação auricular (Peuker & Filler 2002), zona de inervação, unidades motoras (Feinstein 1955), densidade de receptores (Johansson & Vallbo 1979).",
+     "[PREMISSA] posições 3D por proporção sobre a malha genérica; GV20 ≈ Cz; número de placas e fusos desenhados; frações para percepção, desconforto e dor; fração da corrente que chega ao ramo cutâneo."
+    ]
+   }
+  },
   {
    "version": "0.10.0-alpha",
    "date": "2026-11-23",

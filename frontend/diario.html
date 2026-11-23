@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>axon · diário de bordo</title>
+<meta name="robots" content="noindex">
+<style>
+  body{margin:0;background:#eef3f4;font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1d2a30}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 20px;background:#0b161b;color:#e7f4f6}
+  .top a{color:#3ee6c5;text-decoration:none;font-weight:700}.wrap{max-width:860px;margin:18px auto;padding:0 14px}
+  iframe{width:100%;border:0;border-radius:14px;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.08);min-height:70vh}
+  .box{background:#fff;border-radius:14px;padding:16px 18px;margin-top:16px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+  .cm{list-style:none;padding:0;margin:0}.cm li{border-top:1px solid #e3eaec;padding:10px 0}.cm small{color:#667}
+  input,textarea{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;border:1px solid #cfd8dc;border-radius:8px;margin:4px 0}
+  button{font:600 14px system-ui;padding:8px 14px;border-radius:999px;border:0;background:#0b7a64;color:#fff;cursor:pointer}
+  .disc{font-size:12px;color:#556}.err{color:#b23b3b}
+</style>
+</head>
+<body>
+<div class="top"><a href="./">axon</a><span>diário de bordo · somente leitura</span></div>
+<div class="wrap">
+  <p class="disc">Ferramenta de pesquisa e ensino in silico. Não é dispositivo médico. Casos fictícios. Conteúdo publicado pelo autor; o axon não revisa as notas.</p>
+  <div id="meta"></div>
+  <iframe id="doc" sandbox title="Diário de bordo" referrerpolicy="no-referrer"></iframe>
+  <div class="box"><h3 style="margin-top:0">Comentários</h3><ul class="cm" id="cm"></ul>
+    <form id="f"><input id="n" maxlength="60" placeholder="Seu nome (opcional)"><textarea id="t" rows="3" maxlength="2000" placeholder="Comentário" required></textarea><button>Enviar comentário</button> <span id="msg"></span></form></div>
+</div>
+<script src="js/boot.js"></script>
+<script src="js/autotrans.js"></script>
+<script>
+(function () {
+  const id = new URLSearchParams(location.search).get("id") || "", esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const CSS = `body{margin:0}.ms{font:15px/1.65 Georgia,serif;color:#1d2a30;max-width:760px;margin:0 auto;padding:28px}.ms h1{font-size:28px}.ms h2{font-size:19px;border-bottom:1px solid #cfd8dc;padding-bottom:4px;margin-top:1.6em}.ms .kicker{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#0b7a64}.ms .disc{font:12px system-ui;background:#fff6e0;padding:8px 10px;border-radius:8px}.ms time{font:12px monospace;color:#577;margin-right:6px}.ms .k{font:12px system-ui;color:#5a6b70}.ms img{max-width:100%;border-radius:8px}`;
+  const cm = c => `<li><b>${c.name}</b> <small>${new Date(c.t * 1000).toLocaleString()}</small><br>${c.text}</li>`;   // já escapados no servidor
+  fetch("api/logbook/" + encodeURIComponent(id)).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(d => {
+    document.title = "axon · " + d.title;
+    document.getElementById("meta").innerHTML = `<h1 style="margin:.2em 0">${esc(d.title)}</h1><p>${esc(d.author)} · publicado em ${new Date(d.t * 1000).toLocaleDateString()} · ${d.notes} notas · ${d.sessions} sessões</p>`;
+    const f = document.getElementById("doc"); f.srcdoc = `<!doctype html><meta charset="utf-8"><style>${CSS}</style>${d.html}`;
+    f.onload = () => { try { f.style.height = f.contentDocument.documentElement.scrollHeight + 40 + "px"; } catch (e) {} };
+    document.getElementById("cm").innerHTML = d.comments.map(cm).join("") || "<li>Seja o primeiro a comentar.</li>";
+  }).catch(() => { document.getElementById("meta").innerHTML = `<p class="err">Diário não encontrado ou servidor indisponível.</p>`; });
+  document.getElementById("f").onsubmit = ev => { ev.preventDefault(); const msg = document.getElementById("msg");
+    fetch("api/logbook/" + encodeURIComponent(id) + "/comments", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: document.getElementById("n").value, text: document.getElementById("t").value }) })
+      .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(j.detail))).then(c => { const ul = document.getElementById("cm"); if (/primeiro/.test(ul.textContent)) ul.innerHTML = ""; ul.insertAdjacentHTML("beforeend", cm(c)); document.getElementById("t").value = ""; msg.textContent = "Comentário enviado."; })
+      .catch(e => { msg.textContent = typeof e === "string" ? e : "Não foi possível enviar."; msg.className = "err"; }); };
+})();
+</script>
+</body>
+</html>
