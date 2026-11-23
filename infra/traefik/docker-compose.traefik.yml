@@ -1,0 +1,28 @@
+# Opcional — SOMENTE para VPS dedicada ao axon (usa 80/443). Em VPS compartilhada,
+# use o proxy do host (scripts/setup_vps.sh configura nginx/apache + certbot).
+#   docker compose -f docker-compose.yml -f infra/traefik/docker-compose.traefik.yml up -d
+services:
+  traefik:
+    image: traefik:v3.2
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=${LE_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+    ports: ["80:80", "443:443"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/letsencrypt:/letsencrypt
+    networks: [edge]
+  web:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.axon.rule=Host(`${SUBDOMINIO}`)
+      - traefik.http.routers.axon.entrypoints=websecure
+      - traefik.http.routers.axon.tls.certresolver=le
+      - traefik.http.services.axon.loadbalancer.server.port=8080

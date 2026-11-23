@@ -1,378 +1,100 @@
-# Changelog — harmonIA
+# Changelog — axon
 
-Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · Versionamento: [SemVer](https://semver.org/lang/pt-BR/).
+Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
-## [0.8.0-alpha] — 2026-11-22
+## [0.4.0-alpha] — 2026-11-22
+
+Pontos reflexos identificados por cor, com os elementos associados revelados nas camadas anatômicas, e barra de escala com ícones e descrição detalhada de cada nível.
 
 ### Adicionado
-- **🎤 Capturar notas** (no lugar de "Gravar ao vivo"): cante ou toque e a **pauta é escrita em tempo real**, no andamento da partitura, a partir do compasso selecionado (conta 1 compasso, metrônomo). Microfone com detecção de altura no navegador ou **teclado MIDI** (Web MIDI), com intensidade. Indicador ao vivo da nota ouvida.
-- **Visualizador do instrumento como subfunção da pauta** (botão **Teclado** em Ajustar): teclado ou braço do instrumento em 3D cartunesco sob a partitura.
-  - 👁 **Mostrar**: acende as notas que soam (ou as selecionadas) com **nome da nota**, **intensidade** (barra + p/mp/mf/f/ff) e **pedal de sustentação** no piano.
-  - ✎ **Criar**: tocar nas teclas/casas escreve a nota na pauta, em sequência, com a duração escolhida; a altura do toque define a intensidade; teclado do computador (A W S E D F T G Y H U J K).
-  - Instrumento do mostrador escolhível: piano/órgão/harpa (teclado com pedais no piano), violão/guitarra/baixo (braço com casas) e cordas (espelho sem trastes); o som da prévia acompanha o instrumento.
-- **Importar ao lado da pauta**: o Importar abre no painel lateral (que se alarga), junto da partitura.
-- **Trechos marcados**: ✂ guarda a seleção da onda como trecho (T1, T2…), com ▶ ouvir, ◎ selecionar e ✕ remover. **Arraste qualquer trecho (ou o ✂) e solte na pauta** no compasso desejado — isso basta para importar: vira gravação 🎙 + notas transcritas e vinculadas 🔗. Dá para importar partes diferentes em lugares diferentes.
-- **Revisão da leitura de imagem (OMR)** antes de ir para a pauta: a leitura aparece **sobreposta à imagem** (com transparência ajustável) e em cartões por compasso; corrija altura (▲▼), **acidentes (♯ ♭ ♮)**, apague notas, ouça cada compasso e **escolha só os compassos de interesse**; eles entram a partir do compasso selecionado na pauta.
-- **⏹ Cancelar transcrição** no ícone de tarefas: cancela o envio, tira da fila ou para o processamento na próxima etapa.
-- **Barra superior**: menu do **usuário** (dados da conta, privacidade/LGPD, minhas composições, administração, sair) e ícone discreto de **comunidade** com seu **estado** (🟢 online / 🌙 ausente / 👻 invisível), **quem está online** (e quem está em 📹), **chat** e **videochamada**. Conta e Comunidade saíram do Dock.
+- **Pontos reflexos (Nível 1):** 20 pontos projetados sobre a pele real a partir de marcos ósseos e viscerais BodyParts3D, em 4 categorias com cor própria: acupontos OMS 2008 (rosa: LI4, PC6, HT7, ST36, SP6, GB34, LR3, BL40, GV20, CV12), auriculares (azul: cymba conchae com ABVN e lóbulo como controle sham), pontos-gatilho miofasciais (laranja: trapézio superior, glúteo médio, quadrado lombar) e zonas de Head de dor visceral referida (lilás: coração, estômago, vesícula biliar, rim, apêndice).
+- **Associações em camadas:** ao clicar num ponto, o dermátomo ou a faixa segmentar acende em dourado na pele, o nervo modelado em ciano, o músculo ou osso em laranja e o órgão em roxo, cada um ligado ao ponto por uma linha; a camada de cada associação é revelada e a pele fica translúcida (40 %) até limpar a seleção.
+- **Janela "Pontos reflexos"** (Dock): visibilidade por categoria (todas/nenhuma), liga/desliga das associações e da revelação de camadas, opacidade da pele, legenda de cores, lista de pontos (clicar aproxima a câmera) e ficha do ponto com segmento de referência, nervo, músculos com ID FMA, órgão, dor referida, referência bibliográfica e etiquetas de proveniência.
+- **Barra de escala com ícones volumétricos** para os 5 níveis; ao passar o mouse, cada nível mostra escala física, o que se vê, modelo/dados com proveniência e interação disponível (PT e EN; demais idiomas em EN).
+
+### Corrigido
+- Enquadramento do Nível 1: o corpo inteiro cabe acima do Dock.
+- Classificação anatômica: "trato iliotibial" e regiões do córtex (lóbulo parietal, pré-cúneo) deixam de cair em órgãos/músculos por engano.
+- Nomes em português na ordem correta e com concordância ("tibial anterior direito", "tíbia esquerda"); nomes sem tradução ficam no original FMA.
+- Nível 5: canais iônicos mais altos que a bicamada e com brilho próprio, visíveis de qualquer ângulo.
+- Aviso de carregamento da anatomia não sobrepõe mais a barra de escala.
+
+### Científico
+- Localizações de acupontos [LITERATURA] (OMS 2008); inervação auricular [LITERATURA] (Peuker & Filler 2002); pontos-gatilho [LITERATURA] (Travell & Simons 1999); zonas de Head [LITERATURA] (Head 1893). Posição sobre a malha e trajetos nervosos: [PREMISSA]. Correspondência de meridianos da MTC: [HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO], exibida como tradicional e não como relação anatômica.
+- Quando o mapa de dermátomos do app diverge do segmento da literatura (ex.: CV12 em T8, trapézio sobre C4), a ficha mostra os dois.
+
+## [0.3.0-alpha] — 2026-11-22
+
+Anatomia real a partir de imagens médicas, Modo Simulação gamificado com casos clínicos importáveis e ramificação dos axônios dentro dos feixes.
+
+### Adicionado
+- **Anatomia BodyParts3D (Nível 1):** 930 estruturas reais (pele, 258 ossos e discos, 157 órgãos e regiões encefálicas, 56 vasos, 457 músculos) do banco BodyParts3D, mapeadas na Foundational Model of Anatomy; clique em qualquer estrutura mostra o nome e o ID FMA; camadas de músculos e vasos sob demanda.
+- **Dermátomos na pele real:** 30 dermátomos (V1–S5) calculados por vértice a partir do osso mais próximo, do eixo dos ossos longos e dos níveis vertebrais reais.
+- **Nervos periféricos ancorados nos ossos reais:** 125 trajetos (medula, 48 raízes com gânglios, plexos braquial, lombar e sacral, mediano, ulnar, radial, musculocutâneo, intercostais, femoral, ciático, tibial, fibular comum, trigêmeo V1–V3, facial, vago com ramos cardíacos e gástricos, ramo auricular, tronco simpático).
+- **Modo Simulação:** bandeja de instrumentos (eletrodo TENS, agulha de EA com profundidade, sonda de pressão, eletrodo auricular, transdutor LIFU); o instrumento é aplicado clicando na pele ou no órgão-alvo; o nervo mais próximo e a distância em mm são calculados na anatomia real.
+- **Monitor do paciente gamificado:** expressão facial pela EVA, FC, VFC (RMSSD), condutância da pele, frações Aβ/Aδ/Aα, semáforos de segurança, reflexos (contração, retirada) visíveis no corpo, eventos, pontos e medalhas.
+- **Casos clínicos:** 5 casos fictícios (lombociatalgia L5/S1, neuralgia trigeminal V2, dor nociplástica com taVNS, neuropatia diabética, túnel do carpo) com origem da dor, mecanismo, dermátomos, condições que alteram o perfil anatômico e propostas terapêuticas; importação de novos casos em JSON (esquema axon-case/1) com validação e bloqueio de campos identificáveis (LGPD).
+- **Passo a passo** com verificação automática de cada etapa e **desfecho hipotético** por Monte Carlo (N = 300, semente 42) com mediana, faixa 10–90 % e probabilidade de redução ≥ 30 % para 1 e 5 sessões, comparação entre propostas e as ramificações secundárias que mais pesaram.
+- **Rede fisiológica ao vivo:** 23 nós e 37 conexões do campo físico às fibras, ao portão medular, aos opioides endógenos por frequência, à modulação descendente, à via colinérgica anti-inflamatória, ao tônus autonômico e aos desfechos, com referência por conexão.
+- **Ramificação dos axônios no feixe (Nível 3):** plexo intrafascicular (axônios trocando de fascículo) e ramo colateral que leva um subconjunto identificado de fibras; colateral axonal emergindo no nó de Ranvier (Nível 4).
+- `scripts/build_anatomy.py`: pipeline reprodutível BodyParts3D → pacotes binários quantizados (21 MB), dermátomos, marcos ósseos e trajetos nervosos.
+
+### Científico
+- O recrutamento no Modo Simulação usa o núcleo verificado; para eletrodos de superfície, o alvo são ramos cutâneos (1,2 mm + tecido adiposo) e só uma fração da corrente chega à fibra [PREMISSA]; fora de 0,3–1,5 mm, atenuação exponencial declarada [PREMISSA].
+- Pesos, constantes de tempo e a EVA da rede fisiológica são [HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO]; não há predição clínica.
+
+### Documentação
+- Manual do Usuário: Modo Simulação, casos clínicos e anatomia real. Manual Técnico: pipeline anatômico, licença CC BY-SA 2.1 JP, rede fisiológica, esquema de casos.
+
+## [0.2.0-alpha] — 2026-11-22
+
+Hiper-realismo anatômico no palco 3D e entrega contínua: cada atualização aprovada nos testes chega sozinha à VPS, com versão e registro de alterações visíveis no app.
+
+### Adicionado
+- **Corpo inteiro anatômico (Nível 1):** pele modelada por varredura elíptica com dermátomos por vértice (V1–S5) e seleção por clique; esqueleto (crânio, 24 vértebras com discos, 12 pares de costelas com cartilagens, esterno, clavículas, escápulas, pelve, ossos longos, mãos e pés); órgãos (encéfalo com giros, cerebelo, coração, pulmões, rins, estômago); 29 pares de raízes com gânglios da raiz dorsal; plexos braquial e lombossacral; mediano, ulnar, radial, musculocutâneo, intercostais, femoral, obturatório, ciático, tibial e fibular; trigêmeo (V1/V2/V3) e facial; vago com ramos cardíacos e pulmonares; ramo auricular (ABVN); tronco simpático e gânglio celíaco.
+- **Tecidos estratificados (Nível 2):** epiderme deformável com poros e pelos, derme com papilas e capilares, hipoderme com lóbulos adiposos, fáscia de colágeno, músculo estriado; feixe neurovascular (nervo, artéria e veias satélites) com corte histológico; dispositivos realistas (eletrodo de gel, agulha com cabo espiral, algômetro, transdutor focalizado, eletrodo SCS, fibra óptica); campo em cascas volumétricas e indentação da pele pela pressão.
+- **Fascículo histológico (Nível 3):** corte transversal procedural (azul de toluidina) gerado da mesma amostra das fibras 3D; perineuro em lamelas; vasa nervorum; feixes de Remak; eletrodo cuff de platina e silicone; luva da função de ativação.
+- **Nó de Ranvier (Nível 4):** mielina com lamelas e afunilamento paranodal, alças paranodais, canais NaV agrupados, microvilos de Schwann, núcleo da célula de Schwann, incisuras de Schmidt-Lanterman, neurofilamentos e mitocôndrias, potencial de ação saltatório.
+- **Membrana (Nível 5):** fosfolipídios com duas caudas, colesterol, NaV (4 domínios × 6 hélices, S4 destacado), Piezo2 em hélice-propulsor, TRPV1 com repetições de anquirina, TRAAK; íons atravessando cada canal.
+- **Texturas procedurais** (`textures.js`): pele, derme, gordura, músculo, colágeno, mielina, osso, córtex e vasos, com mapas normais; iluminação por ambiente (PMREM), ACES e sombras suaves.
+- **Entrega contínua:** job `release` cria a versão (SemVer), a tag e o GitHub Release com as notas; o deploy só roda depois dele e confere que a VPS respondeu com a versão nova.
+- **Atualização automática pela VPS** (`scripts/autoupdate.sh` + timer systemd a cada 2 min): aplica a última tag aprovada mesmo sem SSH, com rollback automático se a saúde falhar.
+- **Janela “Atualizações” no app:** versão atual, data, commit e o registro completo de alterações; aviso de nova versão com botão para recarregar.
+- `scripts/release.py`: gera `release.json`, sobe a versão a partir dos commits convencionais e escreve as notas.
 
 ### Alterado
-- A Composição abre **maximizada**; a barra de ferramentas começa **aderida à lateral** da pauta.
-- Arquivos de **vídeo** (MP4, MOV, WebM) podem ser importados — o áudio é extraído no navegador.
+- Enquadramento automático da câmera pela proporção da tela em todos os níveis.
+- Níveis 2–5 construídos sob demanda e pré-carregados em segundo plano.
+- Versão da API lida do arquivo `VERSION` (fonte única).
 
-### Corrigido
-- "Falha no envio" de áudio/vídeo (ex.: A_Equação_da_Aurora.mp4): mesma causa da 0.7.2 (permissão de `data/media` na VPS), já corrigida no deploy; os formatos de vídeo também passaram a ser aceitos pelo servidor.
+## [0.1.0-alpha] — 2026-11-21
 
-## [0.7.2-alpha] — 2026-11-22
-
-### Corrigido — envio de arquivos ("Falha no envio")
-- **Causa**: a pasta de mídia da VPS (`data/media`) pertencia ao root e os containers rodam como usuário 10001 — todo envio de áudio/imagem terminava em "Internal Server Error". O deploy agora ajusta a permissão de `data/media` e `data/models` a cada atualização.
-- `/api/health` informa `storage` (se a mídia aceita gravação) e o administrador recebe aviso quando não aceita.
-- Erros do servidor voltam sempre em JSON legível; falha ao gravar devolve 507 com explicação; fila de IA fora do ar devolve 503 com explicação.
-- No navegador, falhas de envio mostram o motivo pelo código (sessão expirada, arquivo grande, formato, servidor reiniciando…) em vez de "Falha no envio". Após o envio, a tarefa passa corretamente para "Na fila".
-
-### Alterado — barra de ferramentas
-- Ferramentas **agrupadas** com títulos discretos: **Criar** (Gravar, Importar) · **Escrever** (Mover, Nota, Apagar, Cifra, Letra, Nota+) · **Ajustar** (Duração, Ouvir, Pauta, Editar) · **IA** (Harmonia), com ícones 3D menores e animação suave.
-- **Dicas flutuantes** novas em todo o app: ficam por cima de tudo (nunca cortadas pela janela ou pelo painel), ao lado das barras laterais, dentro da tela, com título em destaque e seta; também aparecem ao navegar pelo teclado.
-
-## [0.7.1-alpha] — 2026-11-22
-
-### Adicionado — transcrições com feedback e % de evolução
-- **Ícone de tarefas de IA** (canto inferior esquerdo): anel de progresso animado com **% no centro** e personagem 3D da etapa. Clique para o **detalhamento do processo**: etapas concluídas ✓, etapa atual com detalhe ao vivo (ex.: "42 notas ouvidas", "♩ = 96"), próximas etapas, tempo decorrido e **estimativa do que falta**. Várias tarefas ao mesmo tempo, com contador.
-- Etapas reais informadas pelo processador de IA:
-  - áudio (modo leve): preparar áudio → andamento e pulso → ouvir a melodia → encaixar o ritmo → acordes → montar camadas;
-  - áudio (IA completa): + separar voz e instrumentos, polifonia, voz e letra cantada;
-  - imagem: preparar → ler símbolos → converter em notas → acordes; exportação: preparar → gerar arquivos → finalizar.
-- **Envio com %** (o upload também aparece como etapa) e **posição na fila**; se o processador de IA estiver parado, a tarefa avisa em vez de esperar em silêncio.
-- **Resumo ao terminar**: notas, camadas, andamento, tonalidade, compassos e modo (leve/completo), com **Ver resultado**. Em caso de erro, mensagem clara (arquivo ilegível, sem memória, arquivo ausente…) e **↻ Tentar de novo**.
-- Os botões ✨ Transcrever / Ler partitura / Exportar mostram a etapa e o % enquanto trabalham.
-
-### Corrigido
-- Transcrições que ficavam "Na fila…" sem retorno quando o processador de IA estava parado: agora há aviso e notificação.
-- Erros técnicos do processador viram mensagens compreensíveis.
-
-## [0.7.0-alpha] — 2026-11-22
-
-### Alterado — interface enxuta, sem controles repetidos
-- **Um lançador só**: o menu lateral esquerdo (que repetia o Dock) saiu; o Dock abre todos os quadros. No desktop fica só o ícone **Nova composição** (Importar, Biblioteca etc. estão no Dock).
-- **Um transporte só**: tocar/pausar/parar ficam no **player universal** (e o ▶ do topo da partitura). Saíram os botões repetidos de tocar da Mesa, do grupo "Ouvir" (que ficou com metrônomo, loop e andamento) e do "＋ Nova" do pentagrama do desktop.
-- **Uma mesa só**: volume, mudo e solo das camadas ficam na **🎚 Mesa de som** (Propriedades). O painel de Camadas ficou com o essencial — cor, nome, 👁, 🔗 vínculo, 🔒 cadeado e ⋯. A antiga "Mesa de Edição" virou **Exportar** (MIDI, MusicXML, PDF, WAV, MP3).
-- **Uma gravação só**: o ● Gravar fixo decide sozinho (com compassos selecionados grava o trecho; sem seleção, uma nova voz). O grupo "Gravação" repetido saiu.
-- **Dados da partitura num lugar só**: título no cabeçalho; tonalidade, compasso, pautas e claves no quadro **Pauta**. A seção "Partitura" repetida saiu de Propriedades, assim como o "⟲ Do zero" (use Nova composição) e os botões de copiar/recortar repetidos (ficam na barra de seleção da partitura e em ⌘⇧C / ⌘⇧X).
-- Barra de ferramentas mais compacta: ferramentas em duas colunas, cabe inteira sem rolar.
-
-### Adicionado — ícones 3D animados
-- Novos ícones estilo cartoon 3D (volume, profundidade, brilho especular, piscar de olhos e "squash & stretch" ao passar o mouse) para Gravar, Importar, Exportar, as seis ferramentas de escrita e os grupos Duração, Ouvir, Harmonia, Pauta e Editar; todos os ícones ganharam mais profundidade.
-
-## [0.6.1-alpha] — 2026-11-22
+Primeira versão executável. Ferramenta de pesquisa e ensino in silico — **não é dispositivo médico**.
 
 ### Adicionado
-- **Transcrever qualquer gravação** da plataforma — feita no editor (● Gravar, gravar trecho, nova voz), solta do Importar ou faixa original de uma transcrição.
-- **Duplo clique no bloco gravado** (na partitura) abre as opções: ▶ ouvir toda a gravação ou só o compasso (selecionado ou clicado) no player universal; ✨ transcrever **toda a gravação** ou **só o(s) compasso(s)**; 🎹 melodia + harmonia; vincular/desvincular 🔗; trancar 🔒; silenciar; ver no visualizador; apagar.
-- As notas entram exatamente na posição da gravação e ficam **vinculadas** a ela (mover o bloco move as notas).
-- Painel de Camadas (menu ⋯ da gravação): transcrever toda a gravação, com melodia + harmonia ou só os compassos selecionados.
+- **Núcleo biofísico verificado** (`backend/core/bio_model.py`): reimplementação fiel do Anexo G do livro —
+  cadeia nodal de 41 nós, Euler explícito Δt = 1 µs, bordas de Neumann, pulso 100 µs + cauda 300 µs,
+  Monte Carlo N = 20 000 com bootstrap 2 000 (semente 42). Recusa pedidos fora do domínio verificado
+  (1–16 µm; 0,3–1,5 mm).
+- **Regressão obrigatória** reproduzida: α = 1,1266; razão Aδ(3)/Aβ(9) a 1 mm = 3,2077; 2,17 a 0,5 mm;
+  4,07 a 1,5 mm; razão de medianas 3,10 (IC 95 % 2,98–3,22); F_Aδ = 0,38 % com F_Aβ ≤ 10 %;
+  sensibilidade a ρi 2,85–3,48. 28 testes (`pytest`).
+- **4 fronteiras de segurança** (`core/safety.py`): Shannon (k), Pennes 0D + CEM43, MI/ISPTA.3, crônica.
+- **Ruído térmico e ressonância estocástica** (`core/stochastic.py`): k_BT a 310 K; curva SNR × σ.
+- **Modalidades integrativas** (`core/integrative.py`): eletroacupuntura, taVNS (mapa ABVN), acupressão —
+  com etiquetas de procedência por saída.
+- **Variações anatômicas** (`core/anatomy.py`): motor de regras [HIPÓTESE]; perfis anônimos (LGPD).
+- **IA contextual** (`backend/app/ai.py`): tradutor (5 idiomas) e Axon Bot com failover entre provedores;
+  fallback offline; a IA nunca gera números.
+- **API FastAPI** (`/api/*`) com envelope de procedência, versão e semente em toda resposta.
+- **Desktop macOS 3D** (`frontend/`): palco multiescala de 5 níveis, 8 mini-apps em janelas, painéis
+  retráteis, Dock, seletor de 5 idiomas, Axon Bot.
+- **Infra**: `docker-compose.yml`, `scripts/setup_vps.sh` (VPS compartilhada, proxy do host + certbot,
+  Traefik opcional), `.github/workflows/deploy.yml` (testes → sync IA via `SERVIDOR_ENV` → deploy SSH).
+- **Documentação**: manual do usuário, manual técnico e página de apresentação (`docs/`, `site/`).
 
-### Corrigido
-- Duplo clique em cifras e anotações na partitura não era reconhecido em alguns navegadores.
-- Gravações feitas no editor agora guardam a duração e aparecem como bloco contínuo, arrastável.
-
-## [0.6.0-alpha] — 2026-11-22
-
-### Adicionado
-- **Player universal** sempre visível na barra de menus (no celular, acima da barra inferior): ⏮ do início, ⏪ −5 s, ▶/⏸, ⏩ +5 s, ■, barra de posição arrastável, tempo e volume geral. Controla qualquer áudio em execução e **mostra qual quadro está tocando** (Composição, Pentagrama do desktop, Importar, Visualizador, Mesa, Biblioteca) — clique no nome para ir até ele. Espaço fora da partitura toca/pausa.
-- **Mesa de som no painel Propriedades** (barra lateral): o que está tocando, volume geral com medidor e um canal por camada (fader, mudo, solo e medidor com a cor da camada) que **mudam o som ao vivo**, sem reiniciar a reprodução.
-- **Visualizador** dinâmico da transcrição (abre sozinho depois de transcrever um áudio): 🎹 **piano vertical** (notas caindo sobre o teclado, teclas acendem) ou 🎼 **pauta** que corre sob o cursor. Ouvir **ambos**, só a **transcrição** ou só o **original**; arraste para avançar/voltar; ← → pulam compassos.
-- **Arrastar o trecho do Importar para a partitura**: solte no compasso desejado — vira camada 🎙 na posição exata e é transcrito em notas **vinculadas** 🔗. Arrastar o clipe 🎙 na pauta move as notas junto. No painel de Camadas, a **corrente** ao lado do olho abre/fecha o vínculo; o **cadeado** 🔒 impede mudanças (inclusive pelo vínculo).
-
-### Alterado
-- **Importar reorganizado**: barra fixa no topo com tudo à vista — 📂 Arquivo, 🎙 **Gravar ao vivo**, transporte (⏪ ▶/⏸ ■ ⏩ e tempo), ⇲ arrastar para a partitura, 👁 ver transcrição e **✨ Transcrever**; opções (extrair, andamento, separar voz, letra, ganho, recorte) logo abaixo. Na foto: 📂 Imagem, 📷 Câmera, girar, sem recorte, "só a melodia" e **✨ Ler partitura** no topo. Na cifra: acompanhamento e **✨ Transcrever** no topo.
-- **Ouvir trecho** toca a faixa importada/gravada inteira dentro do recorte (sem o limite de 8 s), com pausar/continuar, parar, ±5 s e **ponteiro verde arrastável** na onda: clique ou arraste para mudar de onde está tocando. As alças rosa continuam recortando.
-- Ao transcrever um áudio, a faixa original entra junto como camada 🎙 para comparar com as notas.
-- Pentagrama do desktop translúcido (fica opaco ao passar o mouse).
-- Parar a reprodução agora corta na hora todas as notas já agendadas.
-
-## [0.5.1-alpha] — 2026-11-21
-
-### Corrigido — IA
-- **Gemini sobrecarregado (HTTP 503)**: modelos reserva por provedor. Se o modelo principal (`GEMINI_MODEL`, ex.: `gemini-flash-latest`) estiver sobrecarregado, indisponível (404) ou no limite (429), tenta `GEMINI_FALLBACK_MODELS` (padrão `gemini-2.5-flash,gemini-2.5-flash-lite`) com a mesma chave antes de passar para a próxima.
-- **OpenRouter "resposta vazia"**: modelos gratuitos de raciocínio só preenchiam o campo `reasoning` e o teste usava poucos tokens; agora o texto é lido também de `reasoning` e o diagnóstico usa 256 tokens.
-
-### Adicionado
-- **Pollinations** como provedor nativo (`https://gen.pollinations.ai/v1/chat/completions`, compatível com OpenAI): `POLLINATIONS_API_KEY` (chave `sk_` do enter.pollinations.ai), `POLLINATIONS_MODEL` (padrão `openai`), `POLLINATIONS_FALLBACK_MODELS` e `AI_POLLINATIONS_ANON` (uso anônimo gratuito como última reserva; ligado por padrão, `false` desliga).
-- Variáveis novas aceitas no .env/GitHub, na coleta das outras apps e na sincronização: `POLLINATIONS_API_KEY`, `POLLINATIONS_MODEL`, `GEMINI_FALLBACK_MODELS`, `POLLINATIONS_FALLBACK_MODELS`, `AI_POLLINATIONS_ANON`.
-
-## [0.5.0-alpha] — 2026-11-21
-
-### Alterado — credenciais de IA: o .env do GitHub é a base
-- Ordem de uso das chaves de cada provedor: **1. .env da VPS sincronizado do GitHub** (SERVIDOR_ENV / secrets) → **2. chaves de outras apps da mesma VPS** → **3. painel**. As reservas só entram se a anterior faltar ou **falhar no teste**. Antes, a chave do painel tinha prioridade sobre a do .env.
-- Cada chave tem seu próprio disjuntor: se a do .env falha numa chamada, a próxima chave do mesmo provedor responde antes de trocar de provedor.
-- **Rodar diagnóstico** agora primeiro **atualiza o acervo local** (relê o .env vindo do GitHub e procura chaves nas outras apps), depois testa **todas** as chaves e grava o resultado (`data/ai/status.json`). Uma chave reprovada sai da frente em todos os processos da API, sem reiniciar.
-- Painel IA: cada provedor mostra a lista de chaves na ordem de prioridade (📄 .env/GitHub, 🔗 app X, 🔐 painel), qual está **em uso** e o resultado do teste de cada uma.
-
-### Adicionado
-- `infra/scripts/coletar-ia.sh` (root): percorre as outras apps da VPS (`/opt`, `/srv`, `/var/www`, `/home`, `/root`, até 4 níveis, e as variáveis dos containers Docker que não são do harmonIA — ex.: Prática, Gusto) e reúne **só** nomes de chaves de IA conhecidos (nunca senhas de banco/JWT). Ignora valores de exemplo, não repete a chave que já está no .env e nunca imprime valores (só os 4 últimos caracteres). Grava `data/ai/env.ai` e `data/ai/apps.ai` (0640, root:api).
-- Coleta automática: a cada ciclo da atualização automática, no deploy, após a sincronização do GitHub (merge-env) e na hora em que o painel pede (unidade `harmonia-ia.path`, instalada sozinha).
-- Novos provedores: DeepSeek, xAI Grok, Together AI e Hugging Face (também aceitos nos secrets do GitHub: `DEEPSEEK_API_KEY`, `XAI_API_KEY`, `TOGETHER_API_KEY`, `HF_TOKEN`).
-
-## [0.4.0-alpha] — 2026-11-21
-
-### Alterado — quadro de composição mais limpo e acessível
-- **Barra lateral de ferramentas** em estilo cartoon, discreta, com ícones grandes e explicações ao passar o mouse:
-  - **● Gravar** e **⇪ Importar** sempre visíveis no topo;
-  - ferramentas de escrita (Mover, Nota, Apagar, Cifra, Letra, Nota+);
-  - grupos que abrem um **quadro explicativo** ao lado (um por vez; fecha com ✕, Esc ou clique fora):
-    **Duração**, **Ouvir** (tocar, metrônomo, loop, andamento), **Harmonia** (✨ harmonizar seleção, harmonizar tudo, estilo: acordes em bloco/arpejo/baixo de Alberti/baixo + acorde, melodia ⇠ harmonia, cifrar),
-    **Gravação** (gravar trecho, nova voz), **Pauta** (mão, instrumento, tonalidade, compasso, pautas e claves, + compasso, do zero) e **Editar** (↶ ↷ 🔍).
-  - A barra pode ser arrastada pela alça ⋯ e volta para a lateral com duplo clique.
-- **Cabeçalho enxuto**: título, resumo da pauta (instrumento, tonalidade, compasso, andamento, mão — clique abre o quadro Pauta) e ▶ Tocar.
-- Janela de Composição abre maior, aproveitando o espaço do menu lateral.
-
-### Adicionado — modo foco
-- Ao abrir uma janela, os menus laterais que não fazem parte dela **saem pela lateral**: o menu esquerdo sempre; o dock de painéis só fica quando a janela é a Composição; ícones do desktop e o quadro da Comunidade também se recolhem.
-- O que fica recolhido deixa uma **faixa translúcida desfocada** (passe o mouse para ver) e aparece na **bandeja da barra de menus**: menus recolhidos com ponto desfocado e contorno tracejado; **janelas minimizadas com ponto laranja**. Clique na bandeja para mostrar/restaurar.
-
-## [0.3.0-alpha] — 2026-11-21
-
-### Adicionado
-- **Pentagrama final no desktop**: a composição inteira aparece em overlay sobre o fundo, com ▶ Tocar / ■ Parar e cursor de reprodução, ✎ Editar e ＋ Nova. Dá para mover (arrastar o título), recolher, e duplo clique no título volta à posição padrão.
-- **Ícone "Nova composição"** no desktop: abre uma pauta vazia no editor.
-- **Editor sob demanda**: a janela de Composição e os painéis de edição não abrem sozinhos; o painel lateral expande junto com o editor e recolhe quando ele fecha.
-- **Painel de ferramentas lateral** dentro do editor: movível (arraste pela alça ⋮⋮, solte perto da borda para reacoplar), contraível (só ícones) ou expandido. **● Gravar** e **⇪ Importar** ficam sempre visíveis no topo, com explicações didáticas ao passar o mouse.
-- **Gravar inteligente**: sem compassos selecionados grava uma nova voz livre; com compassos selecionados grava só aquele trecho.
-- **Painéis maximizáveis e redimensionáveis** (Propriedades, Camadas, Anotações, Mesa…): botão ⤢ (Esc restaura) e alça de redimensionar.
-- **Mão em edição**: direita, esquerda ou **ambas ao mesmo tempo**; seleção por retângulo pega as duas pautas; ⌘A seleciona as notas da(s) mão(s) em edição; a mão não editada fica esmaecida.
-- **Instrumentos com clave automática**: violino/flauta/trompete… em Sol, viola em Dó, violoncelo/fagote/trombone/baixo em Fá; piano, órgão e harpa usam as duas pautas. O timbre da reprodução e o programa MIDI acompanham o instrumento.
-- **Maestro (ícone de ajuda) arrastável**: solte onde preferir; a posição fica salva.
-- **Guia passo a passo com holofote e seta cartunesca** após escolher no passo a passo inicial (compor, gravar, importar áudio, importar imagem). Fecha com ✕, Esc ou duplo clique fora do quadro. Também em **Ajuda → Guia: …**.
-- **IA (admin)**: botão 🧪 Testar por provedor, 🔑 Trocar/Cadastrar chave direto da tabela e do diagnóstico (já testa ao salvar). API `POST /api/admin/ai/diagnose` aceita `{"names": [...]}` para testar só alguns.
-
-## [0.2.0-alpha] — 2026-11-21
-
-### Corrigido
-- **CI com ✗ em todos os commits**: os testes do `ai-worker` rodavam `pytest` sem o pacote no caminho de importação. Adicionado `ai-worker/tests/conftest.py` e o workflow agora usa `python -m pytest -q tests`. Como a atualização automática só aplica commits com CI verde, nada novo chegava à VPS.
-- **Deploy acusava "HTTP_PORT=20080 ocupada"** quando a porta era do próprio harmonIA: a posse da porta agora é confirmada por `/api/health` (`"project":"harmonia"`); divergência de portas TURN só gera aviso; `migrate` com novas tentativas.
-- **Diagnóstico de IA**: mostra a mensagem do próprio provedor (com chaves mascaradas) e dicas para 400/402/404/429.
-
-### Adicionado
-- **Tela de login** na abertura, com **"Entrar como visitante (sem senha)"** (papel `guest`: compor, IA, exportar, biblioteca; não publica).
-- **Passo a passo para novos usuários** em 2 passos: (1) compor e harmonizar · subir imagem · gravar o tema · subir áudio; (2) capturar **só a melodia** (harmonizar depois) ou **melodia + harmonia**. Botão para pular direto à estação completa com projeto vazio. Reabrível em **Ajuda → Passo a passo inicial**.
-- **⟲ Do zero**: reinicia a composição numa partitura vazia.
-- **Pautas e claves**: ocultar a mão esquerda, mostrar só a pauta inferior e trocar clave (Sol, Fá, Dó) de cada pauta.
-- **● Nova voz**: grava livremente sobre os compassos (a partir da seleção), com contagem e metrônomo; a gravação vira uma camada nova e a transcrição entra como voz/harmonia em camadas próprias.
-- **Grupos de camadas**: criar, renomear, recolher, visível/mudo/solo/trava do grupo inteiro, arrastar camadas para o grupo.
-- **Mesa de Edição** no menu lateral direito; **Comunidade** como quadro discreto, móvel, que pode ser fechado ou acoplado ao menu lateral.
-- **Área de notificações** (sino na barra superior): trabalhos concluídos/falhos e avisos ficam registrados.
-- **Maestro** começa minimizado como ícone de ajuda; clique para despertá-lo.
-
-### Alterado
-- Quadros sobrepostos agora são opacos (sem transparência).
-
-## [0.1.9-alpha] — 2026-11-21
-
-### Adicionado — versão para celular (detecção automática)
-- `core/device.ts`: identifica celular × desktop e troca o layout sozinho, inclusive ao girar a tela ou redimensionar.
-  - Critérios: user agent móvel (Client Hints), tela estreita (≤ 820 px), ou toque como ponteiro principal em tela < 1100 px (tablet em retrato).
-  - Escolha manual: **Ajuda → Versão para celular / Detectar automaticamente** no desktop, ou **Mais → Usar versão desktop** no celular.
-- Layout celular:
-  - tela **Início** com blocos grandes;
-  - **barra inferior fixa** (Início, Compor, Importar, Painéis, Mais) com alvos de toque ≥ 48 px;
-  - janelas em tela cheia com **‹ Voltar**;
-  - Propriedades, Camadas e Anotações numa **folha inferior**;
-  - folha **Mais** com os demais apps, idioma e acessibilidade;
-  - Maestro como **botão flutuante leve**: o WebGL fica pausado quando oculto, para poupar bateria.
-- Editor no toque:
-  - a partitura rola com o dedo, e as notas, o "+" de compasso e as anotações capturam o gesto;
-  - barra de ferramentas com rolagem horizontal e transporte (Tocar) em primeiro;
-  - zoom inicial adequado.
-- **Acessibilidade** (todas as versões):
-  - link "Pular para o conteúdo" e foco visível de alto contraste;
-  - **Texto maior** e **Alto contraste** (persistidos);
-  - `aria-current` na navegação, rótulos acessíveis e `prefers-reduced-motion` respeitado.
-
-### Adicionado — Administração → 🤖 IA
-- **Registrar credenciais de outras IAs pelo painel**:
-  - provedores conhecidos (Groq, Gemini, GitHub Models, OpenRouter, Cerebras, Mistral, Anthropic, OpenAI) ou **qualquer IA compatível com OpenAI, Anthropic ou Gemini**, informando identificador, nome, URL https e modelo;
-  - a chave é cifrada com AES-256-GCM (tabela `ai_credentials`) e nunca volta para a tela (só os 4 últimos caracteres);
-  - tem prioridade sobre o `.env`/GitHub para o mesmo provedor e vale sem reiniciar (cache de 30 s por worker);
-  - salvar já testa a credencial; o botão 🗑 remove;
-  - toda alteração entra na auditoria.
-- **🩺 Rodada diagnóstica**: testa cada IA isoladamente, em paralelo, e mostra ✅/❌, origem da chave, modelo, tempo e o **motivo da falha em português** (chave inválida, limite atingido, modelo inexistente, tempo esgotado, rede). Inclui o tradutor grátis MyMemory e o Maestro offline.
-
-### Corrigido
-- O formulário do Maestro e o balão respeitam `hidden` (antes ficavam sempre visíveis).
-
-## [0.1.8-alpha] — 2026-11-21
-
-### Adicionado — IA gratuita de suporte e credenciais do GitHub
-- **Provedores gratuitos (free tier, sem cartão)** na cadeia de failover: **Groq** (Llama 3.3 70B), **Google Gemini 2.5 Flash**, **GitHub Models** (PAT com `models:read`), **Cerebras**, **Mistral** e **OpenRouter** (roteador `openrouter/free`, imune à rotação de modelos).
-  - Ordem padrão: os pagos primeiro, se houver chave, e em seguida os gratuitos.
-  - Provedores configurados que não estão em `AI_PROVIDERS` entram no fim da lista, para nenhuma chave ficar ociosa.
-  - Nomes alternativos aceitos: `GOOGLE_API_KEY`, `CLAUDE_API_KEY`, `GH_MODELS_TOKEN`.
-- **Respostas garantidas sem nenhuma IA disponível**:
-  - Tradução: cache → IA → **MyMemory** (gratuito, sem chave; textos agrupados para poupar a cota).
-  - Maestro: IA → **modo offline**, que explica as notas de qualquer cifra citada (ex.: `F#m7(b5) = F#, A, C, E`) e traz um guia do editor por assunto (harmonizar, camadas, gravar, exportar, letra, transcrição).
-- **Credenciais registradas no GitHub chegam à VPS**:
-  - novo job `sync-ai-env` no CI (a cada push, diariamente e sob demanda em *Run workflow*);
-  - lê o secret `SERVIDOR_ENV` (formato `.env`) e/ou secrets individuais;
-  - envia por SSH para `merge-env.sh`, que mescla **só chaves de IA** da lista permitida (senhas do banco, JWT e chave de criptografia nunca são alteradas);
-  - valor vazio mantém a chave já registrada na VPS; nunca imprime valores; reinicia a API só se algo mudou.
-- `configurar-ia.sh` passa a perguntar também pelos provedores gratuitos, com o link de onde obter cada chave.
-- Administração → 🤖 IA mostra o rótulo "grátis" e o modelo de cada provedor.
-
-### Corrigido
-- `env_set` seguro para qualquer caractere no valor (`|`, `&`, `/`), preservando dono e permissão do `.env`.
-- A atualização automática considera só o check `test` (`AUTOUPDATE_CI_CHECKS`). Uma falha na sincronização de credenciais não bloqueia atualizações.
-- Os testes da API usam `conftest.py`, porque o ambiente de teste precisa ser definido antes do primeiro import.
-- A tradução não cai se o Redis estiver fora (o cache é opcional).
-
-## [0.1.7-alpha] — 2026-11-19
-
-### Adicionado — failover entre provedores de IA
-- `backend/app/core/llm.py`: tradução contextual e assistente Maestro usam uma cadeia de provedores **Anthropic → OpenAI → Gemini → OpenRouter** (ordem configurável em `AI_PROVIDERS`). Entram na cadeia só os provedores com chave.
-  - Em timeout, erro de rede, 429/5xx ou chave inválida, o próximo provedor responde.
-  - O provedor que falhou fica em pausa crescente (circuit breaker, `AI_COOLDOWN_S`).
-  - As chaves nunca são logadas nem devolvidas pela API.
-- `infra/scripts/configurar-ia.sh`: grava as chaves no `.env` da VPS com digitação **oculta**, faz backup do `.env`, define a ordem e reinicia só a API.
-- Administração → **🤖 IA**: provedores, modelo, estado (ok/em pausa), chamadas e o botão **Testar failover**, que mostra qual provedor respondeu.
-
-## [0.1.6-alpha] — 2026-11-19
-
-### Adicionado — atualizações automáticas
-- **`infra/scripts/autoupdate.sh` + systemd timer (`harmonia-autoupdate.timer`)**. A cada 5 minutos a VPS:
-  1. consulta o GitHub (`LACibermedicina/harmonia`, branch `main`);
-  2. aplica só commits cujo CI (testes + build) passou;
-  3. reconstrói, reinicia e confere `/api/health`;
-  4. se falhar, faz **rollback** automático para a versão anterior e bloqueia o commit ruim.
-
-  Preserva `.env` e `data/`. É o modelo "pull": nenhuma chave da VPS fica guardada no GitHub.
-- O script executa uma cópia temporária de si mesmo, porque a atualização pode substituir o próprio arquivo, e usa trava (`flock`) contra execuções simultâneas.
-- Aviso no app: quando o servidor muda de versão, aparece "Nova versão instalada — Recarregar agora". Antes de recarregar, salva a composição aberta.
-- Administração → **🔄 Atualizações**: versão em execução, estado (em dia, aguardando CI, aplicando, revertido), commit e log (`/api/admin/system`).
-- `instalar-do-mac.sh` publica o código no GitHub ao final, e esse repositório passa a ser a origem das atualizações.
-
-### Alterado
-- Workflow renomeado para `ci-harmonia`. O job de deploy por SSH só roda com a variável `DEPLOY_MODE=push`; por padrão o CI só testa e a VPS busca sozinha.
-- `deploy.sh` tenta a migração várias vezes enquanto a API inicia. O setup instala `git` e configura as variáveis `AUTOUPDATE_*`.
-
-## [0.1.5-alpha] — 2026-11-19
-
-### Corrigido
-- **A transcrição agora chega à Composição como camada.** No modo leve (servidor pequeno), o áudio caía num erro porque dependia do PyTorch. Agora existe um motor de transcrição leve, que usa só numpy e ffmpeg:
-  - **melodia:** detecção de altura por YIN, com vibrato e glissando;
-  - **andamento:** detectado pelos ataques;
-  - **acordes:** por cromagrama, por meio compasso, com acompanhamento de piano.
-  Ao terminar, a janela de Composição é aberta, o painel Camadas é revelado, a camada nova fica ativa e uma notificação diz quais camadas foram criadas. O mesmo vale para a cifra e para a foto.
-- As camadas criadas por importação recebem o nome do arquivo de origem (ex.: "Melodia transcrita — minha-musica").
-- Selecionar compassos limpa a seleção de notas e vice-versa, para não haver ambiguidade sobre o que será copiado ou recortado.
-
-### Adicionado
-- **Copiar ou recortar para nova camada** as notas ou os compassos selecionados:
-  - pela barra de seleção acima da partitura, pelo painel Propriedades ou pelos atalhos ⌘⇧C / ⌘⇧X;
-  - é criada uma camada por pauta de origem (Sol/Fá);
-  - camadas bloqueadas não são recortadas.
-- **Identidade visual por camada**:
-  - cada camada nova recebe uma cor ainda não usada;
-  - cabeça, haste, bandeirola, linhas suplementares, ponto, acidente e sílaba da nota usam a cor da camada;
-  - a barra de duração ganha uma **textura própria por camada** (lisa, listrada, pontilhada, xadrez, vertical, ondas), que distingue as camadas também sem depender de cor;
-  - legenda de camadas acima da partitura (clique ativa a camada, duplo clique oculta) e tooltip "Camada: …" em cada nota;
-  - anotações e gravações mostram a cor da camada, e o painel Propriedades mostra a etiqueta da camada das notas selecionadas.
-
-## [0.1.4-alpha] — 2026-11-19
-
-### Adicionado
-- **Painel lateral direito acoplável**, do lado oposto ao menu lateral esquerdo, com os painéis da partitura:
-  - **Propriedades**: dados da partitura (título, andamento, fórmula, tonalidade, nº de compassos). Para notas selecionadas: altura (±semitom/oitava, nome em solfejo e cifra), duração, intensidade, sílaba, efeito vocal, mover de camada, apagar. Para compassos selecionados: cifra, harmonizar, ouvir, inserir antes/depois, limpar, excluir.
-  - **Camadas**: o gestor de camadas passa de janela para painel, com layout compacto.
-  - **Anotações**: lista, edição inline, cor, ir ao compasso e remover.
-- Comportamento dos painéis:
-  - arrastar o cabeçalho para fora do dock (ou ⇱ ou duplo clique) transforma o painel em flutuante, movível e redimensionável;
-  - arrastar de volta sobre o dock reacopla o painel na posição da linha guia; o mesmo gesto reordena os painéis dentro do dock;
-  - cada painel pode ser recolhido (▾) ou fechado (✕);
-  - o dock inteiro recolhe para uma faixa de ícones (☰), como o menu esquerdo, e ↺ restaura o layout padrão;
-  - o layout fica salvo no navegador.
-- `store.deleteMeasures()`: exclui compassos e puxa o conteúdo seguinte para trás (cifras, anotações e gravações acompanham; notas que invadiam o trecho são encurtadas).
-
-### Alterado
-- Os ícones 3D usam gradientes globais (corrige ícones sem cor quando o mesmo ícone aparece em vários lugares).
-- A janela de Composição se ajusta à largura disponível entre os dois menus laterais; ícones do desktop, Maestro e janelas maximizadas respeitam o dock direito.
-
-## [0.1.3-alpha] — 2026-11-19
-
-### Adicionado
-- **Administração** (somente o papel `admin`): visão geral com estatísticas, usuários (busca, troca de papel, bloquear/liberar acesso), moderação da biblioteca pública (despublicar) e trilha de auditoria LGPD. Endpoints `/api/admin/*` validados no servidor; o admin não consegue remover o próprio acesso.
-- **Inserir compasso**: um "+" discreto em cada barra de compasso (entre compassos, no início e no final). Alt+clique insere 4 compassos. As notas que cruzam a barra são divididas, e cifras, anotações, gravações e a seleção são deslocadas. Funciona com desfazer (⌘Z).
-
-### Alterado
-- **Fluxo de IA** e **Administração** ficam ocultos no Dock, no menu lateral, nos ícones do desktop e no menu Janelas para quem não é admin. A abertura direta é bloqueada, e as janelas administrativas fecham ao sair da conta.
-- `instalar-do-mac.sh` passa a usar o pacote `harmonia-v*.zip` mais recente e recusa os usuários `deploy` e `root` no login.
-- A API lê a versão do arquivo `VERSION` da raiz também em desenvolvimento.
-
-## [0.1.2-alpha] — 2026-11-19
-
-### Adicionado
-- `infra/scripts/instalar-do-mac.sh`: instala e atualiza a partir do Mac com um único comando. Ele envia o pacote, cria a chave pessoal e a chave de deploy, roda o setup com sudo e deixa o `VPS_SSH_KEY` copiado na área de transferência.
-- **Modo de IA leve** (`AI_ML=0`, escolhido automaticamente com menos de 8 GB de RAM ou 20 GB de disco livre): o ai-worker fica com ~700 MB, sem PyTorch. Editor, cifra, harmonização e exportação MIDI/MusicXML/PDF/WAV/MP3 continuam funcionando; a transcrição de áudio e foto mostra aviso claro. `/api/health` informa `ai_full`.
-- O próprio setup agora constrói, sobe, migra e testa a stack. O site fica no ar antes mesmo do GitHub Actions.
-
-### Alterado (servidor compartilhado com Odoo e outros serviços)
-- O setup deixa de mexer no firewall quando o UFW está desligado, e nunca liga o UFW por conta própria.
-- vhost do nginx com rollback automático se `nginx -t` falhar, e suporte a `conf.d` quando não existe `sites-enabled`.
-- Antes do certbot, confere se o DNS do subdomínio aponta para o IP público. Se não apontar, informa o comando para rodar depois.
-- Usuário `deploy` corrigido: home e shell bash, entra só com chave, fica no grupo `docker` e sai do grupo `sudo` (menor privilégio).
-- Checagens prévias de disco (mínimo de 4 GB) e swap; `apt-get update` tolera repositórios de terceiros com chave GPG vencida.
-- Instala o plugin `docker compose` se estiver faltando. A API usa 1 worker em máquinas com menos de 4 GB de RAM.
-
-## [0.1.1-alpha] — 2026-11-19
-
-### Alterado — regra de portas: nenhuma porta < 1024 e nenhuma porta já em uso
-- O harmonIA não publica mais 80/443. O nginx da stack passou para `nginxinc/nginx-unprivileged`, que escuta 8080 no container e só fica acessível em **`127.0.0.1:HTTP_PORT`** no host.
-- `infra/scripts/lib-ports.sh`: detecta as portas em uso (via `ss`, com fallback em `/proc/net` e nas portas publicadas pelo Docker) e escolhe portas altas livres (≥ 20000): `HTTP_PORT`, `TURN_PORT` e a faixa de relay `TURN_MIN_PORT`–`TURN_MAX_PORT`. As escolhas ficam gravadas no `.env` e são reaproveitadas nos próximos deploys.
-- `deploy.sh` confere as portas antes de subir. Se alguma ficou ocupada por outro serviço, o deploy é abortado sem alterar nada.
-- O HTTPS público fica com o **proxy que já existe no servidor**. O `setup-vps.sh` detecta nginx ou apache, cria o vhost `harmonia.m3d.pro → 127.0.0.1:HTTP_PORT` e emite o certificado com `certbot --nginx` ou `certbot --apache`. Para Caddy e Traefik gera instruções. Sem proxy, há a opção do túnel Cloudflare (perfil `tunnel`, sem porta de entrada).
-- Removidos o certbot standalone (que usava a porta 80) e o cron de renovação próprio. A renovação passa para o `certbot.timer` do host.
-- coturn: portas dinâmicas e `--no-tcp-relay`. O servidor realtime passou a anunciar o `TURN_PORT` correto.
-
-### Corrigido
-- Firewall: o setup não derruba mais serviços que já rodam na VPS. Se o UFW está ativo, as regras existentes são mantidas. Se está inativo, todas as portas públicas que já estão em escuta são liberadas antes de ativá-lo. A porta do SSH é detectada.
-- O endurecimento do SSH (desligar o login por senha) agora é opcional (`HARDEN_SSH=1`), porque afeta o servidor inteiro.
-- `api` e `ai-worker` ganharam a rede `egress`. Antes, a rede `internal` bloqueava as chamadas à API de IA e o download dos modelos.
-- CI: health check interno via SSH em `127.0.0.1:HTTP_PORT`, seguido do health check público. Se só o público falhar, sai um aviso (problema de proxy/DNS) em vez de erro.
-
-## [0.1.0-alpha] — 2026-11-18
-
-Primeira iteração: infraestrutura, motor musical, API e desktop de composição.
-
-### Infra & DevOps
-- `.github/workflows/deploy.yml`: testes (motor musical + API) → build do frontend → rsync via SSH → `deploy.sh` na VPS → health check em `https://harmonia.m3d.pro/api/health`.
-- `infra/scripts/setup-vps.sh`: Docker + Compose, usuário `deploy`, árvore `/opt/harmonia`, UFW (22/80/443 + TURN), hardening SSH, fail2ban, `.env` com segredos aleatórios (chmod 600), certificado Let's Encrypt, cron de renovação e de backup.
-- `docker-compose.yml`: nginx (com build do frontend), api, ai-worker, realtime, postgres 16, redis 7, coturn. Rede `internal` sem saída direta; só o nginx é exposto.
-- Nginx: HTTPS/HTTP2, HSTS, cabeçalhos de segurança, rate limit (auth 5/min, API 20/s), upload de até 200 MB, proxy WebSocket `/ws/`.
-
-### Motor musical (ai-worker) — testado
-- Cifra brasileira/internacional: `C7M`, `m7(b5)`, `7(9)`, `sus4`, `°`, `/baixo`, solfejo, `%`.
-- Cifra em texto → acordes por compasso + letra + seções.
-- Harmonização automática (Viterbi com funções T/S/D) **por trecho**, mantendo os outros compassos como contexto; voicing com condução de vozes (bloco, arpejo, Alberti, baixo + acorde).
-- Melodia extraída da harmonia (skyline), reconhecimento de acordes a partir das notas, detecção de tonalidade (Krumhansl).
-- Silabação em português, alinhamento de letra às notas (pausas e melismas), conferência da letra cantada × letra informada.
-- Exportação MIDI (sem dependências) e MusicXML 4.0 (piano em 2 pautas, ligaduras entre compassos, cifras, letra, anotações).
-- Wrappers de IA: Demucs (separação), Basic Pitch (áudio → notas), pYIN (voz + vibrato/glissando), faster-whisper (letra com tempos), oemer (OMR), Verovio (PDF), FluidSynth/ffmpeg (WAV/MP3).
-
-### API (FastAPI)
-- Autenticação JWT, RBAC (`admin`, `composer`, `student`, `viewer`), senhas com scrypt.
-- LGPD: consentimento obrigatório e versionado, e-mail/nome cifrados (AES-256-GCM) com índice HMAC, exportação e exclusão da conta, trilha de auditoria, minimização (biblioteca pública mostra só o primeiro nome; IA não recebe dados pessoais).
-- Composições com controle de versão otimista, publicação privada / por link / pública / destaque no link principal, playlists e álbuns com ordenação.
-- Upload com validação de tipo e de conteúdo; jobs leves síncronos e pesados em fila Redis.
-- Tradução contextual por IA com cache de 30 dias; assistente "Maestro".
-
-### Frontend (Vite + TypeScript)
-- Desktop estilo macOS: janelas arrastáveis/redimensionáveis, minimizar para o Dock, maximizar, duplo clique fora fecha a janela ativa, ⌘W.
-- Menu lateral recolhível, Dock com magnificação, ícones 3D estilo Pixar com micro-animações.
-- Seletor de idiomas (🇨🇳 🇪🇸 🇬🇧 🇮🇳 🇧🇷): dicionário local + tradução por IA de todo texto visível.
-- Editor de partitura: sistema Sol/Fá, armadura, fórmula, cifras, letra, anotações; drag & drop de notas (diatônico/cromático, duplicar com Alt), redimensionar duração, figuras arrastadas da paleta, atalhos, desfazer/refazer, seleção de compassos, harmonização por trecho, gravação de trechos com contagem.
-- Gestor de camadas, importação (recorte/ganho de áudio, recorte/rotação de foto, cifra com prévia), mesa de edição com exportação, biblioteca, fluxo de IA em grafo, agenda com notas arrastáveis, comunidade com chat e videochamada WebRTC, avatar 3D Maestro (Three.js) com XP.
-
-### Limitações conhecidas (próximas iterações)
-- Migrações de banco ainda via `create_all` → Alembic na v0.2.0.
-- Remoção física de mídia ao excluir conta: job de limpeza na v0.2.0.
-- OMR e transcrição polifônica dependem da qualidade da entrada; revisão manual no editor é esperada.
-- Colaboração simultânea na mesma partitura: canal `score-patch` pronto no realtime, integração no editor na v0.2.0.
+### Limitações conhecidas
+- Modelo **verificado, não validado** (ASME V&V 40). Membrana passiva; meio homogêneo; eletrodo pontual.
+- Fibras C fora do modelo nodal mielinizado.
+- Acupressão e preditor anatômico são regras ilustrativas [HIPÓTESE]; IA preditiva ainda não treinada.
+- Salas WebRTC e grafos Neo4j são perfis opcionais em esqueleto.
