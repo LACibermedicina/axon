@@ -17,7 +17,7 @@ def inline(page: pathlib.Path) -> str:
         html = html.replace(f'href="{rel}"', f'href="{url}"')
     return html
 out = root / "dist"; out.mkdir(exist_ok=True)
-for src, name in [("docs/manual-usuario.html", "manual-usuario.html"), ("docs/manual-tecnico.html", "manual-tecnico.html"), ("site/index.html", "site.html"), ("frontend/index.html", "axon-standalone.html")]:
+for src, name in [("docs/manual-usuario.html", "manual-usuario.html"), ("docs/manual-tecnico.html", "manual-tecnico.html"), ("site/index.html", "site.html"), ("frontend/simulador.html", "axon-standalone.html"), ("frontend/index.html", "inicio.html")]:
     p = root / src
     if p.exists():
         (out / name).write_text(inline(p), encoding="utf-8"); print(out / name)
