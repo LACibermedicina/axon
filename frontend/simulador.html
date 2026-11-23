@@ -45,7 +45,7 @@
 
 <div class="toast" id="toast" role="status" hidden></div>
 <nav class="dock" id="dock" aria-label="Dock de aplicativos"></nav>
-<div class="bot" id="bot" title="Axon Bot"><div class="bubble"></div><div class="art"></div><button id="botMute" aria-label="Silenciar" style="position:absolute;right:0;top:0;border:0;background:rgba(0,0,0,.4);border-radius:10px;font-size:12px">🔊</button></div>
+<div class="bot" id="bot" title="Axon Bot — arraste para mover, clique para conversar"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/reference.js"></script>
@@ -62,6 +62,8 @@
 <script src="js/physio.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/reflexui.js"></script>
+<script src="js/bot3d.js"></script>
+<script src="js/autotrans.js"></script>
 <script>{ try { AxonApp.init(); } catch (e) { console.error(e); document.body.insertAdjacentHTML("beforeend", '<div class="warnbox" style="position:fixed;top:80px;left:20px;z-index:99">Falha ao iniciar o palco 3D: ' + e.message + '</div>'); } }</script>
 </body>
 </html>

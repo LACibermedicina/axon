@@ -2,6 +2,19 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.6.0-alpha] — 2026-11-23
+
+Axon Bot como personagem 3D e tradução da tela inteira por IA ao clicar nas bandeiras.
+
+### Adicionado
+- **Axon Bot 3D:** robô-neurônio com viseira, olhos que piscam e seguem o cursor, antena com "nó de Ranvier" que brilha ao falar e cauda de mielina que acompanha o movimento. Pode ser arrastado para qualquer ponto da tela (a posição fica salva), passeia sozinho pelas bordas quando ninguém interage, comemora seleções de estruturas e pontos reflexos, acena ao receber o mouse e cochila após 90 s parado. Um clique abre a conversa.
+- **Balão de fala** colado à cabeça do bot, do lado com mais espaço, com a ponta apontando para ele; acompanha o bot quando ele se move.
+- **Tradução da tela inteira por IA:** ao clicar numa bandeira, todo o texto visível (painéis, janelas, fichas, dicas, balão do bot) é traduzido de forma contextual. Os números viram marcadores antes do envio, para que valores ao vivo reaproveitem a tradução; siglas, unidades, códigos e etiquetas de procedência ficam como estão. Cache no servidor e no navegador; um indicador ao lado das bandeiras mostra o progresso. Voltar ao 🇧🇷 restaura o original.
+
+### Alterado
+- O app "Tradutor" saiu do Dock: a tradução agora é feita pelas bandeiras.
+- `/api/ai/translate` aceita até 400 textos e um contexto de tela, traduz em lotes de 40 e guarda cache por idioma.
+
 ## [0.5.0-alpha] — 2026-11-23
 
 Página inicial de apresentação do projeto, com diorama voxel 3D animado e acesso direto ao simulador e à documentação.

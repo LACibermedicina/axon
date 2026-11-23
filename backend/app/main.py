@@ -149,12 +149,12 @@ def bot(p: BotIn):
 
 
 class TrIn(BaseModel):
-    texts: List[str] = Field(..., max_length=200); target: str
+    texts: List[str] = Field(..., max_length=400); target: str; context: str = Field("", max_length=300)
 
 
 @app.post("/api/ai/translate")
 def translate(p: TrIn):
     try:
-        return ai.translate(p.texts, p.target)
+        return ai.translate([t[:600] for t in p.texts], p.target, p.context)
     except ValueError as e:
         raise HTTPException(422, str(e))

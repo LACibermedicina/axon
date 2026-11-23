@@ -169,19 +169,66 @@ def bot_answer(question: str, lang: str = "pt", context: Optional[Dict] = None) 
     return {"text": "Modo offline: consulte o Manual do Usuário e o Anexo F do livro.", "mode": "offline", "tag": "PREMISSA"}
 
 
-def translate(texts: List[str], target: str) -> Dict:
+
+
+_TR_CACHE: Dict[str, Dict[str, str]] = {}  # idioma → {texto pt: tradução}; vive com o processo e em /tmp
+_TR_FILE = os.getenv("TRANSLATE_CACHE", "/tmp/axon-translate-cache.json")
+try:
+    with open(_TR_FILE, encoding="utf-8") as _f:
+        _TR_CACHE.update(json.load(_f))
+except Exception:
+    pass
+
+TR_SYSTEM = (
+    "You translate the user interface of 'axon', an in-silico research and teaching simulator of the biophysics of "
+    "neuromodulation (nerve fibers Aα/Aβ/Aδ/C, nodes of Ranvier, dermatomes, TENS, electroacupuncture, taVNS, focused "
+    "ultrasound, safety limits). Source language: Brazilian Portuguese. Translate each string for a screen: concise, "
+    "natural, using the terms a physiologist would use in the target language. Keep unchanged: numbers, units (mA, µs, "
+    "Hz, kPa, mm, °C, dB), symbols and Greek letters, equations, variable names, acronyms (TENS, EA, taVNS, LIFU, SCS, "
+    "TI, FMA, ABVN, point codes like ST36), product names (axon, Axon Bot, BodyParts3D) and anything in square brackets "
+    "such as [LITERATURA] or [PREMISSA]. Placeholders like ⟦0⟧ stand for numbers: keep each one exactly once, moving "
+    "it where the grammar needs. Keep leading/trailing punctuation, arrows and emoji. Never add explanations. "
+    "Answer with a JSON array of strings only, same length and order as the input."
+)
+
+
+def _tr_batch(texts: List[str], target: str, context: str) -> Optional[Dict]:
+    user = f"Target language: {LANGS[target]}\nScreen context: {context or 'general'}\n{json.dumps(texts, ensure_ascii=False)}"
+    r = complete(TR_SYSTEM, user, max_tokens=min(4000, 300 + 60 * len(texts)))
+    if not r:
+        return None
+    try:
+        t = r["text"]
+        out = json.loads(t[t.find("["): t.rfind("]") + 1])
+        if isinstance(out, list) and len(out) == len(texts) and all(isinstance(x, str) for x in out):
+            return {"texts": out, "provider": r["provider"]}
+    except ValueError:
+        pass
+    return None
+
+
+def translate(texts: List[str], target: str, context: str = "") -> Dict:
+    """Traduz strings da interface (origem pt-BR) com cache por idioma, em lotes de 40 por chamada de IA."""
     if target not in LANGS:
         raise ValueError("idioma não suportado")
     if target == "pt":
         return {"texts": texts, "mode": "identity"}
-    sys = ("Translate scientific UI strings. Keep symbols, units, Greek letters, equations and provenance tags "
-           "like [LITERATURA] unchanged. Return a JSON array of strings only.")
-    r = complete(sys, f"Target: {LANGS[target]}\n{json.dumps(texts, ensure_ascii=False)}", max_tokens=2000)
-    if r:
+    cache = _TR_CACHE.setdefault(target, {})
+    miss = list(dict.fromkeys(x for x in texts if x not in cache))
+    provider, failed = None, 0
+    for i in range(0, len(miss), 40):
+        part = miss[i:i + 40]
+        r = _tr_batch(part, target, context)
+        if r is None:
+            failed += len(part)
+            continue
+        provider = r["provider"]
+        cache.update(zip(part, r["texts"]))
+    if miss and failed < len(miss):
         try:
-            out = json.loads(r["text"][r["text"].find("["): r["text"].rfind("]") + 1])
-            if isinstance(out, list) and len(out) == len(texts):
-                return {"texts": out, "mode": "ia", "provider": r["provider"]}
-        except ValueError:
+            with open(_TR_FILE, "w", encoding="utf-8") as f:
+                json.dump(_TR_CACHE, f, ensure_ascii=False)
+        except Exception:
             pass
-    return {"texts": texts, "mode": "offline", "note": "Use os dicionários i18n estáticos do frontend."}
+    mode = "cache" if not miss else ("ia" if not failed else ("parcial" if failed < len(miss) else "offline"))
+    return {"texts": [cache.get(x, x) for x in texts], "mode": mode, "provider": provider, "pending": failed}

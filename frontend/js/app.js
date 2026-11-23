@@ -234,16 +234,6 @@
       gEl.addEventListener("pointerup", () => { if (d && d.m < 3) { if (this.sel && this.sel !== n.id) { this.edges.push([this.sel, n.id]); this.sel = null; } else this.sel = n.id; } d = null; this.draw(b); }); });
   } };
 
-  APPS.app7 = { title: "app7", w: 400, h: 330, render(b) {
-    b.innerHTML = `<div class="flags" style="justify-content:center;font-size:26px;margin-bottom:10px">${g.I18N.langs.map(l => `<button data-l="${l}" class="${l === g.I18N.lang ? "on" : ""}" style="font-size:26px">${g.I18N.FLAGS[l]}</button>`).join("")}</div>
-      <p class="note">Interface: dicionários estáticos (offline). Fichas técnicas livres: IA do servidor (${st.api ? t("online") : t("offline")}). Símbolos, unidades e etiquetas de procedência não são traduzidos.</p>
-      <textarea id="t7" style="width:100%;height:80px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px;font-size:14px">Função de ativação positiva sob o cátodo [LITERATURA]</textarea>
-      <div class="row" style="margin-top:6px"><button class="btn" id="t7b">Traduzir ficha</button></div><div id="t7o" class="card" style="margin-top:8px"></div>`;
-    $$("[data-l]", b).forEach(x => x.onclick = () => { g.I18N.set(x.dataset.l); this.render(b); });
-    $("#t7b", b).onclick = async () => { const o = $("#t7o", b); if (!st.api) { o.innerHTML = `<p>${t("offline")}: a tradução livre requer a API em axon.m3d.pro (chaves de IA via SERVIDOR_ENV).</p>`; return; }
-      o.textContent = "…"; try { const r = await fetch("/api/ai/translate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ texts: [$("#t7", b).value], target: g.I18N.lang }) }).then(r => r.json()); o.textContent = r.texts[0] + "  (" + r.mode + ")"; } catch (e) { o.textContent = t("offline"); } };
-  } };
-
   let a8tab = "chat";
   APPS.app8 = { title: "app8", w: 470, h: 470, render(b) { this.draw(b); }, draw(b) {
     if (b.dataset.tab === a8tab && b.innerHTML) return; b.dataset.tab = a8tab;
@@ -290,7 +280,8 @@
 
   // ---------------------------------------------------------------- Axon Bot (mascote)
   let muted = false, botTimer;
-  function botSay(s) { if (muted) return; const b = $("#bot"); b.querySelector(".bubble").textContent = s; b.classList.add("talk"); clearTimeout(botTimer); botTimer = setTimeout(() => b.classList.remove("talk"), 5200); }
+  let BOT = null;
+  function botSay(s) { if (muted) return; if (BOT) BOT.say(s); }
 
   // ---------------------------------------------------------------- ações
   function setMod(id) {
@@ -337,13 +328,13 @@
   // ---------------------------------------------------------------- inicialização
   function init() {
     // Dock
-    const order = ["app1", "app2", "app3", "app4", "app5", "app6", "app7", "app8", "reflex", "sim"];
+    const order = ["app1", "app2", "app3", "app4", "app5", "app6", "app8", "reflex", "sim"];
     $("#dock").innerHTML = order.map(id => `<button data-app="${id}" aria-label="${t(id)}">${g.AxonIcons[id]}<span class="tip" data-i18n="${id}">${t(id)}</span></button>`).join("")
       + `<button data-app="updates" aria-label="${t("updates")}">${g.AxonIcons.updates}<span class="tip" data-i18n="updates">${t("updates")}</span></button><span class="sep"></span><a href="docs/manual-usuario.html" target="_blank" rel="noopener"><button aria-label="Manuais">${g.AxonIcons.docs}<span class="tip">Manuais</span></button></a>`;
     $$("#dock button[data-app]").forEach(b => b.onclick = () => b.dataset.app === "sim" ? g.AxonSim && g.AxonSim.toggle() : openApp(b.dataset.app));
-    $("#bot .art").innerHTML = g.AxonIcons.bot;
-    $("#bot").onclick = () => openApp("app8");
-    $("#botMute").onclick = e => { e.stopPropagation(); muted = !muted; $("#bot").classList.toggle("muted", muted); $("#botMute").textContent = muted ? "🔇" : "🔊"; };
+    try { BOT = g.AxonBot3D && g.AxonBot3D.init($("#bot"), { onClick: () => openApp("app8"), onMute: m => { muted = m; } }); } catch (e) { BOT = null; }
+    if (!BOT) { $("#bot").innerHTML = `<div class="botgl" style="width:110px;cursor:pointer">${g.AxonIcons.bot}</div>`; $("#bot").style.cssText = "right:16px;bottom:90px;left:auto;top:auto"; $("#bot").onclick = () => openApp("app8"); }
+    ["axon:select", "axon:reflex", "axon:dermatome", "axon:structure"].forEach(ev => document.addEventListener(ev, e => BOT && e.detail && BOT.react(ev === "axon:reflex" ? "spin" : "wave")));
     // idiomas
     $("#flags").innerHTML = g.I18N.langs.map(l => `<button data-l="${l}" title="${l}">${g.I18N.FLAGS[l]}</button>`).join("");
     $$("#flags button").forEach(b => b.onclick = () => g.I18N.set(b.dataset.l));

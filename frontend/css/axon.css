@@ -116,12 +116,7 @@ table.mini td.n{text-align:right;font-family:var(--mono)}
 .dock .sep{width:1px;height:44px;background:rgba(255,255,255,.15);margin:0 2px}
 
 /* Axon Bot */
-.bot{position:fixed;right:18px;bottom:16px;width:118px;z-index:55;cursor:grab;filter:drop-shadow(0 10px 18px rgba(0,0,0,.5))}
-.bot svg{width:100%;animation:float 4s ease-in-out infinite}
 @keyframes float{50%{transform:translateY(-8px)}}
-.bot .bubble{position:absolute;right:104px;bottom:96px;width:230px;background:rgba(14,34,40,.95);border:1px solid rgba(62,230,197,.4);border-radius:14px 14px 4px 14px;padding:9px 11px;font-size:12.5px;color:#d9f;color:#dff;opacity:0;transform:translateY(6px);transition:.25s;pointer-events:none}
-.bot.talk .bubble{opacity:1;transform:none}
-.bot.muted svg{opacity:.45}
 .chat{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;margin-bottom:8px}
 .chat .m{padding:7px 9px;border-radius:10px;font-size:12.5px;max-width:92%}
 .chat .u{align-self:flex-end;background:rgba(79,179,255,.18)}.chat .a{background:rgba(62,230,197,.1)}
@@ -142,12 +137,12 @@ svg.graph .n{cursor:move}svg.graph path{fill:none;stroke-width:2}
   .side.collapsed .side-body{display:none}
   .stage{margin:0 10px;min-height:52vh}
   .win{left:8px!important;right:8px;width:auto!important;top:auto!important;bottom:84px}
-  .bot{width:80px}.dock button{width:40px;height:40px}.scalebar button{padding:5px 6px;font-size:10.5px}
+  .dock button{width:40px;height:40px}.scalebar button{padding:5px 6px;font-size:10.5px}
   .scalebar .lab{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:600px){
-  .menubar .pill,.brand small,.hint,.bot{display:none}
+  .menubar .pill,.brand small,.hint{display:none}
   .brand{position:static;transform:none}
   .flags button{padding:2px 4px}
   .dock{left:0;right:0;bottom:0;transform:none;overflow-x:auto;border-radius:16px 16px 0 0;justify-content:flex-start}
@@ -206,3 +201,27 @@ button.pill{background:none;cursor:pointer}button.pill:hover{color:var(--accent)
 .scr{display:grid;grid-template-columns:92px 1fr;gap:8px;margin:4px 0}.scr i{font-style:normal;color:var(--accent,#3ee6c5);font-weight:600}
 .scf{display:block;margin-top:8px;padding-top:6px;border-top:1px solid var(--line);color:var(--muted);font-size:10.5px}
 @media (max-width:900px){.scalebar .lab{display:none}.sctip{width:260px}}
+
+/* Axon Bot 3D: personagem arrastável e balão de fala colado à cabeça */
+.bot{position:fixed;left:0;top:0;z-index:55;touch-action:none;user-select:none}
+.bot .botgl{display:block;cursor:grab;filter:drop-shadow(0 12px 16px rgba(0,0,0,.45))}
+.bot.drag .botgl{cursor:grabbing}
+.bot .bubble{position:absolute;max-width:260px;background:#f6fbfa;color:#0d2328;border-radius:18px;padding:10px 13px;font-size:13px;line-height:1.45;box-shadow:0 12px 30px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.05);opacity:0;transform:scale(.85);pointer-events:none;transition:opacity .18s,transform .22s cubic-bezier(.3,1.6,.5,1);cursor:pointer;z-index:2}
+.bot .bubble.r{transform-origin:0 var(--tail,30px)}.bot .bubble.l{transform-origin:100% var(--tail,30px)}
+.bot .bubble::after{content:"";position:absolute;top:calc(var(--tail,30px) - 9px);width:0;height:0;border:9px solid transparent}
+.bot .bubble.r::after{left:-15px;border-right:10px solid #f6fbfa;border-left:0}
+.bot .bubble.l::after{right:-15px;border-left:10px solid #f6fbfa;border-right:0}
+.bot.talk .bubble{opacity:1;transform:none;pointer-events:auto}
+.bot .botmute{position:absolute;right:2px;top:2px;border:0;background:rgba(0,0,0,.45);color:#fff;border-radius:10px;font-size:11px;padding:2px 5px;opacity:0;transition:opacity .2s;cursor:pointer}
+.bot:hover .botmute,.bot.muted .botmute{opacity:1}
+.bot.muted .botgl{opacity:.55}
+.bot .zzz{position:absolute;right:16px;top:4px;font:800 14px var(--mono,monospace);color:#bff7ee;opacity:0;pointer-events:none}
+.bot .zzz i,.bot .zzz b{font-style:normal;font-weight:800;margin-left:2px}
+.bot.sleep .zzz{opacity:1;animation:zz 2.4s infinite}
+@keyframes zz{0%{transform:translate(0,6px);opacity:0}30%{opacity:1}100%{transform:translate(10px,-14px);opacity:0}}
+/* indicador da tradução por IA (ao lado das bandeiras) */
+.trpill{display:inline-flex;align-items:center;gap:6px;margin-left:8px;font:600 11px var(--mono,monospace);padding:3px 9px;border-radius:999px;white-space:nowrap;background:rgba(62,230,197,.14);color:#bff7ee;border:1px solid rgba(62,230,197,.35)}
+.trpill.busy i{width:8px;height:8px;border-radius:50%;border:2px solid #3ee6c5;border-right-color:transparent;animation:trs .8s linear infinite}
+.trpill.off{background:rgba(255,179,107,.14);color:#ffd9a8;border-color:rgba(255,179,107,.4)}
+@keyframes trs{to{transform:rotate(360deg)}}
+@media (max-width:600px){.trpill{display:none}}

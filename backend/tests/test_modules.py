@@ -1,4 +1,5 @@
 """Testes das fronteiras de segurança, ruído, integrativas, anatomia e IA (offline)."""
+import json
 import math
 import os
 
@@ -93,3 +94,20 @@ def test_ai_chain_order(monkeypatch):
     monkeypatch.setenv("AI_PROVIDERS", "groq,anthropic")
     assert [p.name for p in ai.chain()][:2] == ["groq", "anthropic"]
     assert "SECRET" not in str(ai.status())
+
+
+def test_translate_batches_and_cache(monkeypatch, tmp_path):
+    from app import ai
+    calls = []
+    def fake(system, user, max_tokens=800):
+        arr = json.loads(user[user.index("["):])
+        calls.append(len(arr))
+        return {"text": json.dumps([f"EN:{x}" for x in arr]), "provider": "fake"}
+    monkeypatch.setattr(ai, "complete", fake)
+    monkeypatch.setattr(ai, "_TR_FILE", str(tmp_path / "c.json"))
+    monkeypatch.setattr(ai, "_TR_CACHE", {})
+    texts = [f"texto {i}" for i in range(85)] + ["texto 0"]
+    r = ai.translate(texts, "en", "teste")
+    assert r["mode"] == "ia" and calls == [40, 40, 5] and r["texts"][0] == "EN:texto 0" and r["texts"][-1] == "EN:texto 0"
+    r2 = ai.translate(["texto 3"], "en")
+    assert r2["mode"] == "cache" and len(calls) == 3 and r2["texts"] == ["EN:texto 3"]
