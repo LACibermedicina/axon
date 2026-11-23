@@ -138,16 +138,28 @@ fi
 PROXY=none
 systemctl is-active --quiet nginx 2>/dev/null && PROXY=nginx
 [[ $PROXY == none ]] && systemctl is-active --quiet apache2 2>/dev/null && PROXY=apache
-DNS_IP="$(dig +short A "$SUBDOMINIO" @1.1.1.1 | tail -1)"
+DNS_IP="$( { dig +short A "$SUBDOMINIO" @1.1.1.1 2>/dev/null || getent ahostsv4 "$SUBDOMINIO" | awk '{print $1}'; } | { grep -E '^[0-9.]+$' || true; } | tail -1)"
 ok "Proxy do host: ${PROXY} · DNS ${SUBDOMINIO} → ${DNS_IP:-não encontrado}"
 case "$PROXY" in
   nginx)
     apt-get install -y certbot python3-certbot-nginx >/dev/null
     VH="/etc/nginx/sites-available/${SUBDOMINIO}"
+    # outros vhosts já atendendo o mesmo domínio (ex.: instalação anterior) são desativados, com backup
+    BK="/etc/nginx/axon-vhost-backup-$(date +%Y%m%d%H%M%S)"; moved=()
+    for f in /etc/nginx/sites-enabled/* /etc/nginx/conf.d/*.conf; do
+      [[ -e "$f" && "$(basename "$f")" != "$SUBDOMINIO" ]] || continue
+      names="$( { grep -oE '(^|[[:space:]{;])server_name[[:space:]][^;]*' "$f" || true; } | sed -E 's/^.*server_name//' | tr ' \t' '\n\n' | { grep -v '^$' || true; } | sort -u)"
+      grep -qxF "$SUBDOMINIO" <<<"$names" || continue
+      if [[ "$(grep -vxF "$SUBDOMINIO" <<<"$names" | { grep -v '^$' || true; })" != "" ]]; then
+        warn "$f também atende outros domínios — não alterado; confira se ele ainda responde por ${SUBDOMINIO}"; continue; fi
+      mkdir -p "$BK"; mv "$f" "$BK/"; moved+=("$f")
+    done
+    [[ ${#moved[@]} -gt 0 ]] && warn "vhosts anteriores de ${SUBDOMINIO} desativados (backup em $BK): ${moved[*]}"
     sed "s/__HTTP_PORT__/${HTTP_PORT}/" infra/host-proxy/nginx-axon.conf > "$VH"
     ln -sf "$VH" "/etc/nginx/sites-enabled/${SUBDOMINIO}"
     if nginx -t >/dev/null 2>&1; then systemctl reload nginx; ok "vhost nginx ativo"
-    else rm -f "/etc/nginx/sites-enabled/${SUBDOMINIO}"; die "vhost quebrou o nginx — removido (rollback)."; fi
+    else rm -f "/etc/nginx/sites-enabled/${SUBDOMINIO}"; for f in "${moved[@]}"; do mv "$BK/$(basename "$f")" "$f"; done
+      die "vhost quebrou o nginx — removido e anteriores restaurados (rollback)."; fi
     [[ -n "$DNS_IP" ]] && certbot --nginx -n --agree-tos -m "$LE_EMAIL" -d "$SUBDOMINIO" --redirect \
       && ok "Let's Encrypt emitido (renovação: certbot.timer)" || warn "Aponte o DNS A de ${SUBDOMINIO} e rode: certbot --nginx -d ${SUBDOMINIO}";;
   apache)
