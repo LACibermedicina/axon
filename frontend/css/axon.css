@@ -412,3 +412,25 @@ body.zen .dkicons{display:none}
 .mbicons.tb11{overflow:visible}
 .ixlupa{right:16px;bottom:auto;top:42%}.ixhint{right:44px;bottom:auto;top:0}
 .guide li .demo{grid-column:2/-1;justify-self:start;margin-top:4px;white-space:nowrap;width:auto;height:auto;padding:4px 10px}
+
+/* v0.11.2 — orelhas sempre visíveis (painel aberto ou fechado), com inverter ⇄ e extrair ⇱ ao passar o mouse */
+.side{overflow:visible}.side-h{border-radius:var(--r) var(--r) 0 0}
+.side-body{border-radius:0 0 var(--r) var(--r)}
+.ears{overflow:visible;max-height:none;padding:0}
+.ear{position:relative;display:flex}
+.ears .ear .lab{position:relative;writing-mode:vertical-rl;text-orientation:mixed;padding:8px 4px;max-height:var(--eh,150px)}
+.ear .eact{position:absolute;top:50%;display:flex;gap:3px;padding:3px;background:rgba(12,30,36,.96);border:1px solid rgba(62,230,197,.35);border-radius:9px;transform:translateY(-50%);opacity:0;pointer-events:none;transition:opacity .12s;z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.ears-left .ear .eact{left:calc(100% + 2px)}.ears-right .ear .eact{right:calc(100% + 2px)}
+.ear:hover .eact,.ear:focus-within .eact{opacity:1;pointer-events:auto}
+.ears .ear .eact button{writing-mode:horizontal-tb;transform:none;width:26px;height:26px;padding:0;border-radius:7px;border:1px solid rgba(62,230,197,.3);font-size:13px;max-height:none}
+.ear .lab::after{content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:#3ee6c5;opacity:.55;bottom:3px;left:50%;margin-left:-2px}
+.ear-swap .lab::after,.ear .lab.tab::after{display:none}
+.ears .ear-swap .lab{writing-mode:horizontal-tb;padding:5px 4px;font-size:12px;transform:none}
+/* painéis invertidos de lado */
+body.sides-swap #left{order:3}body.sides-swap #stage{order:2}body.sides-swap #right{order:1}
+body.sides-swap .ears-left{left:auto;right:100%}body.sides-swap .ears-right{right:auto;left:100%}
+body.sides-swap .ears-left .eact{left:auto;right:calc(100% + 2px)}body.sides-swap .ears-right .eact{right:auto;left:calc(100% + 2px)}
+body.sides-swap .ears-left button.lab{border-radius:9px 0 0 9px;border-left:1px solid rgba(62,230,197,.22);border-right:0;transform:rotate(180deg)}
+body.sides-swap .ears-right button.lab{border-radius:0 9px 9px 0;border-right:1px solid rgba(62,230,197,.22);border-left:0;transform:none}
+body.sides-swap .ears .ear-swap .lab{transform:none}
+body.sides-swap .side-h button{transform:scaleX(-1)}

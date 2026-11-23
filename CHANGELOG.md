@@ -2,6 +2,17 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) · versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.11.2-alpha] — 2026-11-23
+
+As abas laterais continuam visíveis com o painel aberto e permitem inverter ou extrair cada capítulo.
+
+### Alterado
+- **Abas laterais (orelhas):** ficam visíveis com o painel aberto ou fechado; antes sumiam ao abrir o painel.
+  - Ao passar o mouse, cada aba mostra **⇄ inverter**, que leva o capítulo para o painel do outro lado, e **⇱ extrair**, que o abre como janela flutuante (⇲ devolve).
+  - A aba ⇄ do topo troca o painel inteiro de lado.
+  - As escolhas ficam guardadas no navegador.
+  - A altura das abas se ajusta para todas caberem ao lado do painel, também em telas menores.
+
 ## [0.11.1-alpha] — 2026-11-23
 
 Página inicial e simulador passam a mostrar a versão nova logo após cada atualização, e as novidades do portal voltam a aparecer.

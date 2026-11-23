@@ -50,13 +50,58 @@
   }
 
   // ================================================================ abas verticais dos capítulos laterais
+  // As orelhas ficam visíveis com o painel aberto ou fechado. Cada uma leva ao capítulo e tem duas ações:
+  // ⇄ inverte (leva o capítulo para o painel do outro lado) e ⇱ extrai (janela flutuante, devolvida com ⇲).
+  // A orelha do topo inverte o painel inteiro de lado. Escolhas guardadas no navegador.
+  const SIDES = (() => { try { return Object.assign({ swap: false, moved: {} }, JSON.parse(localStorage.getItem("axon.sides.v1") || "{}")); } catch (e) { return { swap: false, moved: {} }; } })();
+  const saveSides = () => { try { localStorage.setItem("axon.sides.v1", JSON.stringify({ swap: SIDES.swap, moved: SIDES.moved })); } catch (e) {} };
+  const MOVED_EL = {};
+  const keyOf = c => (c.dataset.key || ((c.querySelector("h4") || {}).firstChild || {}).textContent || (c.querySelector("h4") || {}).textContent || "").replace(/^⇱/, "").trim();
+  const bodyOf = side => $(side === "left" ? "#leftBody" : "#rightBody");
+  const other = side => side === "left" ? "right" : "left";
+  function applySwap() { document.body.classList.toggle("sides-swap", !!SIDES.swap); setTimeout(() => dispatchEvent(new Event("resize")), 60); }
+  function applyMoves() {
+    Object.entries(SIDES.moved).forEach(([key, to]) => {
+      const tb = bodyOf(to), sb = bodyOf(other(to)); if (!tb || !sb) return;
+      const src = $$(":scope > .card", sb).find(c => keyOf(c) === key);
+      if (src) { tb.appendChild(src); MOVED_EL[key] = src; return; }
+      const el = MOVED_EL[key];
+      if (el && !el.isConnected && !$$(":scope > .card", tb).some(c => keyOf(c) === key)) tb.appendChild(el);   // o painel de destino foi redesenhado
+    });
+  }
+  function invertCard(c, side) {
+    const key = keyOf(c); if (!key) return; const to = other(side);
+    const home = Object.prototype.hasOwnProperty.call(SIDES.moved, key) ? other(SIDES.moved[key]) : side;   // lado original do capítulo
+    if (to === home) delete SIDES.moved[key]; else SIDES.moved[key] = to;
+    bodyOf(to).appendChild(c); MOVED_EL[key] = c; saveSides();
+    const s = $("#" + to); if (s && s.classList.contains("collapsed")) WB().toggleSide(to);
+    setTimeout(() => { c.scrollIntoView({ behavior: "smooth", block: "start" }); c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 900); }, 340);
+  }
+  function extractCard(c) { const b = c.querySelector(":scope > .detach"); if (b) b.click(); }
+  // altura de cada orelha ajustada para todas caberem ao lado do painel
+  function fitEars(s, el) {
+    const labs = $$(".ear:not(.ear-swap) .lab", el).length; if (!labs) return;
+    const avail = Math.max(200, innerHeight - s.getBoundingClientRect().top - 60 - 100);   // da orelha do topo até acima do Dock
+    el.style.setProperty("--eh", Math.max(44, Math.min(150, Math.floor((avail - 34 - labs * 4) / labs))) + "px");
+  }
+  addEventListener("resize", () => ["left", "right"].forEach(x => { const s = $("#" + x), e = s && s.querySelector(".ears"); if (e) fitEars(s, e); }));
   function ears(side) {
     const s = $("#" + side); if (!s) return; let el = s.querySelector(".ears"); if (!el) { el = document.createElement("div"); el.className = "ears ears-" + side; s.appendChild(el); }
-    const cards = $$(".side-body .card", s).filter(c => c.querySelector("h4")); const tabs = side === "left" ? [["anat", "Anatomia"], ["phys", "Biofísica"], ["proto", "Protocolo"]] : [];
-    el.innerHTML = tabs.map(([k, n]) => `<button data-t="${k}" class="tab">${esc(n)}</button>`).join("") + cards.map((c, i) => `<button data-c="${i}">${esc(c.querySelector("h4").textContent.replace(/^⇱/, "").trim().slice(0, 28))}</button>`).join("");
+    const cards = $$(":scope > .card", bodyOf(side)).filter(c => c.querySelector("h4")); const tabs = side === "left" ? [["anat", "Anatomia"], ["phys", "Biofísica"], ["proto", "Protocolo"]] : [];
+    const sig = (SIDES.swap ? "s" : "") + tabs.map(t => t[0]).join() + "|" + cards.map(keyOf).join("|");
+    if (el.dataset.sig === sig) { fitEars(s, el); return; } el.dataset.sig = sig;
+    const lado = (side === "left") !== SIDES.swap ? "direito" : "esquerdo";
+    el.innerHTML = `<div class="ear ear-swap"><button class="lab" data-x="swap" title="Inverter o painel: levar este painel inteiro para o lado ${lado}">⇄</button></div>`
+      + tabs.map(([k, n]) => `<div class="ear"><button class="lab tab" data-t="${k}" title="Abrir a aba ${esc(n)}">${esc(n)}</button></div>`).join("")
+      + cards.map((c, i) => { const n = keyOf(c).slice(0, 28); return `<div class="ear" data-c="${i}"><button class="lab" data-go="${i}" title="Ir para ${esc(n)}">${esc(n)}</button><span class="eact"><button data-x="inv" data-i="${i}" title="Inverter: levar ${esc(n)} para o painel do outro lado">⇄</button><button data-x="ext" data-i="${i}" title="Extrair ${esc(n)} como janela flutuante (⇲ devolve)">⇱</button></span></div>`; }).join("");
+    fitEars(s, el);
     const openSide = () => { if (s.classList.contains("collapsed")) WB().toggleSide(side); };
+    const cur = i => $$(":scope > .card", bodyOf(side)).filter(c => c.querySelector("h4"))[i];   // o painel pode ter sido redesenhado
     $$("[data-t]", el).forEach(b => b.onclick = () => { openSide(); const t = s.querySelector(`[data-tab="${b.dataset.t}"]`); if (t) t.click(); });
-    $$("[data-c]", el).forEach(b => b.onclick = () => { openSide(); const c = cards[+b.dataset.c]; if (c) { c.scrollIntoView({ behavior: "smooth", block: "start" }); c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 900); } });
+    $$("[data-go]", el).forEach(b => b.onclick = () => { openSide(); const c = cur(+b.dataset.go); if (c) { c.scrollIntoView({ behavior: "smooth", block: "start" }); c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 900); } });
+    $$("[data-x=inv]", el).forEach(b => b.onclick = e => { e.stopPropagation(); const c = cur(+b.dataset.i); if (c) invertCard(c, side); });
+    $$("[data-x=ext]", el).forEach(b => b.onclick = e => { e.stopPropagation(); const c = cur(+b.dataset.i); if (c) extractCard(c); });
+    $$("[data-x=swap]", el).forEach(b => b.onclick = () => { SIDES.swap = !SIDES.swap; saveSides(); applySwap(); ["left", "right"].forEach(x => { const e2 = $("#" + x + " .ears"); if (e2) e2.dataset.sig = ""; ears(x); }); });
   }
 
   // ================================================================ parâmetros: simples + avançado
@@ -268,12 +313,12 @@
     if (!A() || !A().registerApp || !WB() || !$(".mbicons") || !g.AxonIcons) return setTimeout(boot, 120);
     A().registerApp("tray", { title: "tray", w: 640, h: 720, render: trayWin, onClose: () => cancelAnimationFrame(TRAY.raf) });
     A().registerApp("patientcard", { title: "patientcard", w: 520, h: 720, render: cardWin });
-    toolbar(); desktopIcons(); botAsk(); ["left", "right"].forEach(ears);
-    const obs = new MutationObserver(() => { requestAnimationFrame(() => { ["left", "right"].forEach(ears); paramsBasic(); guideHook(); physHook(); }); });
+    toolbar(); desktopIcons(); botAsk(); applySwap(); applyMoves(); ["left", "right"].forEach(ears);
+    const obs = new MutationObserver(() => { requestAnimationFrame(() => { applyMoves(); ["left", "right"].forEach(ears); paramsBasic(); guideHook(); physHook(); }); });
     ["#leftBody", "#rightBody"].forEach(s => $(s) && obs.observe($(s), { childList: true })); obs.observe(document.body, { childList: true, subtree: false });
     setInterval(() => { guideHook(); physHook(); paramsBasic(); botAsk(); }, 1200);
     document.addEventListener("axon:case", () => { if (A().isOpen("patientcard")) cardWin(A().body("patientcard")); });
   }
   boot();
-  g.AxonUI11 = { GROUPS, DEMO, TRAY, PC, physDetail };
+  g.AxonUI11 = { GROUPS, DEMO, TRAY, PC, physDetail, SIDES, invertCard, applyMoves };
 })(window);

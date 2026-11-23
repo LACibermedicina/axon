@@ -1,8 +1,18 @@
 {
- "version": "0.11.1-alpha",
+ "version": "0.11.2-alpha",
  "sha": "dev",
- "built_at": "2026-11-23T22:15:08Z",
+ "built_at": "2026-11-23T22:44:59Z",
  "releases": [
+  {
+   "version": "0.11.2-alpha",
+   "date": "2026-11-23",
+   "summary": "As abas laterais continuam visíveis com o painel aberto e permitem inverter ou extrair cada capítulo.",
+   "sections": {
+    "Alterado": [
+     "Abas laterais (orelhas): ficam visíveis com o painel aberto ou fechado; antes sumiam ao abrir o painel. - Ao passar o mouse, cada aba mostra ⇄ inverter, que leva o capítulo para o painel do outro lado, e ⇱ extrair, que o abre como janela flutuante (⇲ devolve). - A aba ⇄ do topo troca o painel inteiro de lado. - As escolhas ficam guardadas no navegador. - A altura das abas se ajusta para todas caberem ao lado do painel, também em telas menores."
+    ]
+   }
+  },
   {
    "version": "0.11.1-alpha",
    "date": "2026-11-23",
