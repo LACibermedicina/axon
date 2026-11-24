@@ -1,8 +1,21 @@
 {
- "version": "0.13.0-alpha",
+ "version": "0.14.0-alpha",
  "sha": "dev",
- "built_at": "2026-11-24T13:26:53Z",
+ "built_at": "2026-11-24T15:24:24Z",
  "releases": [
+  {
+   "version": "0.14.0-alpha",
+   "date": "2026-11-24",
+   "summary": "Novos painéis de análise da predição e de variação de possibilidades, e a histotripsia como método terapêutico.",
+   "sections": {
+    "Adicionado": [
+     "Análise descritiva da predição (ícone \"Análise\" na área de trabalho, analysis.js): - Modelo: campo da fonte pontual; geometria (g-ratio 0,7; internodo 100·D); equação nodal com função de ativação (McNeal 1976; Rattay 1986); limiar Vth/h; bisseção de D*; distribuição de calibres e fração recrutada 1 − Φ((D* − μs)/σ); velocidade de condução; fatores do paciente atual. - Calcular: campo, função de ativação, h, limiar, D* e frações com os números do momento, e o gráfico do limiar em função do diâmetro. - Código: o código-fonte das funções que rodam no simulador (núcleo nodal, limiar, D*, Φ, preditor e fatores), lido da própria função. - Verificação: convergência no passo de tempo (0,135 %) e no número de nós, monotonicidade, recuperação de D* pela bisseção e linearidade.",
+     "Variação de possibilidades (ícone \"Variações\"): - Fibras: Ia, Ib, motoneurônio α, II, γ, III, B, C de raiz dorsal, C-tátil e C simpática, com o limiar de cada uma. As amielínicas usam uma estimativa por cabo contínuo passivo, que dá só a ordem de grandeza. [PREMISSA] - Força-duração: reobase e cronaxia comparadas com os dados humanos (Mogyoros 1996). A discrepância do núcleo passivo fica explícita. - Sensibilidade: gráfico com 10 parâmetros (distância, duração do pulso, ρe, ρi, g-ratio, internodo, nó, cm, gl, Vth), para o limiar de Aβ e para a seletividade Aδ/Aβ. - Cenários terapêuticos, com recrutamento por classe, janela de seletividade, mecanismo e desfecho conferidos no PubMed: TENS convencional e acupuntura-símile (Sluka 2003); eletroacupuntura de 2 e 100 Hz (Han 2003); taVNS (Peuker 2002); bloqueio por kHz (Kilgore 2014); tato afetivo (Löken 2009). - Complexidade: o que o axon simplifica e por que é difícil estabelecer os parâmetros fisiológicos completos.",
+     "Histotripsia como método terapêutico (histo.js): - Modalidade nova: frequência, pressão negativa de pico, repetição dos pulsos, número de pulsos e profundidade. - Cálculo: - pressão no foco corrigida pela atenuação [PREMISSA]; - probabilidade de cavitação pelo limiar intrínseco de 26–30 MPa (Maxwell 2013; Vlaisavljevich 2015); - acréscimo de limiar em tecido rígido (Vlaisavljevich 2014); - tamanho da lesão pela zona focal; - índice mecânico. - Efeito no nervo: perda de condução não seletiva quando o nervo está dentro da lesão. - Alertas: ablação irreversível, que não é neuromodulação; gás no trajeto do feixe no abdome. - Presença no simulador: transdutor 3D na bandeja com o passo a passo, e capítulo teórico no livro: mecanismo, limiar, seletividade por tecido, variantes (Khokhlova 2011), uso clínico (#HOPE4LIVER, Mendiratta-Lala 2024) e simplificações.",
+     "O núcleo h() aceita parâmetros opcionais (g-ratio, internodo, cm, gl, Vth) para a análise de sensibilidade. Sem eles, o cálculo é idêntico ao núcleo Python verificado: Ith(9 µm, 1,2 mm) = 0,412 mA."
+    ]
+   }
+  },
   {
    "version": "0.13.0-alpha",
    "date": "2026-11-24",

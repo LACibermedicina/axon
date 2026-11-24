@@ -173,6 +173,8 @@
       steps: ["Localize o ponto (Atlas) e palpe a área.", "Aplique pressão crescente até sensação firme, abaixo do limiar de dor à pressão.", "Mantenha 1–2 min por ponto, com movimentos circulares lentos se desejado.", "Registre a sensação e a dor no ponto antes e depois."] },
     tavns: { n: "Clipe auricular (taVNS)", k: "elétrica · orelha", d: "Eletrodos na concha da orelha (cymba), território do ramo auricular do vago.", tech: ["tavns"],
       steps: ["Limpe a concha; posicione o eletrodo na cymba conchae (100 % de inervação vagal).", "Use 20–30 Hz, 200–250 µs.", "Suba até sensação clara e confortável, sem dor; controle sham no lóbulo.", "Sessões de 15–60 min; monitore frequência cardíaca."] },
+    hist: { n: "Transdutor de histotripsia", k: "acústica · ablação", d: "Transdutor focado de grande abertura com bolsa d'água: pulsos de microssegundos e pressão negativa acima do limiar de cavitação fracionam o tecido no foco.", tech: [],
+      steps: ["Planeje o alvo por imagem (ultrassom) e confirme a janela acústica: sem gás nem osso no trajeto do feixe.", "Acople a bolsa d'água degaseificada ao paciente.", "Teste a cavitação no foco com pulsos isolados (bolhas visíveis no ultrassom).", "Varra o volume-alvo ponto a ponto com o número de pulsos planejado e acompanhe a zona tratada em tempo real.", "Avalie a zona de ablação por imagem; o resíduo acelular é reabsorvido em semanas a meses."] },
     lifu: { n: "Transdutor de ultrassom (LIFU)", k: "acústica", d: "Transdutor focado de baixa intensidade; neuromodulação em investigação.", tech: [],
       steps: ["Aplique gel e acople o transdutor.", "Defina a intensidade (mW/cm²) e o ciclo de trabalho; observe o índice mecânico e o aquecimento.", "Mantenha a exposição curta e monitore a temperatura.", "Uso experimental: sem parâmetros clínicos estabelecidos."] },
   };
@@ -200,10 +202,14 @@
       const tip = new T.Mesh(new T.SphereGeometry(.075, 20, 16), steel); tip.position.set(.55, .08, 0); gp.add(tip); gp.position.set(.4, 0, 0); G.acu = gp; }
     { const gp = new T.Group(); const c = new T.Mesh(new T.TorusGeometry(.22, .045, 14, 40, Math.PI * 1.4), new T.MeshStandardMaterial({ color: 0xe7ecef, roughness: .35 })); c.rotation.x = Math.PI / 2; c.position.y = .06; gp.add(c);
       [[.22, 0], [-.07, .21]].forEach(([x, z]) => { const e = new T.Mesh(new T.SphereGeometry(.05, 14, 12), gel); e.position.set(x, .06, z); gp.add(e); }); gp.add(cable([[-.2, .06, -.1], [-.1, .1, .4], [.1, .06, .6]], 0x5aa86a));
-      gp.position.set(1.45, 0, -.1); G.tavns = gp; }
+      gp.position.set(1.45, 0, -.55); G.tavns = gp; }
     { const gp = new T.Group(); const b = new T.Mesh(new T.CylinderGeometry(.16, .18, .5, 32), dark); b.rotation.x = Math.PI / 2; b.position.y = .17; gp.add(b);
       const lens = new T.Mesh(new T.SphereGeometry(.16, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), gel); lens.rotation.x = Math.PI / 2; lens.position.set(0, .17, .25); gp.add(lens); gp.add(cable([[0, .17, -.25], [0, .1, -.6], [.3, .06, -.8]], 0x333a3e));
       gp.position.set(2.3, 0, .1); G.lifu = gp; }
+    { const gp = new T.Group(); const dish = new T.Mesh(new T.SphereGeometry(.3, 40, 20, 0, Math.PI * 2, 0, Math.PI / 3.2), new T.MeshStandardMaterial({ color: 0x2c3942, metalness: .55, roughness: .35, side: T.DoubleSide })); dish.rotation.x = Math.PI; dish.position.y = .3; gp.add(dish);
+      const els = new T.MeshStandardMaterial({ color: 0xc88a3a, metalness: .85, roughness: .3 }); for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, e = new T.Mesh(new T.CylinderGeometry(.026, .026, .016, 12), els); e.position.set(Math.cos(a) * .19, .15, Math.sin(a) * .19); gp.add(e); }
+      const bag = new T.Mesh(new T.SphereGeometry(.22, 28, 16), gel); bag.scale.set(1, .45, 1); bag.position.y = .08; gp.add(bag); gp.add(cable([[.25, .22, 0], [.4, .14, -.15], [.5, .06, -.3]], 0x333a3e));
+      gp.position.set(1.4, 0, .62); G.hist = gp; }
     Object.entries(G).forEach(([k, gp]) => { gp.scale.setScalar(1.35); gp.position.x *= .95; gp.userData.k = k; gp.userData.y0 = gp.position.y; sc.add(gp); gp.traverse(o => { if (o.isMesh) { o.userData.k = k; o.material = o.material.clone(); } }); });
     return { r, sc, cam, G, T };
   }
@@ -280,9 +286,9 @@
   }
   function desktopIcons() {
     if ($("#dkIcons")) return; const host = $("#stage") || document.body, el = document.createElement("div"); el.id = "dkIcons"; el.className = "dkicons notr";
-    el.innerHTML = `<button data-d="new" title="Incluir novo caso clínico (texto livre ou formulário)">${I("newcase")}<span>Novo caso</span></button><button data-d="card" title="Cartão do paciente do caso ativo">${I("card")}<span>Paciente</span></button><button data-d="tray" title="Bandeja de instrumentos">${I("tray")}<span>Instrumentos</span></button>`;
+    el.innerHTML = `<button data-d="new" title="Incluir novo caso clínico (texto livre ou formulário)">${I("newcase")}<span>Novo caso</span></button><button data-d="card" title="Cartão do paciente do caso ativo">${I("card")}<span>Paciente</span></button><button data-d="tray" title="Bandeja de instrumentos">${I("tray")}<span>Instrumentos</span></button><button data-d="math" data-tip="Análise descritiva: as equações da predição do diâmetro recrutado, o cálculo passo a passo e o código que o executa">${I("mathdesc")}<span>Análise</span></button><button data-d="var" data-tip="Variação de possibilidades: outras fibras, sensibilidade aos parâmetros, cenários terapêuticos e a complexidade de parametrizar a fisiologia">${I("variation")}<span>Variações</span></button>`;
     host.appendChild(el); $$("[data-d]", el).forEach(b => b.onclick = () => { const d = b.dataset.d; const big = { max: !document.body.classList.contains("dev-mobile") };   // no desktop abrem maximizados: definem os parâmetros gerais da sessão
-      if (d === "new") { PC.mode = "new"; A().openApp("patientcard", big); } if (d === "card") { PC.mode = "view"; A().openApp("patientcard", big); } if (d === "tray") A().openApp("tray", big); });
+      if (d === "new") { PC.mode = "new"; A().openApp("patientcard", big); } if (d === "card") { PC.mode = "view"; A().openApp("patientcard", big); } if (d === "tray") A().openApp("tray", big); if (d === "math") A().openApp("mathdesc", big); if (d === "var") A().openApp("variation", big); });
   }
 
   // ================================================================ rede fisiológica clicável ↔ anatomia

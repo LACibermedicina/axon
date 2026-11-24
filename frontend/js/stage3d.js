@@ -525,7 +525,7 @@
     for (let i = 0; i < pos.count; i++) { const x = a0[i * 3], z = a0[i * 3 + 2]; pos.array[i * 3 + 1] = -depth * Math.exp(-(x * x + z * z) / .03); }
     pos.needsUpdate = true; S.tissue.top.geometry.computeVertexNormals();
     const d = S.dev; ["pad", "ea", "acu", "lifu", "scs", "opto"].forEach(k => d[k].visible = false);
-    const key = { tens: "pad", tavns: "pad", ti: "pad", ea: "ea", acu: "acu", lifu: "lifu", scs: "scs", opto: "opto" }[p.modality] || "pad";
+    const key = { tens: "pad", tavns: "pad", ti: "pad", ea: "ea", acu: "acu", lifu: "lifu", hist: "lifu", scs: "scs", opto: "opto" }[p.modality] || "pad";
     const dv = d[key]; dv.visible = true; dv.position.set(0, 0, 0); dv.rotation.set(0, 0, 0);
     let src = V3(0, 0, 0);
     if (key === "pad") dv.position.y = .012;

@@ -85,7 +85,7 @@
 
 <div class="wrap">
 <nav class="toc" aria-label="Índice">
-  <div class="grp">Começar</div><a href="#atlas">Atlas visual</a><a href="#carga">Carregamento e idiomas</a><a href="#v013">Mapa do atlas e referências</a><a href="#v012">Corpo, aparelho e níveis</a><a href="#v011">Pontos, gestos e diário</a><a href="#sobre">O que é o axon</a><a href="#acesso">Primeiros passos</a><a href="#tela">Anatomia da tela</a>
+  <div class="grp">Começar</div><a href="#atlas">Atlas visual</a><a href="#carga">Carregamento e idiomas</a><a href="#v014">Análise, variações e histotripsia</a><a href="#v013">Mapa do atlas e referências</a><a href="#v012">Corpo, aparelho e níveis</a><a href="#v011">Pontos, gestos e diário</a><a href="#sobre">O que é o axon</a><a href="#acesso">Primeiros passos</a><a href="#tela">Anatomia da tela</a>
   <div class="grp">Navegar</div><a href="#escalas">Zoom semântico em 5 escalas</a><a href="#janelas">Janelas e Dock</a><a href="#paineis">Painéis laterais</a>
   <div class="grp">Simular</div><a href="#apps">Os 8 mini-apps</a><a href="#simulacao">Modo Simulação</a><a href="#modalidades">Modalidades</a><a href="#integrativa">Medicina integrativa</a><a href="#reflexos">Pontos reflexos e camadas</a><a href="#mesa">Mesa, imagens e plano</a><a href="#calibre">Calibre do axônio e grafo</a><a href="#portal">Portal, agenda e podcast</a><a href="#fluxos">Fluxos de trabalho</a>
   <div class="grp">Interpretar</div><a href="#procedencia">Etiquetas de procedência</a><a href="#seguranca">4 fronteiras de segurança</a><a href="#limites">O que os números autorizam</a>
@@ -352,6 +352,28 @@
     <li>No Modo Simulação, os pontos continuam visíveis como alvo: aplique o instrumento sobre eles para ver o recrutamento naquele local.</li>
   </ol>
   <div class="note warn">Os pontos são localizações de referência projetadas sobre um único corpo e servem para ensino. A correspondência com meridianos é a da tradição chinesa e não é mostrada como relação anatômica. Nada aqui indica onde ou como tratar um paciente.</div>
+</section>
+
+<section id="v014">
+  <h2>Análise, variações e histotripsia <span class="mono">v0.14</span></h2>
+  <h3>Análise descritiva da predição (ícone "Análise")</h3>
+  <p>Mostra como o axon chega ao menor diâmetro de fibra recrutado (D*) e à fração de cada classe. A janela tem quatro abas:</p>
+  <ul>
+    <li><b>∑ Modelo:</b> as equações, do campo do eletrodo à fração recrutada, com a procedência de cada uma.</li>
+    <li><b>▶ Calcular:</b> os controles de diâmetro, distância, duração do pulso e corrente; cada passo do cálculo aparece com os números substituídos, e o gráfico mostra o limiar em função do diâmetro.</li>
+    <li><b>&lt;/&gt; Código:</b> o código que roda no simulador, para ler ou copiar.</li>
+    <li><b>✓ Verificação:</b> checagens numéricas feitas na hora (convergência, monotonicidade, bisseção, linearidade).</li>
+  </ul>
+  <h3>Variação de possibilidades (ícone "Variações")</h3>
+  <ul>
+    <li><b>Fibras:</b> outros tipos de fibra (Ia, Ib, γ, B, C nociceptora, C-tátil, C simpática), com o limiar estimado de cada uma. Os números das amielínicas são só ordem de grandeza.</li>
+    <li><b>Força-duração:</b> como o limiar cai com pulsos mais longos, comparado com medidas em humanos.</li>
+    <li><b>Sensibilidade:</b> quanto cada parâmetro físico ou biológico muda o resultado.</li>
+    <li><b>Cenários:</b> TENS convencional e acupuntura-símile, eletroacupuntura de 2 e 100 Hz, taVNS, bloqueio por kHz e tato afetivo, com as fibras recrutadas, o mecanismo e o desfecho publicado.</li>
+    <li><b>Complexidade:</b> por que é difícil ter todos os parâmetros fisiológicos e o que isso significa para a interpretação.</li>
+  </ul>
+  <h3>Histotripsia</h3>
+  <p>A histotripsia aparece como modalidade (Histo) e na bandeja de instrumentos. É ultrassom focado de pressão muito alta em pulsos de microssegundos: a cavitação fraciona o tecido no foco. É <b>ablação irreversível, não neuromodulação</b>. O simulador calcula a pressão no foco, a probabilidade de cavitação, o tamanho da lesão e se um nervo próximo ficaria dentro dela. O livro tem um capítulo sobre o mecanismo, o limiar de cavitação e o uso clínico <span class="tag t-lit">LITERATURA</span>.</p>
 </section>
 
 <section id="v013">
@@ -654,7 +676,7 @@
 
 </main>
 </div>
-<footer>axon v0.13.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../#novidades">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
+<footer>axon v0.14.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../#novidades">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
 <script src="doc.js"></script>
 <script src="../js/boot.js"></script>
 <script src="../js/autotrans.js"></script>

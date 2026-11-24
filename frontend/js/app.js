@@ -37,7 +37,9 @@
     if (elec) { const J = st.p.I * 1e-3 / (st.p.area * 1e-4), duty = Math.min(1, st.p.f * st.p.pw * 1e-6); q = J * J * 3 * duty; }
     if (mod.kind === "acou") q = 2 * 5.76 * st.p.f * st.p.U * 10;           // 2·α·f·I ; I em W/m² (mW/cm² × 10)
     out.th = M.pennes0d(q, st.p.dur); out.q = q;
-    if (mod.kind === "acou") { const p = Math.sqrt(2 * 1.5e6 * 2 * st.p.U * 10) / 1e6; out.mech = M.mechanical(p, st.p.f, st.p.U); }
+    if (mod.kind === "hist" && g.AxonHisto) { const H = g.AxonHisto.focal(st.p); out.hist = H; out.FA = out.FD = null; q = 2 * 5.76 * st.p.f * (H.pin * 1e6) ** 2 / (2 * 1.5e6) * H.duty; out.th = M.pennes0d(q, st.p.dur); out.q = q;
+      out.mech = { MI: H.MI, pk: H.pin, level: H.P1 > .05 ? "risk" : H.pin > 15 ? "warn" : "ok", hist: true }; }
+    else if (mod.kind === "acou") { const p = Math.sqrt(2 * 1.5e6 * 2 * st.p.U * 10) / 1e6; out.mech = M.mechanical(p, st.p.f, st.p.U); }
     else if (st.mod === "acu") out.mech = { MI: 0, pk: st.p.P, level: st.p.P < 200 ? "ok" : st.p.P < 300 ? "warn" : "risk" };
     else out.mech = { MI: 0, ispta: 0, level: "ok" };
     out.Z = 1 + 2 * v.fib;
@@ -75,6 +77,7 @@
     if (mod.kind === "elec") ctl = slider("sF", t("freq"), 1, mod.id === "scs" ? 10000 : mod.id === "ti" ? 4000 : 200, 1, p.f, "Hz") + slider("sI", t("amp"), .05, ({ tens: 50, ti: 50, scs: 10 })[mod.id] || 5, .05, p.I, "mA") + slider("sPw", t("pw"), 20, 500, 10, p.pw, "µs") + slider("sA", t("area"), .005, 10, .005, p.area, "cm²");
     if (mod.kind === "mech") ctl = slider("sP", t("pressure"), 0, 400, 5, p.P, "kPa") + slider("sA", t("area"), .1, 4, .1, p.area, "cm²");
     if (mod.kind === "acou") ctl = slider("sF", t("freq"), .2, 10, .1, p.f, "MHz") + slider("sU", "I_SPTA", 0, 2000, 10, p.U, "mW/cm²");
+    if (mod.kind === "hist") ctl = slider("sF", t("freq"), .25, 3, .05, p.f, "MHz") + slider("sPn", "Pressão negativa de pico (água)", 5, 60, 1, p.Pn, "MPa") + slider("sPrf", "Repetição dos pulsos", 1, 1000, 1, p.prf, "Hz") + slider("sN", "Pulsos por posição", 1, 5000, 10, p.N, "") + slider("sDep", "Profundidade do foco", .5, 15, .5, p.depth, "cm");
     ctl += slider("sR", t("dist"), .3, 3, .05, p.r, "mm") + slider("sD", t("fiber"), 1, 16, .5, p.D, "µm");
     $("#rightBody").innerHTML = `
       <div class="card" data-key="params"><h4>Técnica e parâmetros</h4><div class="ctl"><label><span>${t("modality")}</span></label><div class="seg">${MODS.map(m => `<button data-mod="${m.id}" class="${m.id === st.mod ? "on" : ""}" title="${m.name}">${m.short || m.name}</button>`).join("")}</div><p class="note">${mod.desc}</p></div>
@@ -85,7 +88,7 @@
       <div class="card"><h4>${t("impact")}</h4><div id="impact"></div></div>`;
     $$("#rightBody .seg button").forEach(b => b.onclick = () => setMod(b.dataset.mod));
     const bind = (id, key, obj = st.p) => { const el = $("#" + id); if (!el) return; el.oninput = () => { obj[key] = +el.value; $("#" + id + "o").textContent = el.value + " " + (el.closest(".ctl").querySelector("output").textContent.split(" ").slice(1).join(" ")); update(); }; };
-    [["sF", "f"], ["sI", "I"], ["sPw", "pw"], ["sA", "area"], ["sP", "P"], ["sU", "U"], ["sR", "r"], ["sD", "D"]].forEach(([i, k]) => bind(i, k));
+    [["sF", "f"], ["sI", "I"], ["sPw", "pw"], ["sA", "area"], ["sP", "P"], ["sU", "U"], ["sR", "r"], ["sD", "D"], ["sPn", "Pn"], ["sPrf", "prf"], ["sN", "N"], ["sDep", "depth"]].forEach(([i, k]) => bind(i, k));
     [["vFat", "fat"], ["vDemy", "demy"], ["vSfl", "sfl"], ["vPeri", "peri"], ["vFib", "fib"]].forEach(([i, k]) => bind(i, k, st.v));
   }
   function renderImpact(o) {
@@ -318,6 +321,7 @@
   function setMod(id) {
     const m = MODS.find(x => x.id === id); st.mod = id;
     Object.assign(st.p, { f: m.f, pw: m.pw || st.p.pw, area: m.area, r: m.r }); if (m.I) st.p.I = m.I; if (m.P) st.p.P = m.P; if (m.U) st.p.U = m.U;
+    if (m.kind === "hist") ["Pn", "prf", "N", "cyc", "depth"].forEach(k => { if (st.p[k] == null) st.p[k] = m[k]; });
     renderRight(); update(); renderLeft();
     botSay(`${m.name}: ${m.desc}`);
   }

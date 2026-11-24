@@ -11,8 +11,9 @@
   function h(D, r, o = {}) {
     const pw = o.pw ?? 100e-6, rho_i = o.rho_i ?? P.RHO_I, N = o.N ?? 41, dt = o.dt ?? 1e-6;
     const rho_e = o.rho_e ?? P.RHO_E, ln = o.ln ?? P.LN;
-    const Dc = D * 1e-4, d = 0.7 * Dc, L = 100 * Dc;
-    const Ga = Math.PI * d * d / 4 / (rho_i * L), ar = Math.PI * d * ln, C = P.CM * ar, gl = P.GL * ar;
+    // parâmetros opcionais para a análise de sensibilidade (gr, lk, cm, gl); sem eles o cálculo é idêntico ao núcleo Python
+    const Dc = D * 1e-4, d = (o.gr ?? 0.7) * Dc, L = (o.lk ?? 100) * Dc;
+    const Ga = Math.PI * d * d / 4 / (rho_i * L), ar = Math.PI * d * ln, C = (o.cm ?? P.CM) * ar, gl = (o.gl ?? P.GL) * ar;
     const Ve = new Float64Array(N), drv = new Float64Array(N);
     for (let i = 0; i < N; i++) { const x = (i - (N >> 1)) * L; Ve[i] = -rho_e / (4 * Math.PI * Math.sqrt(x * x + r * r)); }
     for (let i = 1; i < N - 1; i++) drv[i] = Ga * (Ve[i - 1] - 2 * Ve[i] + Ve[i + 1]);
@@ -29,7 +30,7 @@
     }
     return vm;
   }
-  const Ith = (D, r, o) => P.VTH / h(D, r, o);           // A
+  const Ith = (D, r, o) => ((o && o.vth) ?? P.VTH) / h(D, r, o);           // A
   const inDomain = (D, r) => D >= DOMAIN.Dmin - 1e-9 && D <= DOMAIN.Dmax + 1e-9 && r >= DOMAIN.rmin - 1e-9 && r <= DOMAIN.rmax + 1e-9;
 
   function activation(D, r, I) {           // Ve e Δ²Ve por nó (mV) para corrente I (A)

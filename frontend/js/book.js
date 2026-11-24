@@ -38,6 +38,7 @@
     { id: "paciente", t: "O paciente simulado", ev: ["axon:case", "axon:patient"], p: [
       `Sexo, idade, altura, peso e fototipo deformam a malha e alteram o modelo: tecido adiposo afasta o eletrodo da fibra, a idade reduz o calibre e a densidade das fibras grossas, a glicemia reduz axônios. ${L(0, "pre")}`,
       `O caso clínico (fictício) define origem da dor, EVA de base, segmentos e condições; o plano terapêutico ordena as técnicas por adequação e simula o desfecho por sessão. ${L(0, "mod")}`] },
+    { id: "histo", t: "Histotripsia: ablação por cavitação", ev: ["axon:instr"], p: (g.AxonHisto ? g.AxonHisto.THEORY : []).map(([t, x, k, r]) => `<b>${t}.</b> ${x} ${L(0, k)}${r.length ? ` <small>(${r.map(id => g.AxonHisto.REF[id].t.split(".")[0]).join("; ")})</small>` : ""}`) },
     { id: "seg", t: "Segurança", ev: ["axon:interact"], p: [
       `Densidade de carga: o critério de Shannon (k < 1,85) separa combinações de carga por fase e densidade de carga sem lesão observada em estudos com eletrodos. ${L(0, "lit")}`,
       `Aquecimento: a equação biotérmica de Pennes estima o aumento de temperatura pela dissipação de energia e pela perfusão. Locais de risco (tórax para agulhas profundas, seio carotídeo, gestação) aparecem nas fichas dos pontos. ${L(0, "lit")}`] },

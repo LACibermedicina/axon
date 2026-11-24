@@ -15,8 +15,8 @@
   const TG = { lit: ["LITERATURA", "t-lit"], pre: ["PREMISSA", "t-pre"], der: ["DERIVADO", "t-der"], mod: ["RESULTADO DE MODELO - SEMENTE 42", "t-mod"], hip: ["HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO", "t-hip"] };
   const tag = k => `<span class="tag ${TG[k][1]}">${TG[k][0]}</span>`;
   const A = () => g.AxonApp, ST = () => g.AxonStage, M = () => g.AxonModel;
-  const LAMBDA = { tens: 3.2, ea: 2.5, tavns: 2.0, lifu: 25, acu: 3 };
-  const TOOLN = { tens: "Eletrodo TENS", ea: "Agulha de eletroacupuntura", acu: "Sonda de pressão", tavns: "Eletrodo auricular (taVNS)", lifu: "Transdutor LIFU" };
+  const LAMBDA = { tens: 3.2, ea: 2.5, tavns: 2.0, lifu: 25, acu: 3, hist: 25 };
+  const TOOLN = { tens: "Eletrodo TENS", ea: "Agulha de eletroacupuntura", acu: "Sonda de pressão", tavns: "Eletrodo auricular (taVNS)", lifu: "Transdutor LIFU", hist: "Transdutor de histotripsia" };
   const IX = { last: null, lastClick: null, hold: null, lupa: false, res: null, test: { on: false, id: null, start: null, entries: [] }, Dsel: 9, depth: 10, rampS: 4, adv: false };
   const tool = () => (g.AxonWorkbench && g.AxonWorkbench.WB.instr) || null;
   const phi = z => .5 * (1 + Math.tanh(.7978845608 * (z + .044715 * z * z * z)));
@@ -28,7 +28,7 @@
     let lo = Math.log(1), hi = Math.log(16); for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (th(Math.exp(m)) > Ieff) lo = m; else hi = m; } return { D: Math.exp((lo + hi) / 2), thMin: th(16) };
   }
   function evaluate(det, o = {}) {
-    const st = A().state, p = st.p, out = A().compute(), tl = o.tool || tool() || ({ tens: "tens", ea: "ea", acu: "acu", tavns: "tavns", lifu: "lifu" }[st.mod]) || "tens";
+    const st = A().state, p = st.p, out = A().compute(), tl = o.tool || tool() || ({ tens: "tens", ea: "ea", acu: "acu", tavns: "tavns", lifu: "lifu", hist: "hist" }[st.mod]) || "tens";
     const I = o.I != null ? o.I : p.I, pw = (p.pw || 100) * 1e-6, trans = out.trans, nn = det.nn || { name: "nervo cutâneo", mm: 12 };
     const surface = tl === "tens" || tl === "tavns", needle = tl === "ea", fat = st.v.fat || 0;
     const dCut = surface ? (tl === "tavns" ? 1.0 : 1.2) + fat : needle ? Math.max(.3, Math.abs(nn.mm - IX.depth)) : Math.max(.3, nn.mm);
@@ -41,6 +41,13 @@
     if (tl === "acu") {
       const FA = M().acupressure(p.P); classes = [{ cls: "Aβ", frac: FA, note: "mecanorreceptores por pressão" }, { cls: "Aδ", frac: Math.max(0, (p.P - 250) / 300), note: "acima do limiar de dor à pressão" }];
       lim.push("Acupressão: modelo de recrutamento mecânico simplificado (curva sigmoide da pressão) " + "[PREMISSA]");
+    } else if (tl === "hist" && g.AxonHisto) {
+      // ablação: foco a p.depth cm; fibras dentro da lesão perdem a condução, sem seletividade por calibre
+      const H = g.AxonHisto, ctx = g.AxonContext && g.AxonContext.ctx, tis = ctx && ctx.kind === "musculo" ? "musculo" : ctx && ctx.kind === "nervo" ? "nervo" : ctx && ctx.kind === "osso" ? "osso" : "mole";
+      const F = H.focal(Object.assign({}, p, { depth: p.depth || 4 }), tis), dist = Math.abs(nn.mm - (p.depth || 4) * 10), hit = H.onNerve(F, dist);
+      classes = ["Aα", "Aβ", "Aδ", "C"].map(c => ({ cls: c, frac: hit.hit, note: "destruição mecânica (irreversível)" }));
+      IX.hist = { F, dist, hit };
+      lim.push(`Histotripsia: pressão in situ ${fmt(F.pin, 1)} MPa (limiar ${fmt(F.pt, 1)} MPa no tecido ${tis}); probabilidade de cavitação por pulso ${fmt(F.P1 * 100, 0)} %; lesão ≈ ${fmt(F.rl * 2, 1)} × ${fmt(F.al * 2, 1)} mm; ${hit.txt}. Ablação, não neuromodulação [LITERATURA: Maxwell 2013; Vlaisavljevich 2015] [PREMISSA: atenuação linear, zona focal ideal]`);
     } else if (tl === "lifu") {
       classes = [{ cls: "Aβ", frac: Math.min(1, p.U / 2500) }, { cls: "Aδ", frac: Math.max(0, (p.U - 1500) / 3000) }]; lim.push("LIFU: neuromodulação ultrassônica tem mecanismo em investigação; curva ilustrativa [HIPÓTESE]");
     } else {
@@ -68,6 +75,9 @@
       if (SAF && SAF.pregnancy.includes(code)) alerts.push(`${code} está entre os pontos tradicionalmente evitados na gestação (estímulo uterino) [LITERATURA: OMS, Guidelines on basic training and safety in acupuncture, 1999]`);
     }
     if (V.ascites >= 2 && zone && zone !== "lombossacral" && (tl === "ea" || tl === "acu")) alerts.push(`Ascite grau ${V.ascites}: parede abdominal distendida; agulha ou pressão profunda no abdome podem atingir líquido e vísceras [PREMISSA]`);
+    if (tl === "hist") { alerts.push("Histotripsia é ablativa: o tecido no foco é destruído de forma irreversível; não é neuromodulação [LITERATURA: Xu 2021]");
+      if (IX.hist && IX.hist.hit.hit > 0) alerts.push(`O nervo ${nn.name || ""} está dentro da lesão simulada: perda de condução em todas as classes de fibra`);
+      if (zone === "abdome" || zone === "pelve") alerts.push("No abdome, gás intestinal no trajeto do feixe bloqueia ou desvia a energia [PREMISSA]"); }
     if (V.wasting > .3 && tl === "ea") alerts.push("Pouca gordura subcutânea (caquexia simulada): nervos, vasos e ossos ficam mais superficiais; reduza a profundidade [PREMISSA]");
     const sh = out.sh;
     return { alerts, t: Date.now(), tool: tl, mod: st.mod, I, f: p.f, pw: p.pw, area: p.area, P: p.P, depth: needle ? IX.depth : null, point: det.point, derm: det.code || null, name: det.name || null, nerve: nn.name, mm: nn.mm,
@@ -234,7 +244,7 @@
   function download(name, txt, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
   // registro de testes: barra de ícones (descrição ao passar o mouse), um teste por linha que se abre ao clicar
   const TV = { full: false, lim: false, open: null };
-  const TOOLIC = { tens: "⚡", ea: "📍", acu: "👆", tavns: "👂", lifu: "〰" };
+  const TOOLIC = { tens: "⚡", ea: "📍", acu: "👆", tavns: "👂", lifu: "〰", hist: "💥" };
   function testsWin(b) {
     const T = IX.test, n = T.entries.length, pc = (e, c) => ((e.classes.find(x => x.cls === c) || {}).frac || 0) * 100;
     const ib = (id, ic, tip, on, dis) => `<button class="ib${on ? " on" : ""}" id="${id}" data-tip="${esc(tip)}" aria-label="${esc(tip)}" ${dis ? "disabled" : ""}>${ic}</button>`;
@@ -263,5 +273,5 @@
     document.addEventListener("axon:instr", () => { if (IX.pending && tool()) { const d = IX.pending; IX.pending = null; applyAt(d); } render(); });
   }
   boot();
-  g.AxonInteract = { IX, applyAt, evaluate, startTests, stopTests, explainShort, get result() { return IX.res; } };
+  g.AxonInteract = { IX, Dstar, phi, applyAt, evaluate, startTests, stopTests, explainShort, get result() { return IX.res; } };
 })(window);

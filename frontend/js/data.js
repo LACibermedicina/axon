@@ -10,6 +10,10 @@
     farmer: "Farmer AD, et al. International consensus based review and recommendations for minimum reporting standards in research on transcutaneous vagus nerve stimulation. Front Hum Neurosci. 2021;14:568051.",
     shannon: "Shannon RV. A model of safe levels for electrical stimulation. IEEE Trans Biomed Eng. 1992;39(4):424-6.",
     rattay: "Rattay F. Analysis of models for external stimulation of axons. IEEE Trans Biomed Eng. 1986;33(10):974-7.",
+    maxwell13: "Maxwell AD, Cain CA, Hall TL, Fowlkes JB, Xu Z. Probability of cavitation for single ultrasound pulses applied to tissues and tissue-mimicking materials. Ultrasound Med Biol. 2013;39(3):449-65.",
+    vlais15: "Vlaisavljevich E, et al. Effects of ultrasound frequency and tissue stiffness on the histotripsy intrinsic threshold for cavitation. Ultrasound Med Biol. 2015;41(6):1651-67.",
+    xu21: "Xu Z, Hall TL, Vlaisavljevich E, Lee FT Jr. Histotripsy: the first noninvasive, non-ionizing, non-thermal ablation technique based on ultrasound. Int J Hyperthermia. 2021;38(1):561-575.",
+    hope24: "Mendiratta-Lala M, et al. The #HOPE4LIVER single-arm pivotal trial for histotripsy of primary and metastatic liver tumors. Radiology. 2024;312(3):e233051.",
     coste: "Coste B, et al. Piezo1 and Piezo2 are essential components of distinct mechanically activated cation channels. Science. 2010;330(6000):55-60."
   };
   const MODS = [
@@ -20,6 +24,7 @@
     { id: "tavns", name: "taVNS", kind: "elec", f: 25, I: 0.5, pw: 250, area: 0.5, r: 0.8, desc: "Concha auricular (ABVN) → NTS. 20–30 Hz; 200–250 µs." },
     { id: "lifu", name: "LIFU", kind: "acou", f: 0.5, U: 500, pw: 0, area: 1, r: 1.0, desc: "Ultrassom focalizado: compromisso difração × atenuação." },
     { id: "ti", name: "Interferência temporal", short: "TI", kind: "elec", f: 2000, I: 0.6, pw: 100, area: 4, r: 1.0, desc: "Batimento de duas portadoras kHz; resolução centimétrica." },
+    { id: "hist", name: "Histotripsia", short: "Histo", kind: "hist", f: 1.0, Pn: 32, prf: 100, N: 500, cyc: 2, depth: 4, pw: 0, area: 1, r: 1.0, desc: "Ultrassom focado de pressão muito alta em pulsos de microssegundos: a cavitação fraciona o tecido no foco. Ablação mecânica e irreversível, não é neuromodulação." },
     { id: "opto", name: "Optoacústica", short: "Opto", kind: "acou", f: 6.6, U: 200, pw: 0, area: .0003, r: 0.3, desc: "Fibra afilada 20 µm, 6,6 MHz, precisão ≈ 39,6 µm (campo próximo)." }
   ];
   const REGIONS = {
@@ -49,6 +54,7 @@
     acu: [["Deformação de membrana ativa Piezo2/TRAAK em Aβ", "lit", "coste"], ["Inibição segmentar via portão; sem risco eletroquímico", "lit", "melzack"], ["Relação pressão→fração ativada (Boltzmann)", "pre"]],
     tavns: [["Aferentes Aβ do ABVN → NTS", "lit", "peuker"], ["LC, rafe, PAG e via colinérgica anti-inflamatória (α7nAChR)", "hip"], ["Parâmetros usuais 20–30 Hz, 200–250 µs", "lit", "farmer"]],
     lifu: [["λ = c/f: foco de 10 µm exige 150 MHz e 75 dB/cm", "der"], ["Ativação mecânica de canais (Piezo/TRAAK)", "lit", "coste"]],
+    hist: [["Cavitação acima do limiar intrínseco (26–30 MPa em tecidos com muita água)", "lit", "maxwell13"], ["Limiar pouco dependente da frequência e da rigidez; tendão +2–3 MPa", "lit", "vlais15"], ["Ablação não térmica e não ionizante; resíduo acelular reabsorvido", "lit", "xu21"], ["Tumores hepáticos: sucesso técnico 95 %, complicações maiores 7 %", "lit", "hope24"]],
     ti: [["Envelope de batimento em profundidade; resolução centimétrica", "lit", "teixeira"]],
     opto: [["Campo próximo contorna a difração: ≈ 39,6 µm", "lit", "teixeira"]]
   };

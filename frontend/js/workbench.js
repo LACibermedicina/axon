@@ -57,6 +57,7 @@
     { id: "scs", ic: "app2", n: "SCS", k: "elétrica · implantada", d: "Estimulação da medula espinal (estudo biofísico)" },
     { id: "ti", ic: "app2", n: "Interferencial (TI)", k: "elétrica · superfície", d: "Batimento entre duas portadoras de kHz" },
     { id: "lifu", ic: "app5", n: "Ultrassom focado (LIFU)", k: "acústica", d: "Uso experimental; fronteiras térmicas e mecânicas" },
+    { id: "hist", ic: "hist", n: "Histotripsia", k: "acústica · ablação", d: "Cavitação focal fraciona o tecido (irreversível); comparação com neuromodulação" },
   ];
   const WB = { mode: null, instr: null };
   function updateChip() { const c = $("#modeChip"); if (!c) return; const m = MODES.find(x => x.id === WB.mode), i = INSTR.find(x => x.id === WB.instr) || INSTR.find(x => x.id === (A() && A().state.mod));
