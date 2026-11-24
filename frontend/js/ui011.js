@@ -34,20 +34,33 @@
         ["relations", "Músculo ↔ nervo", "Inervação e estruturas relacionadas", () => open("relations")], ["terminals", "Terminações nervosas", "Até a placa motora, por grupo anatômico; receptores da pele", () => open("terminals")],
         ["morpho", "Calibre do axônio", "Predição por biometria e clínica", () => open("morpho")], ["maps", "Mapas do caso", "Pontos sugeridos e disponíveis", () => open("maps")]] },
       { id: "vista", n: "Vista", ic: "hideall", items: [["panelL", "Painel esquerdo", "Anatomia, biofísica, protocolo", () => WB().toggleSide("left")], ["panelR", "Painel direito", "Técnica e parâmetros, impacto", () => WB().toggleSide("right")],
-        ["hideall", "Ocultar tudo (\\)", "Só o modelo na tela", () => WB().zen()], ["notes", "Notas (post-its)", "Mostrar ou ocultar o painel de notas", () => g.AxonNotes && g.AxonNotes.toggle()]] },
+        ["hideall", "Ocultar tudo (\\)", "Só o modelo na tela", () => WB().zen()], ["notes", "Notas (post-its)", "Mostrar ou ocultar o painel de notas", () => g.AxonNotes && g.AxonNotes.toggle()],
+        ["tools", g.AxonDevice ? g.AxonDevice.label() : "Interface", "Detectada pelo aparelho (celular, tablet ou desktop); clique para alternar: automática → celular → tablet → desktop", () => { g.AxonDevice && g.AxonDevice.cycle(); }]] },
     ];
   };
   function toolbar() {
     const old = $(".mbicons"); if (!old || old.dataset.v === "11") return; old.dataset.v = "11"; old.classList.add("tb11");
     const draw = () => { const G = GROUPS(); old.innerHTML = G.map(gr => `<div class="tbg" data-g="${gr.id}"><button class="tbb" aria-haspopup="true">${I(gr.ic)}<span>${esc(gr.n)}</span></button>
-      <div class="tbm" role="menu">${gr.sub ? `<div class="tbsub">${esc(gr.sub)}</div>` : ""}${gr.items.map(([ic, n, d], i) => `<button role="menuitem" data-i="${i}">${I(ic)}<span><b>${esc(n)}</b><small>${esc(d)}</small></span></button>`).join("")}</div></div>`).join("")
-      + `<button class="tbq ${g.AxonInteract && g.AxonInteract.IX.test.on ? "on" : ""}" data-ix="tests" title="Iniciar testes">${I("tests")}<span>Iniciar testes</span></button>`;
+      <div class="tbm" role="menu">${gr.sub ? `<div class="tbsub">${esc(gr.sub)}</div>` : ""}${gr.items.map(([ic, n, d], i) => `<button role="menuitem" data-i="${i}" data-tip="${esc(n)}: ${esc(d)}" aria-label="${esc(n)}">${I(ic)}<span>${esc(n.length > 22 ? n.slice(0, 21) + "…" : n)}</span></button>`).join("")}</div></div>`).join("")
+      + `<button class="tbq ${g.AxonInteract && g.AxonInteract.IX.test.on ? "on" : ""}" data-ix="tests" data-tip="Iniciar ou encerrar uma sessão de testes: cada aplicação fica registrada">${I("tests")}<span>Iniciar testes</span></button>`;
       $$(".tbg", old).forEach(el => { const gr = G.find(x => x.id === el.dataset.g); el.querySelector(".tbb").onclick = e => { e.stopPropagation(); const on = !el.classList.contains("open"); $$(".tbg.open").forEach(x => x.classList.remove("open")); el.classList.toggle("open", on); };
         $$(".tbm [data-i]", el).forEach(b => b.onclick = () => { el.classList.remove("open"); gr.items[+b.dataset.i][3](); }); });
       $(".tbq", old).onclick = () => { const X = g.AxonInteract; if (!X) return; X.IX.test.on ? X.stopTests() : X.startTests(); open("tests"); draw(); }; };
     draw(); document.addEventListener("click", () => $$(".tbg.open").forEach(x => x.classList.remove("open")));
     ["axon:case", "axon:tests", "axon:lang"].forEach(ev => document.addEventListener(ev, () => setTimeout(() => { const n = $(".mbicons"); if (n && n.dataset.v === "11") draw(); else toolbar(); }, 60)));
   }
+
+  // ================================================================ dicas ao passar o mouse ([data-tip]) — no lugar de títulos longos
+  (() => { let tipEl = null, cur = null, tm = 0;
+    const show = el => { const t = el.dataset.tip; if (!t) return; if (!tipEl) { tipEl = document.createElement("div"); tipEl.className = "axtip notr"; document.body.appendChild(tipEl); }
+      tipEl.textContent = t; tipEl.style.display = "block"; const r = el.getBoundingClientRect(), w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+      let x = r.left + r.width / 2 - w / 2, y = r.top - h - 8; if (y < 6) y = r.bottom + 8; x = Math.max(6, Math.min(innerWidth - w - 6, x)); tipEl.style.left = x + "px"; tipEl.style.top = y + "px"; tipEl.classList.add("on"); };
+    const hide = () => { clearTimeout(tm); cur = null; if (tipEl) { tipEl.classList.remove("on"); tipEl.style.display = "none"; } };
+    document.addEventListener("pointerover", e => { if (e.pointerType === "touch") return; const el = e.target.closest && e.target.closest("[data-tip]"); if (el === cur) return; hide(); if (!el) return; cur = el; tm = setTimeout(() => show(el), 260); });
+    document.addEventListener("pointerdown", hide, true); addEventListener("scroll", hide, true);
+    // toque: pressionar e segurar mostra a dica
+    document.addEventListener("touchstart", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (!el) return; clearTimeout(tm); tm = setTimeout(() => { show(el); setTimeout(hide, 2200); }, 450); }, { passive: true });
+    document.addEventListener("touchend", () => clearTimeout(tm), { passive: true }); })();
 
   // ================================================================ abas verticais dos capítulos laterais
   // As orelhas ficam visíveis com o painel aberto ou fechado. Cada uma leva ao capítulo e tem duas ações:
@@ -234,8 +247,16 @@
     ynsa: ["Revisão sistemática com estudos pequenos em condições dolorosas.", "BrJP. 2018;1(2):180-3.", null],
   };
   const litOf = id => LITR[id.startsWith("tens") ? "tens" : id] || null;
+  // avatar do cartão: sexo, fototipo e silhueta conforme a condição (gestação, ascite, IMC)
   function avatar(P) { const f = P.sex === "F", tone = { I: "#f6dcc8", II: "#eccab0", III: "#d9a982", IV: "#b98058", V: "#8a5a3b", VI: "#5c3a26" }[P.fitz || "III"] || "#d9a982";
-    return `<svg viewBox="0 0 80 96" class="pcav"><rect width="80" height="96" rx="12" fill="#0f2228"/><circle cx="40" cy="36" r="17" fill="${tone}"/>${f ? `<path d="M22 36q0-24 18-24t18 24q-4-12-18-12t-18 12z" fill="#3b2a20"/><path d="M22 36q-2 18 6 22M58 36q2 18-6 22" stroke="#3b2a20" stroke-width="5" fill="none"/>` : `<path d="M23 32q2-18 17-18t17 18q-6-8-17-8t-17 8z" fill="#3b2a20"/>`}<path d="M10 96q4-26 30-26t30 26z" fill="${f ? "#d36c9b" : "#3a7bd5"}"/></svg>`; }
+    const B = P.weight / ((P.height / 100) ** 2), wide = Math.max(-6, Math.min(12, (B - 23) * .9)), belly = (f && P.preg >= 14 ? Math.min(14, (P.preg - 12) * .55) : 0) + [0, 0, 5, 10][P.ascites | 0], col = f ? "#d36c9b" : "#3a7bd5";
+    return `<svg viewBox="0 0 80 96" class="pcav"><rect width="80" height="96" rx="12" fill="#0f2228"/><circle cx="40" cy="30" r="${B < 17 ? 13 : 15}" fill="${tone}"/>${f ? `<path d="M24 30q0-22 16-22t16 22q-4-11-16-11t-16 11z" fill="#3b2a20"/><path d="M24 30q-2 16 5 20M56 30q2 16-5 20" stroke="#3b2a20" stroke-width="4.5" fill="none"/>` : `<path d="M25 27q2-16 15-16t15 16q-5-7-15-7t-15 7z" fill="#3b2a20"/>`}
+      <path d="M${12 - wide / 2} 96q2-${24 + belly * .3} 28-${26 + belly * .2}t28 ${26 + belly * .2}q${wide / 2} 0 ${wide / 2} 0z" fill="${col}"/>${belly ? `<ellipse cx="40" cy="${84 - belly * .2}" rx="${10 + belly * .5}" ry="${6 + belly * .45}" fill="${col}" stroke="#0f2228" stroke-opacity=".25"/>` : ""}</svg>`; }
+  document.addEventListener("axon:patient", () => { const w = document.querySelector('.win[data-app="patientcard"] .body'); if (w) cardWin(w); });
+  const condTags = P => { const B = P.weight / ((P.height / 100) ** 2), t = [];
+    if (P.sex === "F" && P.preg > 0) t.push(`🤰 gestante · ${P.preg} sem`); if (P.ascites) t.push(`ascite grau ${P.ascites}`);
+    if (B < 18.5) t.push(B < 16 ? "magreza grave" : "baixo peso"); else if (B >= 30) t.push("obesidade"); if (P.waist) t.push(`perímetro abdominal ${P.waist} cm`);
+    return t.length ? `<span class="pc-cond">${t.map(x => `<i>${esc(x)}</i>`).join("")}</span>` : ""; };
   function cardWin(b) {
     const c = cs(), P = g.AxonDissect ? g.AxonDissect.PT : {}, bmi = P.weight / ((P.height / 100) ** 2); let rows = [];
     try { rows = c && A().state.mc && g.AxonPlanner ? g.AxonPlanner.plan(c).slice(0, 4) : []; } catch (e) {}
@@ -244,7 +265,7 @@
         <textarea id="pcQ" rows="4" placeholder="Ex.: Homem, 61 anos, 1,78 m, 92 kg, fototipo III, diabético há 12 anos (HbA1c 8,4 %). Queimação e dormência nos pés há 2 anos, pior à noite, EVA 6."></textarea>
         <div class="row" style="gap:6px"><button class="btn" id="pcGo">Criar caso e cartão</button><button class="btn ghost" id="pcCancel">${c ? "Voltar ao cartão" : "Cancelar"}</button><span id="pcSt" class="note"></span></div></div>` : ""}
       ${c && PC.mode !== "new" ? `<div class="idcard"><div class="id-h"><span>CASO FICTÍCIO · ${pid}</span><span>${new Date().toLocaleDateString()}</span></div>
-        <div class="id-b">${avatar(P)}<div class="id-f"><b>${P.sex === "F" ? "Mulher" : "Homem"}, ${P.age} anos</b><span>${P.height} cm · ${P.weight} kg · IMC ${fmt(bmi, 1)} · fototipo ${esc(P.fitz)}</span>
+        <div class="id-b">${avatar(P)}<div class="id-f"><b>${P.sex === "F" ? "Mulher" : "Homem"}, ${P.age} anos</b><span>${P.height} cm · ${P.weight} kg · IMC ${fmt(bmi, 1)} · fototipo ${esc(P.fitz)}</span>${condTags(P)}
           <span class="cc"><b>Queixa principal:</b> ${esc(c.title)}</span><span>${esc(c.pain.mechanism || "")}</span>
           <span>Dor ${esc(c.pain.origin)} · <b>EVA ${c.pain.baseline}</b> · segmentos ${esc(c.pain.dermatomes.join(", "))}</span>${(c.conditions || []).length ? `<span>Condições: ${esc(c.conditions.map(x => x.label).join(", "))}</span>` : ""}</div></div>
         <div class="id-m"><h5>Métodos mais indicados ao quadro</h5>${rows.map(r => { const L = litOf(r.id), pr = (r.oc.off.pResp || 0) * 100;
@@ -260,7 +281,8 @@
   function desktopIcons() {
     if ($("#dkIcons")) return; const host = $("#stage") || document.body, el = document.createElement("div"); el.id = "dkIcons"; el.className = "dkicons notr";
     el.innerHTML = `<button data-d="new" title="Incluir novo caso clínico (texto livre ou formulário)">${I("newcase")}<span>Novo caso</span></button><button data-d="card" title="Cartão do paciente do caso ativo">${I("card")}<span>Paciente</span></button><button data-d="tray" title="Bandeja de instrumentos">${I("tray")}<span>Instrumentos</span></button>`;
-    host.appendChild(el); $$("[data-d]", el).forEach(b => b.onclick = () => { const d = b.dataset.d; if (d === "new") { PC.mode = "new"; open("patientcard"); } if (d === "card") { PC.mode = "view"; open("patientcard"); } if (d === "tray") open("tray"); });
+    host.appendChild(el); $$("[data-d]", el).forEach(b => b.onclick = () => { const d = b.dataset.d; const big = { max: !document.body.classList.contains("dev-mobile") };   // no desktop abrem maximizados: definem os parâmetros gerais da sessão
+      if (d === "new") { PC.mode = "new"; A().openApp("patientcard", big); } if (d === "card") { PC.mode = "view"; A().openApp("patientcard", big); } if (d === "tray") A().openApp("tray", big); });
   }
 
   // ================================================================ rede fisiológica clicável ↔ anatomia

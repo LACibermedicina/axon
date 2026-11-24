@@ -85,7 +85,7 @@
 
 <div class="wrap">
 <nav class="toc" aria-label="Índice">
-  <div class="grp">Começar</div><a href="#atlas">Atlas visual</a><a href="#carga">Carregamento e idiomas</a><a href="#v011">Pontos, gestos e diário</a><a href="#sobre">O que é o axon</a><a href="#acesso">Primeiros passos</a><a href="#tela">Anatomia da tela</a>
+  <div class="grp">Começar</div><a href="#atlas">Atlas visual</a><a href="#carga">Carregamento e idiomas</a><a href="#v012">Corpo, aparelho e níveis</a><a href="#v011">Pontos, gestos e diário</a><a href="#sobre">O que é o axon</a><a href="#acesso">Primeiros passos</a><a href="#tela">Anatomia da tela</a>
   <div class="grp">Navegar</div><a href="#escalas">Zoom semântico em 5 escalas</a><a href="#janelas">Janelas e Dock</a><a href="#paineis">Painéis laterais</a>
   <div class="grp">Simular</div><a href="#apps">Os 8 mini-apps</a><a href="#simulacao">Modo Simulação</a><a href="#modalidades">Modalidades</a><a href="#integrativa">Medicina integrativa</a><a href="#reflexos">Pontos reflexos e camadas</a><a href="#mesa">Mesa, imagens e plano</a><a href="#calibre">Calibre do axônio e grafo</a><a href="#portal">Portal, agenda e podcast</a><a href="#fluxos">Fluxos de trabalho</a>
   <div class="grp">Interpretar</div><a href="#procedencia">Etiquetas de procedência</a><a href="#seguranca">4 fronteiras de segurança</a><a href="#limites">O que os números autorizam</a>
@@ -354,6 +354,36 @@
   <div class="note warn">Os pontos são localizações de referência projetadas sobre um único corpo e servem para ensino. A correspondência com meridianos é a da tradição chinesa e não é mostrada como relação anatômica. Nada aqui indica onde ou como tratar um paciente.</div>
 </section>
 
+<section id="v012">
+  <h2>Corpo do paciente, aparelho e níveis por estrutura <span class="mono">v0.12</span></h2>
+  <h3>O corpo segue o paciente</h3>
+  <p>Na janela <b>Biometria do paciente</b> (Caso → Biometria) ou descrevendo o caso em texto livre, o corpo 3D muda conforme o paciente simulado. Exemplos de texto que o sistema entende: “gestante de 28 semanas”, “3º trimestre”, “ascite grau 3”, “perímetro abdominal 112 cm”, “caquexia”.</p>
+  <ul>
+    <li><b>Sexo e estatura:</b> contorno, mamas e órgãos pélvicos femininos; a altura do corpo acompanha o valor informado.</li>
+    <li><b>Gestação (0 a 42 semanas):</b> o útero cresce com a idade gestacional e empurra a parede abdominal. O fundo uterino segue a regra de McDonald <span class="tag t-lit">LITERATURA</span>.</li>
+    <li><b>Ascite (graus 1 a 3):</b> o grau 1 só aparece ao ultrassom; os graus 2 e 3 distendem o abdome e abaúlam os flancos.</li>
+    <li><b>Perímetro abdominal:</b> deixe em “automático” para ver o que resulta do peso e da condição, ou escolha o valor; o modelo mostra o perímetro medido.</li>
+    <li><b>Magreza extrema (IMC abaixo de 18,5):</b> menos gordura e massa muscular.</li>
+  </ul>
+  <p>Os pontos de acupuntura, nervos e marcadores acompanham o corpo. Ao aplicar um instrumento, a explicação avisa sobre a condição: por exemplo, corrente elétrica sobre o abdome de uma gestante, pontos tradicionalmente evitados na gestação, agulha profunda no abdome com ascite.</p>
+  <p class="note"><span class="tag t-pre">PREMISSA</span> É uma única malha anatômica deformada; útero, feto e ascite são esquemáticos, para ensino.</p>
+  <h3>Painel de propriedades</h3>
+  <p>O cartão do paciente, a explicação, o registro de testes e outras janelas de propriedades abrem incorporados ao painel direito, na seção <b>Propriedades</b>. Clique no título para recolher; <b>⇱</b> (ou arrastar o título para fora) solta como janela; <b>⇲</b> (ou soltar a janela sobre o painel direito) reincorpora. No computador, os ícones <b>Novo caso</b>, <b>Paciente</b> e <b>Instrumentos</b> abrem maximizados, porque definem os parâmetros gerais da sessão.</p>
+  <h3>Celular, tablet e computador</h3>
+  <p>O axon reconhece o aparelho e adapta a tela. No celular, o modelo ocupa a tela; os painéis abrem como gavetas pela barra inferior (Corpo, Anatomia, Propriedades, Instrumentos, Mais) e as janelas como folhas. Para trocar, use <b>Vista → Interface</b> (automática, celular, tablet, desktop).</p>
+  <h3>Os níveis correspondem ao que você escolheu</h3>
+  <p>Selecione uma estrutura no corpo e entre nos níveis (duplo clique segurando, ou a roda do mouse). O que aparece depende do tecido:</p>
+  <div class="scroll"><table class="stack"><tr><th>Seleção</th><th>Nível 2</th><th>Nível 3</th><th>Nível 4</th></tr>
+    <tr><td>Pele</td><td>Camadas da pele</td><td>Nervo cutâneo</td><td>Corpúsculo de Pacini</td></tr>
+    <tr><td>Músculo</td><td>Pele, gordura, epimísio, fascículos, ponto motor e zona de placas</td><td>Fascículo muscular, axônios motores e fuso</td><td>Junção neuromuscular</td></tr>
+    <tr><td>Nervo</td><td>Tronco nervoso</td><td>Fascículo nervoso</td><td>Nós de Ranvier</td></tr>
+    <tr><td>Osso</td><td>Periósteo, cortical e trabecular</td><td>Ósteon (Havers e Volkmann)</td><td>Axônio do canal de Havers</td></tr>
+    <tr><td>Crânio e encéfalo</td><td>Couro cabeludo, crânio, meninges e córtex</td><td>Coluna cortical I–VI</td><td>Axônio do SNC com oligodendrócito</td></tr></table></div>
+  <p>No alto do palco, o <b>minimapa</b> mostra onde você está no corpo, e a trilha de ícones leva a qualquer nível. Clique na silhueta para voltar ao corpo inteiro naquele ponto.</p>
+  <h3>Painéis mais simples</h3>
+  <p>Os painéis trocaram títulos longos por ícones; passe o mouse (ou segure no toque) para ver a descrição. No registro de testes: ▶ inicia, ■ encerra, ▦ mostra a tabela completa, ⓘ as limitações, ⤓ e { } baixam CSV e JSON. Cada teste é uma linha que se abre ao clicar.</p>
+</section>
+
 <section id="v011">
   <h2>Pontos, gestos, testes, notas e diário de bordo <span class="mono">v0.11</span></h2>
   <p class="lead">A barra superior agora tem cinco grupos: <b>Teoria</b>, <b>Caso</b> (com as funções do caso ativo), <b>Experimento</b>, <b>Anatomia</b> e <b>Vista</b>, além do botão <b>Iniciar testes</b>.</p>
@@ -604,7 +634,7 @@
 
 </main>
 </div>
-<footer>axon v0.11.2-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../#novidades">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
+<footer>axon v0.12.0-alpha · Manual do Usuário · ferramenta de pesquisa e ensino in silico — não é dispositivo médico · <a href="../#novidades">página do projeto</a> · <a href="manual-tecnico.html">manual técnico</a></footer>
 <script src="doc.js"></script>
 <script src="../js/boot.js"></script>
 <script src="../js/autotrans.js"></script>

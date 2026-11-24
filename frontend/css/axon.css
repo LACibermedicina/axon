@@ -434,3 +434,138 @@ body.sides-swap .ears-left button.lab{border-radius:9px 0 0 9px;border-left:1px 
 body.sides-swap .ears-right button.lab{border-radius:0 9px 9px 0;border-right:1px solid rgba(62,230,197,.22);border-left:0;transform:none}
 body.sides-swap .ears .ear-swap .lab{transform:none}
 body.sides-swap .side-h button{transform:scaleX(-1)}
+
+/* v0.12 — condição do paciente no cartão */
+.pc-cond{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0}.pc-cond i{font-style:normal;font-size:11px;padding:1px 7px;border-radius:9px;background:rgba(211,108,155,.16);color:#ffc2dc;border:1px solid rgba(211,108,155,.35)}
+
+/* v0.12 — painel de propriedades (janelas incorporadas) */
+.props{flex:0 1 auto;max-height:62%;display:flex;flex-direction:column;border-bottom:1px solid rgba(62,230,197,.18);overflow:hidden}
+.props.empty{display:none}
+.props-h{display:flex;align-items:center;gap:6px;padding:6px 12px;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#8fd9c8}
+.props-h i{font-style:normal;opacity:.7}
+.props-list{overflow-y:auto;padding:0 8px 8px;display:flex;flex-direction:column;gap:8px}
+.win.docked{position:relative!important;left:auto!important;top:auto!important;width:auto!important;height:auto!important;max-height:none;z-index:auto!important;box-shadow:none;border-radius:12px;resize:none;flex:0 0 auto}
+.win.docked .tb{cursor:grab;padding:6px 8px}
+.win.docked .body{max-height:52vh;overflow:auto}
+.win.docked.fold .body{display:none}
+.win.docked .lights i[data-a="min"]{background:#ffbd2e}
+.win .tb .dockbt{margin-left:auto;background:rgba(62,230,197,.12);border:1px solid rgba(62,230,197,.35);color:#bff3e6;border-radius:7px;width:24px;height:22px;font-size:13px;line-height:1;cursor:pointer;flex:0 0 auto}
+.win .tb .dockbt:hover{background:rgba(62,230,197,.28)}
+#right.drop{outline:2px dashed #3ee6c5;outline-offset:-4px}
+
+/* v0.12 — interface por dispositivo (body.dev-mobile / dev-tablet / dev-desktop, definido por device.js) */
+body.touch button,body.touch .seg button{min-height:34px}
+body.dev-tablet .side{width:290px}
+body.dev-tablet .ears .ear .lab{padding:10px 6px}
+/* celular: modelo em tela cheia, painéis como gavetas inferiores, barra de navegação embaixo */
+body.dev-mobile{overflow:hidden}
+body.dev-mobile .desk{display:block;position:fixed;inset:48px 0 62px 0;overflow:hidden}
+body.dev-mobile .stage,body.dev-mobile #stage{position:absolute!important;inset:0!important;margin:0!important;min-height:0;border-radius:0}
+body.dev-mobile .side{position:fixed!important;left:0!important;right:0!important;bottom:62px!important;top:auto!important;width:auto!important;height:min(66vh,560px)!important;max-height:none!important;z-index:60;border-radius:18px 18px 0 0;transform:translateY(0);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:0 -12px 40px rgba(0,0,0,.45);display:flex;flex-direction:column}
+body.dev-mobile .side.collapsed{transform:translateY(110%);pointer-events:none}
+body.dev-mobile .side .side-h{justify-content:center;position:relative}
+body.dev-mobile .side .side-h::before{content:"";position:absolute;top:5px;left:50%;width:42px;height:4px;margin-left:-21px;border-radius:3px;background:rgba(255,255,255,.28)}
+body.dev-mobile .ears{display:none!important}
+body.dev-mobile .side-body{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch}
+body.dev-mobile .props{max-height:58%}
+body.dev-mobile .win:not(.docked){left:0!important;right:0!important;width:100%!important;top:auto!important;bottom:62px!important;height:min(80vh,680px)!important;border-radius:18px 18px 0 0;max-width:none}
+body.dev-mobile .win:not(.docked) .tb{height:40px}
+body.dev-mobile .win:not(.docked) .lights i{width:16px;height:16px}
+body.dev-mobile .dock{display:none}
+body.dev-mobile.dock-open .dock{display:flex;position:fixed;left:8px;right:8px;bottom:70px;top:auto;transform:none;flex-wrap:wrap;justify-content:center;gap:8px;padding:12px;border-radius:18px;z-index:70;max-height:50vh;overflow-y:auto}
+body.dev-mobile.dock-open .dock button{width:52px;height:52px}
+body.dev-mobile .menubar{height:48px;padding:0 6px;gap:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+body.dev-mobile .menubar .pill,body.dev-mobile .brand small,body.dev-mobile #verPill,body.dev-mobile #apiPill,body.dev-mobile .modechip{display:none!important}
+body.dev-mobile .tb11 .tbb span,body.dev-mobile .tb11 .tbq span{display:none}
+body.dev-mobile .tb11 button{min-width:38px;min-height:38px}
+body.dev-mobile .disclaimer,body.dev-mobile .warnbar{font-size:10px;padding:2px 8px}
+body.dev-mobile .scalebar{top:6px;left:6px;right:6px;transform:none;overflow-x:auto;max-width:none;justify-content:flex-start}
+body.dev-mobile .scalebar .lab{display:none}
+body.dev-mobile .dkicons{top:52px;left:6px;gap:6px}body.dev-mobile .dkicons button{width:52px}body.dev-mobile .dkicons span{font-size:9.5px}
+body.dev-mobile .bot{transform:scale(.72);transform-origin:bottom right;bottom:70px!important;right:4px!important}
+body.dev-mobile .botask{max-width:calc(100vw - 110px)}
+body.dev-mobile .ixlupa,body.dev-mobile #ixLupa{display:none}
+.mobnav{position:fixed;left:0;right:0;bottom:0;height:62px;z-index:80;display:flex;justify-content:space-around;align-items:stretch;background:rgba(8,22,27,.96);backdrop-filter:blur(16px);border-top:1px solid rgba(62,230,197,.22);padding-bottom:env(safe-area-inset-bottom)}
+.mobnav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:0;color:#9fc7c0;font:600 10.5px Inter,system-ui,sans-serif}
+.mobnav button .ic{width:26px;height:26px;display:flex;align-items:center;justify-content:center}.mobnav button .ic svg{width:24px;height:24px}
+.mobnav button.on{color:#3ee6c5}.mobnav button.on .ic{transform:translateY(-1px) scale(1.06)}
+
+/* v0.12 — ícones 3D animados: squash-and-stretch ao passar o mouse, compressão ao clicar, flutuação suave no dock */
+@keyframes pxBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.6px)}}
+@keyframes pxJump{0%{transform:translateY(0) scale(1,1)}14%{transform:translateY(2px) scale(1.14,.84)}42%{transform:translateY(-8px) scale(.92,1.1)}66%{transform:translateY(1px) scale(1.09,.9)}82%{transform:translateY(-1.5px) scale(.98,1.03)}100%{transform:translateY(0) scale(1,1)}}
+@keyframes pxShadow{0%,100%{transform:scaleX(1);opacity:.3}42%{transform:scaleX(.7);opacity:.14}66%{transform:scaleX(1.08);opacity:.34}}
+@keyframes pxWiggle{0%,100%{transform:rotate(0)}30%{transform:rotate(-7deg) scale(1.04)}65%{transform:rotate(5deg)}}
+svg.pxi{overflow:visible}
+svg.pxi .pxtop{transform-box:fill-box;transform-origin:50% 100%}
+svg.pxi .gl{transform-box:fill-box;transform-origin:50% 60%}
+svg.pxi .pxsh{transform-box:fill-box;transform-origin:50% 50%}
+.dock button svg.pxi .pxtop,.dkicons button svg.pxi .pxtop{animation:pxBob 3.4s ease-in-out infinite}
+.dock button:nth-child(3n+1) svg.pxi .pxtop{animation-delay:-1.1s}.dock button:nth-child(3n+2) svg.pxi .pxtop{animation-delay:-2.3s}
+.dkicons button:nth-child(2) svg.pxi .pxtop{animation-delay:-1.4s}.dkicons button:nth-child(3) svg.pxi .pxtop{animation-delay:-2.6s}
+button:hover svg.pxi .pxtop,a:hover svg.pxi .pxtop,button:focus-visible svg.pxi .pxtop{animation:pxJump .72s cubic-bezier(.3,.7,.4,1) both}
+button:hover svg.pxi .pxsh,a:hover svg.pxi .pxsh{animation:pxShadow .72s cubic-bezier(.3,.7,.4,1) both}
+button:hover svg.pxi .gl,a:hover svg.pxi .gl{animation:pxWiggle .6s .12s ease-in-out both}
+button:active svg.pxi .pxtop{transform:scale(1.1,.86)!important;animation:none!important;transition:transform .08s}
+
+/* v0.12 — dicas, barra de ícones e registro de testes simplificado */
+.axtip{position:fixed;z-index:9999;max-width:280px;padding:7px 10px;border-radius:9px;background:rgba(10,26,31,.97);border:1px solid rgba(62,230,197,.4);color:#e4f6f2;font:500 12px/1.4 Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:none;display:none;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+.axtip.on{opacity:1;transform:none}
+.ibar{display:flex;align-items:center;gap:6px;padding:4px 2px 10px;position:sticky;top:0;z-index:2;background:linear-gradient(var(--panel2,#0f2328) 75%,transparent)}
+.ibar .sp{flex:1}
+.ib{width:34px;height:34px;border-radius:10px;border:1px solid rgba(62,230,197,.3);background:rgba(62,230,197,.08);color:#d9f6ef;font:700 14px/1 Inter,system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:transform .15s cubic-bezier(.3,1.6,.5,1),background .15s}
+.ib:hover{transform:translateY(-2px) scale(1.08);background:rgba(62,230,197,.2)}.ib:active{transform:scale(.92)}
+.ib.on{background:#3ee6c5;color:#06302a;border-color:#3ee6c5}.ib:disabled{opacity:.35;cursor:default;transform:none}
+#tsStart{background:#3ee6c5;color:#06302a;border-color:#3ee6c5;border-radius:50%}#tsStop{background:#ff6b6b;color:#fff;border-color:#ff6b6b;border-radius:50%}
+.ist{font:500 12.5px Inter,system-ui,sans-serif;color:#a9cfc8;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dotlive{width:8px;height:8px;border-radius:50%;background:#ff6b6b;box-shadow:0 0 0 0 rgba(255,107,107,.6);animation:dotl 1.4s infinite}
+@keyframes dotl{70%{box-shadow:0 0 0 7px rgba(255,107,107,0)}100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}}
+.empty{text-align:center;padding:26px 12px;color:#9fc7c0}.empty .eic{font-size:38px;margin-bottom:6px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
+.tlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.tlist li{border:1px solid rgba(150,220,230,.14);border-radius:11px;background:rgba(255,255,255,.03);overflow:hidden}
+.tlist li.open{border-color:rgba(62,230,197,.45)}
+.tl-h{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer}
+.tl-h:hover{background:rgba(62,230,197,.06)}
+.tl-ic{width:30px;height:30px;border-radius:9px;background:rgba(62,230,197,.12);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.tl-n{flex:1;min-width:0;font:600 13px Inter,system-ui,sans-serif;color:#e4f6f2;display:flex;flex-direction:column;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-n small{font-weight:500;color:#8fb3ad;font-size:11px}
+.tl-b{display:flex;flex-direction:column;gap:4px;width:64px;flex:none}
+.tl-b i{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+.tl-b i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--v);border-radius:3px}
+.tl-b i.ab::after{background:#4fb3ff}.tl-b i.ad::after{background:#ff8a3d}
+.tl-p{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 8px var(--c)}
+.tl-w{color:#ffb36b;font-size:14px}
+.tl-d{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;padding:8px 12px 10px 50px;font-size:11.5px;border-top:1px solid rgba(150,220,230,.1)}
+.tl-d dt{color:#8fb3ad}.tl-d dd{margin:0;color:#e4f6f2;word-break:break-word}
+.lim-c{margin-top:8px}
+.ih{display:flex;align-items:center;gap:6px;cursor:help}.xp .ih{margin-top:10px}
+.limd summary,.xp details>summary{cursor:pointer;font:600 13px Inter,system-ui,sans-serif;margin:10px 0 4px;list-style:none}
+.limd summary::-webkit-details-marker{display:none}
+.ictl{display:inline-flex;align-items:center;gap:4px;font:600 13px Inter;color:#bfe8de;padding:0 6px;height:34px;border:1px solid rgba(62,230,197,.25);border-radius:10px}
+.ictl input{width:48px;background:transparent;border:0;color:#fff;font:600 13px Inter;text-align:right}
+/* menus da barra: grade de ícones 3D com nome curto; descrição completa na dica */
+.tb11 .tbg.open .tbm{display:grid!important;grid-template-columns:repeat(3,92px);gap:6px;padding:10px;width:auto;min-width:0}
+.tb11 .tbm .tbsub{grid-column:1/-1}
+.tb11 .tbm button[role=menuitem]{display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start;gap:5px;padding:8px 4px!important;height:auto;text-align:center;border-radius:12px;white-space:normal}
+.tb11 .tbm button[role=menuitem] svg{width:40px!important;height:40px!important;flex:none}
+.tb11 .tbm button[role=menuitem] span{font:600 11px/1.2 Inter,system-ui,sans-serif;color:#dff3ee}
+body.dev-mobile .tb11 .tbg.open .tbm{position:fixed;left:8px!important;right:8px;top:52px;grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+
+/* v0.12 — minimapa: onde se está no corpo e trilha dos níveis */
+.ctxmap{position:absolute;right:58px;top:44px;z-index:7;display:flex;flex-direction:row-reverse;align-items:flex-start;gap:8px;pointer-events:none}
+.ctxmap>*{pointer-events:auto}
+.cm-body{width:54px;height:88px;padding:4px;border-radius:12px;background:rgba(8,22,27,.72);border:1px solid rgba(62,230,197,.28);cursor:pointer;backdrop-filter:blur(8px)}
+.cm-body svg{width:100%;height:100%}
+.cm-sil{fill:rgba(180,230,222,.22);stroke:rgba(180,230,222,.55);stroke-width:1.4}
+.cm-dot{fill:#ff7a59}.cm-ring{fill:none;stroke:#ff7a59;stroke-width:2;opacity:.7;transform-box:fill-box;transform-origin:center;animation:cmPing 1.6s ease-out infinite}
+@keyframes cmPing{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+.cm-crumbs{display:flex;align-items:center;gap:2px;padding:4px 6px;border-radius:12px;background:rgba(8,22,27,.72);border:1px solid rgba(62,230,197,.22);backdrop-filter:blur(8px)}
+.cm-crumbs b{color:#5d8a83;font-weight:400;font-size:12px}
+.cm-crumbs button{display:flex;align-items:center;gap:5px;height:28px;min-width:28px;padding:0 6px;border-radius:9px;border:0;background:none;color:#9fc7c0;cursor:pointer;font:600 11.5px Inter,system-ui,sans-serif;transition:transform .15s cubic-bezier(.3,1.6,.5,1)}
+.cm-crumbs button i{font-style:normal;font-size:15px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+.cm-crumbs button:hover{transform:translateY(-2px) scale(1.08);background:rgba(62,230,197,.1)}
+.cm-crumbs button.past{opacity:.85}.cm-crumbs button:not(.on):not(.past){opacity:.45}
+.cm-crumbs button.on{background:#3ee6c5;color:#06302a}
+body.zen .ctxmap{display:none}
+body.dev-mobile .ctxmap{top:44px;right:6px}body.dev-mobile .cm-body{width:40px;height:66px}body.dev-mobile .cm-crumbs button span{display:none}
+body.dev-mobile .postits{left:auto;right:6px;bottom:70px;width:calc(100vw - 12px);max-height:42vh;z-index:66}
+body.dev-mobile .postits.min{width:auto;left:auto;right:64px;bottom:70px}

@@ -1,17 +1,29 @@
 /* axon · icons.js — ícones volumétricos (estética "Pixar": base brilhante, sombra própria, realce especular). */
 (function (g) {
   let uid = 0;
+  // ícone 3D: laje com espessura (parede lateral), chanfro, símbolo em relevo com brilho especular e sombra própria
   function base(c1, c2, inner) {
     const id = "i" + (uid++);
-    return `<svg viewBox="0 0 64 64" aria-hidden="true"><defs>
+    return `<svg viewBox="0 0 64 64" class="pxi" aria-hidden="true"><defs>
       <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
-      <radialGradient id="${id}s" cx=".5" cy=".2" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-      <linearGradient id="${id}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cfe9ee"/></linearGradient></defs>
-      <rect x="4" y="6" width="56" height="54" rx="15" fill="#000" opacity=".25"/>
-      <rect x="4" y="3" width="56" height="54" rx="15" fill="url(#${id}b)"/>
-      <rect x="4" y="3" width="56" height="54" rx="15" fill="none" stroke="#fff" stroke-opacity=".35"/>
-      ${inner(id)}
-      <ellipse cx="32" cy="14" rx="22" ry="9" fill="url(#${id}s)"/></svg>`;
+      <linearGradient id="${id}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></linearGradient>
+      <linearGradient id="${id}v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient>
+      <radialGradient id="${id}s" cx=".5" cy=".18" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${id}r" cx=".85" cy=".95" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${id}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cfe9ee"/></linearGradient>
+      <filter id="${id}f" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="1.3" result="b"/>
+        <feSpecularLighting in="b" surfaceScale="3.2" specularConstant=".85" specularExponent="18" lighting-color="#fff" result="sp"><fePointLight x="18" y="-12" z="46"/></feSpecularLighting>
+        <feComposite in="sp" in2="SourceAlpha" operator="in" result="spc"/>
+        <feOffset in="SourceAlpha" dy="1.8" result="o"/><feGaussianBlur in="o" stdDeviation="1.2" result="ob"/><feFlood flood-color="#000" flood-opacity=".38"/><feComposite in2="ob" operator="in" result="sh"/>
+        <feMerge><feMergeNode in="sh"/><feMergeNode in="SourceGraphic"/><feMergeNode in="spc"/></feMerge></filter></defs>
+      <ellipse class="pxsh" cx="32" cy="61" rx="24" ry="2.6" fill="#000" opacity=".3"/>
+      <rect x="4" y="8" width="56" height="52" rx="15" fill="url(#${id}w)"/>
+      <g class="pxtop"><rect x="4" y="3" width="56" height="52" rx="15" fill="url(#${id}b)"/>
+      <rect x="5.2" y="4.2" width="53.6" height="49.6" rx="13.8" fill="none" stroke="url(#${id}v)" stroke-width="2.4"/>
+      <rect x="4" y="3" width="56" height="52" rx="15" fill="url(#${id}r)"/>
+      <g class="gl" filter="url(#${id}f)">${inner(id)}</g>
+      <ellipse cx="30" cy="13" rx="21" ry="8" fill="url(#${id}s)"/></g></svg>`;
   }
   const I = {
     app1: base("#3ee6c5", "#0d7f74", id => `<circle cx="32" cy="22" r="6" fill="url(#${id}m)"/><path d="M24 30h16l-3 16h-3l-1 8h-2l-1-8h-3z" fill="url(#${id}m)"/><path d="M24 31l-7 9M40 31l7 9" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path d="M32 29v18" stroke="#ffb547" stroke-width="2"/>`),
@@ -78,5 +90,8 @@
     <path d="M52 118l-16 26M108 118l18-30" stroke="#7fd6e0" stroke-width="10" stroke-linecap="round"/>
     <circle cx="127" cy="86" r="7" fill="#bff7ee"/><rect x="58" y="140" width="12" height="4" rx="2" fill="#4fb3ff"/>
     <ellipse cx="80" cy="190" rx="36" ry="6" fill="#000" opacity=".3"/></svg>`;
-  g.AxonIcons = I;
+  // cada uso recebe ids próprios: o mesmo ícone aparece no dock, na área de trabalho e em menus ocultos, e ids repetidos
+  // fazem o navegador buscar gradientes e filtros numa cópia invisível (o ícone sai preto)
+  let use = 0;
+  g.AxonIcons = new Proxy(I, { get(t, k) { const s = t[k]; if (typeof s !== "string") return s; const u = "_" + (++use).toString(36); return s.replace(/(id="|url\(#)(i\d+)/g, `$1$2${u}`); } });
 })(window);

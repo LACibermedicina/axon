@@ -60,8 +60,17 @@
     const per = f("Aδ") > .25 ? ["dor", "#ff5d5d"] : f("Aδ") > .05 ? ["desconforto / picada", "#ffb36b"] : f("Aβ") > .3 ? ["parestesia forte, confortável", "#ffd166"] : f("Aβ") > .02 ? ["formigamento (limiar de percepção)", "#3ee6c5"] : ["imperceptível", "#8fb3bd"];
     lim.push("Limiares de percepção, desconforto e dor como frações de Aβ/Aδ recrutadas: convenção didática [PREMISSA]");
     lim.push("Geometria anatômica genérica (BodyParts3D) deformada pela biometria; nervos periféricos como trajetos didáticos [PREMISSA]");
+    // alertas do paciente: gestação, ascite, caquexia
+    const alerts = [], V = st.v || {}, D = g.AxonDissect, zone = D && D.trunkZone ? D.trunkZone(det.point) : null, elec = ["tens", "ea", "tavns"].includes(tl);
+    const code = (det.name || "").toUpperCase(), SAF = g.AxonAcuData && g.AxonAcuData.SAFETY;
+    if (V.preg > 0) {
+      if (elec && zone) alerts.push(`Gestação de ${V.preg} semanas: corrente elétrica sobre ${zone === "lombossacral" ? "a região lombossacral" : zone === "pelve" ? "a pelve" : "o abdome"} é contraindicada ou exige precaução [LITERATURA: Houghton et al., Physiother Can 2010, agentes eletrofísicos]`);
+      if (SAF && SAF.pregnancy.includes(code)) alerts.push(`${code} está entre os pontos tradicionalmente evitados na gestação (estímulo uterino) [LITERATURA: OMS, Guidelines on basic training and safety in acupuncture, 1999]`);
+    }
+    if (V.ascites >= 2 && zone && zone !== "lombossacral" && (tl === "ea" || tl === "acu")) alerts.push(`Ascite grau ${V.ascites}: parede abdominal distendida; agulha ou pressão profunda no abdome podem atingir líquido e vísceras [PREMISSA]`);
+    if (V.wasting > .3 && tl === "ea") alerts.push("Pouca gordura subcutânea (caquexia simulada): nervos, vasos e ossos ficam mais superficiais; reduza a profundidade [PREMISSA]");
     const sh = out.sh;
-    return { t: Date.now(), tool: tl, mod: st.mod, I, f: p.f, pw: p.pw, area: p.area, P: p.P, depth: needle ? IX.depth : null, point: det.point, derm: det.code || null, name: det.name || null, nerve: nn.name, mm: nn.mm,
+    return { alerts, t: Date.now(), tool: tl, mod: st.mod, I, f: p.f, pw: p.pw, area: p.area, P: p.P, depth: needle ? IX.depth : null, point: det.point, derm: det.code || null, name: det.name || null, nerve: nn.name, mm: nn.mm,
       dCut, frac, trans, Ieff, Dstar: IX.lastDs, classes, motor: f("Aα"), perception: per[0], perColor: per[1], shannon: sh ? sh.k : null, shannonOk: sh ? sh.ok !== false : true,
       patient: g.AxonMorpho ? g.AxonMorpho.patient() : null, caseTitle: g.AxonSim && g.AxonSim.case ? g.AxonSim.case.title : null, lim, holdS: o.holdS || 0, source: det.source || "corpo" };
   }
@@ -78,19 +87,20 @@
       : r.tool === "ea" ? "verificar quais classes a agulha recruta conforme a distância da ponta ao tronco e se há contração (Aα), base dos efeitos de 2 Hz e 100 Hz"
       : r.tool === "acu" ? "verificar se a pressão fica abaixo do limiar de dor à pressão enquanto ativa mecanorreceptores"
       : "verificar se a intensidade ativa Aβ (controle de portão) sem atingir Aδ (dor) ou Aα (contração)";
-    return `<div class="card xp"><h4>O que calculei</h4><p>${esc(explainShort(r))} ${tag("mod")}</p>
-      <h4>Por quê</h4><p>O limiar de uma fibra mielinizada cai com o diâmetro e sobe com a distância ao eletrodo (função de ativação no modelo nodal de 41 nós). Por isso, a uma mesma corrente, as fibras mais grossas respondem primeiro: o menor diâmetro recrutado agora é <b>D* = ${isFinite(r.Dstar) ? fmt(r.Dstar) + " µm" : "> 16 µm (nenhuma)"}</b>. ${tag("lit")}</p>
-      <h4>O que está acontecendo</h4><p>${esc(TOOLN[r.tool] || r.tool)} em ${esc(r.derm ? "dermátomo " + r.derm : r.name || "ponto")}; nervo mais próximo: ${esc(short(r.nerve))} a ${fmt(r.mm, 0)} mm. Sensação: <b style="color:${r.perColor}">${esc(r.perception)}</b>${r.motor > .05 ? " · contração muscular prevista" : ""}. O trajeto ativado aparece em azul no corpo, com o pulso na velocidade da classe mais recrutada.</p>
-      <h4>O que buscamos descobrir</h4><p>${esc(goal)}.</p>
-      <h4>Fibras envolvidas</h4><table class="tbl">${r.classes.map(c => `<tr><td><b>${c.cls}</b></td><td><div class="bar"><i style="width:${(c.frac * 100).toFixed(0)}%"></i></div></td><td>${fmt(c.frac * 100, 0)} %</td><td><small>${c.Dmed ? "D mediano " + fmt(c.Dmed) + " µm" : esc(c.note || "")}</small></td></tr>`).join("")}</table>
-      <h4>Seletor de diâmetro</h4><div class="ctl"><label><span>Diâmetro da fibra</span><output id="xD">${fmt(IX.Dsel)} µm</output></label><input type="range" id="xDs" min="1" max="16" step=".1" value="${IX.Dsel}"></div><div id="xDo">${dsel(r)}</div>
-      <h4>Limitações</h4><ul class="lim">${r.lim.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
-      <details ${IX.adv ? "open" : ""} id="xAdv"><summary>Detalhamento avançado</summary><table class="tbl">${[
+    return `<div class="card xp"><h4 class="ih" data-tip="O que foi calculado nesta aplicação">🧮 Cálculo</h4><p>${esc(explainShort(r))} ${tag("mod")}</p>
+      <h4 class="ih" data-tip="Por que o modelo chega a esse resultado">💡 Por quê</h4><p>O limiar de uma fibra mielinizada cai com o diâmetro e sobe com a distância ao eletrodo (função de ativação no modelo nodal de 41 nós). Por isso, a uma mesma corrente, as fibras mais grossas respondem primeiro: o menor diâmetro recrutado agora é <b>D* = ${isFinite(r.Dstar) ? fmt(r.Dstar) + " µm" : "> 16 µm (nenhuma)"}</b>. ${tag("lit")}</p>
+      <h4 class="ih" data-tip="O que está acontecendo no tecido e no nervo">▶ Agora</h4><p>${esc(TOOLN[r.tool] || r.tool)} em ${esc(r.derm ? "dermátomo " + r.derm : r.name || "ponto")}; nervo mais próximo: ${esc(short(r.nerve))} a ${fmt(r.mm, 0)} mm. Sensação: <b style="color:${r.perColor}">${esc(r.perception)}</b>${r.motor > .05 ? " · contração muscular prevista" : ""}. O trajeto ativado aparece em azul no corpo, com o pulso na velocidade da classe mais recrutada.</p>
+      <h4 class="ih" data-tip="O que se busca descobrir com este teste">🎯 Objetivo</h4><p>${esc(goal)}.</p>
+      <h4 class="ih" data-tip="Fração recrutada de cada classe de fibra">🧵 Fibras</h4><table class="tbl">${r.classes.map(c => `<tr><td><b>${c.cls}</b></td><td><div class="bar"><i style="width:${(c.frac * 100).toFixed(0)}%"></i></div></td><td>${fmt(c.frac * 100, 0)} %</td><td><small>${c.Dmed ? "D mediano " + fmt(c.Dmed) + " µm" : esc(c.note || "")}</small></td></tr>`).join("")}</table>
+      <h4 class="ih" data-tip="Escolha um diâmetro de fibra e veja o limiar nesse ponto">⌀ Diâmetro</h4><div class="ctl"><label><span>Diâmetro da fibra</span><output id="xD">${fmt(IX.Dsel)} µm</output></label><input type="range" id="xDs" min="1" max="16" step=".1" value="${IX.Dsel}"></div><div id="xDo">${dsel(r)}</div>
+      ${(r.alerts || []).length ? `<div class="warnbox"><b>⚠ Atenção ao paciente simulado</b><ul class="lim">${r.alerts.map(a => `<li>${esc(a)}</li>`).join("")}</ul></div>` : ""}
+      <details class="limd"><summary class="ih" data-tip="O que o modelo não representa, em linguagem didática">ⓘ Limitações (${r.lim.length})</summary><ul class="lim">${r.lim.map(l => `<li>${esc(l)}</li>`).join("")}</ul></details>
+      <details ${IX.adv ? "open" : ""} id="xAdv"><summary class="ih" data-tip="Todas as variáveis da interação e a fórmula usada">⚙ Avançado</summary><table class="tbl">${[
         ["Corrente programada", fmt(r.I, 2) + " mA"], ["Transmissão tecidual", fmt(r.trans, 3)], ["Fração que chega ao ramo", fmt(r.frac, 4)], ["Corrente efetiva", fmt(r.Ieff, 4) + " mA"],
         ["Distância eletrodo–fibra", fmt(r.dCut, 2) + " mm"], ["Largura de pulso · frequência", `${r.pw} µs · ${r.f} Hz`], ["Área do eletrodo", fmt(r.area) + " cm²"], ["Shannon k", r.shannon == null ? "—" : fmt(r.shannon, 2) + (r.shannonOk ? " (dentro de k < 1,85)" : " (acima do limite)")],
         ["Paciente", r.patient ? `${r.patient.sex} ${r.patient.age} anos · ${r.patient.height} cm · IMC ${fmt(r.patient.bmi)}` : "—"], ["Tempo de exposição", fmt(r.holdS) + " s"]].map(([k, v]) => `<tr><td>${k}</td><td>${esc(v)}</td></tr>`).join("")}</table>
         <p class="note">Ith(D, r) = V<sub>th</sub>/h(D, r) com o modelo nodal verificado (semente 42); D* por bissecção em log D; fração recrutada = 1 − Φ((D* − D<sub>med</sub>)/σ) com a distribuição do preditor morfométrico.</p></details>
-      <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn ghost" id="xNote">Anotar esta interação</button><button class="btn ghost" id="xTests">${IX.test.on ? "Ver registro de testes" : "Iniciar testes"}</button></div></div>`;
+      <div class="ibar" style="position:static;padding-top:8px"><button class="ib" id="xNote" data-tip="Anotar esta interação nas notas (post-its)">📝</button><button class="ib" id="xTests" data-tip="${IX.test.on ? "Ver o registro de testes" : "Iniciar uma sessão de testes"}">🧪</button></div></div>`;
   }
   function dsel(r) {
     const D = IX.Dsel, rcm = Math.min(1.5, Math.max(.3, r.dCut)) / 10, th = M().Ith(D, rcm, { pw: (r.pw || 100) * 1e-6 }) * 1e3, cls = Object.entries(g.AxonMorpho.CL).filter(([, c]) => c.my && D >= c.lo && D <= c.hi).map(([k]) => k).join(" / ") || "—";
@@ -113,7 +123,7 @@
     const nn = ST().placeTool(tl, det.point, det.normal); det.nn = nn;
     if (det.ear && tl === "tavns") det.name = det.name || "concha (orelha)";
     const r = evaluate(det, Object.assign({ tool: tl }, o)); IX.res = r; feedback(r);
-    if (!o.quiet) botSay(explainShort(r));
+    if (!o.quiet) botSay(explainShort(r) + ((r.alerts || []).length ? " ⚠ " + r.alerts[0].replace(/\s*\[[^\]]+\]$/, "") : ""));
     log(r); render(); document.dispatchEvent(new CustomEvent("axon:interact", { detail: r }));
     return r;
   }
@@ -149,7 +159,7 @@
       if (e.button !== 0) return; const now = performance.now(), lc = IX.lastClick;
       down = { x: e.clientX, y: e.clientY, t: now, moved: 0, dbl: lc && now - lc.t < 500 && Math.hypot(e.clientX - lc.x, e.clientY - lc.y) < 18, used: false };
       clearTimeout(timer); timer = setTimeout(() => { if (!down || down.moved > 5) return; down.used = true;
-        if (down.dbl) { const det = hitAt(e); const L = ST().level; if (L < 5) { if (det && L === 1) ST().ext().focusOn(det.point, det.normal, .3); setTimeout(() => ST().setLevel(L + 1), 120); botSay(`Entrando no nível ${L + 1} a partir deste ponto.`); } return; }
+        if (down.dbl) { const det = hitAt(e); const L = ST().level; if (L === 1 && det && g.AxonContext) g.AxonContext.set(det, true); if (L < 5) { if (det && L === 1) ST().ext().focusOn(det.point, det.normal, .3); setTimeout(() => ST().setLevel(L + 1), 120); botSay(`Entrando no nível ${L + 1} a partir deste ponto.`); } return; }
         const det = hitAt(e); if (!det) return; if (!tool()) { openTools("Escolha uma ferramenta: depois, clique e segure para aplicar com rampa de intensidade."); return; }
         startHold(e, det); }, 450);
     }, true);
@@ -198,9 +208,9 @@
   // ---------------------------------------------------------------- janelas
   function render() { if (A().isOpen("explain")) explainWin(A().body("explain")); }
   function explainWin(b) {
-    b.innerHTML = `<div class="card"><p class="note"><b>Gestos:</b> 1 clique seleciona · 2º clique no mesmo ponto (após uma pausa) aplica a ferramenta · clique e segure aplica com rampa de ${IX.rampS} s · duplo clique segurando entra no nível seguinte · 🔍 amplia sem trocar de nível.</p>
-      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><b>Ferramenta:</b> ${tool() ? esc(TOOLN[tool()] || tool()) : `<a href="#" id="xT">escolher</a>`}
-      ${tool() === "ea" ? `<label>profundidade <input type="number" id="xDep" min="1" max="40" step=".5" value="${IX.depth}" style="width:64px"> mm</label>` : ""}<label>rampa <input type="number" id="xR" min="1" max="15" step=".5" value="${IX.rampS}" style="width:56px"> s</label></div></div>
+    b.innerHTML = `<div class="ibar" style="position:static"><span class="ib" data-tip="Gestos: 1 clique seleciona · 2º clique no mesmo ponto (após uma pausa) aplica · clique e segure aplica com rampa de ${IX.rampS} s · duplo clique segurando entra no nível seguinte · 4 cliques: o que fica visível · 🔍 amplia sem trocar de nível">✋</span>
+      ${tool() ? `<span class="ist" data-tip="Instrumento em uso">${esc(TOOLN[tool()] || tool())}</span>` : `<button class="ib" id="xT" data-tip="Escolher o instrumento">✚</button>`}<span class="sp"></span>
+      ${tool() === "ea" ? `<label class="ictl" data-tip="Profundidade da agulha (mm)">↧<input type="number" id="xDep" min="1" max="40" step=".5" value="${IX.depth}"></label>` : ""}<label class="ictl" data-tip="Rampa: segundos até a intensidade programada ao clicar e segurar">⤴<input type="number" id="xR" min="1" max="15" step=".5" value="${IX.rampS}"></label></div>
       ${explainHTML(IX.res)}`;
     const xt = $("#xT", b); if (xt) xt.onclick = ev => { ev.preventDefault(); openTools(); };
     const dp = $("#xDep", b); if (dp) dp.onchange = e => { IX.depth = +e.target.value; };
@@ -222,17 +232,29 @@
   const CSVH = ["n", "hora", "ferramenta", "mA", "Hz", "µs", "cm²", "dermátomo", "estrutura", "nervo", "mm", "d_fibra_mm", "I_efetiva_mA", "D*_µm", "Aα", "Aβ", "Aδ", "percepção", "exposição_s", "Shannon_k"];
   function row(e) { const f = c => fmt(((e.classes.find(x => x.cls === c) || {}).frac || 0) * 100, 0); return [e.n, new Date(e.t).toLocaleTimeString(), e.tool, fmt(e.I, 2), e.f, e.pw, e.area, e.derm || "", e.name || "", short(e.nerve), fmt(e.mm, 0), fmt(e.dCut, 2), fmt(e.Ieff, 4), isFinite(e.Dstar) ? fmt(e.Dstar, 2) : ">16", f("Aα"), f("Aβ"), f("Aδ"), e.perception, fmt(e.holdS, 1), e.shannon == null ? "" : fmt(e.shannon, 2)]; }
   function download(name, txt, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+  // registro de testes: barra de ícones (descrição ao passar o mouse), um teste por linha que se abre ao clicar
+  const TV = { full: false, lim: false, open: null };
+  const TOOLIC = { tens: "⚡", ea: "📍", acu: "👆", tavns: "👂", lifu: "〰" };
   function testsWin(b) {
-    const T = IX.test;
-    b.innerHTML = `<div class="card"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">${T.on ? `<span class="pill live">● testes em andamento · ${esc(T.id)}</span><button class="btn" id="tsStop">Encerrar testes</button>` : `<button class="btn" id="tsStart">Iniciar testes</button>`}
-      <button class="btn ghost" id="tsCsv" ${T.entries.length ? "" : "disabled"}>CSV</button><button class="btn ghost" id="tsJson" ${T.entries.length ? "" : "disabled"}>JSON</button></div>
-      <p class="note">${T.caseTitle ? `Caso: <b>${esc(T.caseTitle)}</b> · ` : ""}${T.start ? `início ${new Date(T.start).toLocaleString()}` : "Inicie para registrar cada aplicação com todas as variáveis."} · ${T.entries.length} registros. Ao encerrar, a sessão vai para as notas e o diário de bordo.</p></div>
-      <div class="card"><div class="scroll"><table class="tbl mo"><tr>${CSVH.map(h => `<th>${h}</th>`).join("")}</tr>${T.entries.slice().reverse().map(e => `<tr>${row(e).map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div></div>
-      <div class="card"><h4>Limitações (resumo didático)</h4><ul class="lim">${[...new Set(T.entries.flatMap(e => e.lim))].map(l => `<li>${esc(l)}</li>`).join("") || "<li>As limitações de cada interação aparecem aqui.</li>"}</ul></div>`;
-    const s1 = $("#tsStart", b); if (s1) s1.onclick = () => { startTests(); testsWin(b); };
-    const s2 = $("#tsStop", b); if (s2) s2.onclick = () => { stopTests(); testsWin(b); };
-    const c = $("#tsCsv", b); if (c) c.onclick = () => download(`axon-testes-${T.id}.csv`, [CSVH, ...T.entries.map(row)].map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
-    const j = $("#tsJson", b); if (j) j.onclick = () => download(`axon-testes-${T.id}.json`, JSON.stringify(T, null, 1), "application/json");
+    const T = IX.test, n = T.entries.length, pc = (e, c) => ((e.classes.find(x => x.cls === c) || {}).frac || 0) * 100;
+    const ib = (id, ic, tip, on, dis) => `<button class="ib${on ? " on" : ""}" id="${id}" data-tip="${esc(tip)}" aria-label="${esc(tip)}" ${dis ? "disabled" : ""}>${ic}</button>`;
+    b.innerHTML = `<div class="ibar">${T.on ? ib("tsStop", "■", "Encerrar a sessão de testes; ela vai para as notas e o diário de bordo", false, false) : ib("tsStart", "▶", "Iniciar uma sessão de testes: cada aplicação passa a ser registrada com todas as variáveis", false, false)}
+        <span class="ist">${T.on ? `<i class="dotlive"></i>${n} ${n === 1 ? "teste" : "testes"}` : n ? `${n} ${n === 1 ? "teste" : "testes"}` : "pronto para registrar"}${T.caseTitle ? ` · <span title="${esc(T.caseTitle)}">${esc(T.caseTitle.slice(0, 26))}</span>` : ""}</span>
+        <span class="sp"></span>${ib("tsFull", "▦", "Tabela completa com todas as colunas", TV.full, !n)}${ib("tsLim", "ⓘ", "Limitações do modelo em linguagem didática", TV.lim, false)}${ib("tsCsv", "⤓", "Baixar CSV (planilha)", false, !n)}${ib("tsJson", "{ }", "Baixar JSON (dados completos)", false, !n)}</div>
+      ${!n ? `<div class="empty"><div class="eic">🧪</div><p>${T.on ? "Aplique um instrumento no corpo: cada aplicação aparece aqui." : "Toque em ▶ para começar. Cada aplicação no corpo vira uma linha."}</p></div>` : TV.full
+        ? `<div class="scroll"><table class="tbl mo"><tr>${CSVH.map(h => `<th>${h}</th>`).join("")}</tr>${T.entries.slice().reverse().map(e => `<tr>${row(e).map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`
+        : `<ul class="tlist">${T.entries.slice().reverse().map(e => `<li class="${TV.open === e.n ? "open" : ""}" data-n="${e.n}"><div class="tl-h" data-tip="${esc(e.perception)} · clique para ver todas as variáveis">
+            <span class="tl-ic">${TOOLIC[e.tool] || "•"}</span><span class="tl-n">${esc(e.name || e.derm || "ponto")}<small>${new Date(e.t).toLocaleTimeString().slice(0, 5)} · ${fmt(e.I, 1)} mA · ${e.f} Hz</small></span>
+            <span class="tl-b"><i style="--v:${pc(e, "Aβ")}%" class="ab" data-tip="Aβ (tato) ${fmt(pc(e, "Aβ"), 0)} %"></i><i style="--v:${pc(e, "Aδ")}%" class="ad" data-tip="Aδ (dor) ${fmt(pc(e, "Aδ"), 0)} %"></i></span>
+            <span class="tl-p" style="--c:${e.perColor || "#9fc7c0"}"></span>${(e.alerts || []).length ? `<span class="tl-w" data-tip="${esc(e.alerts[0])}">⚠</span>` : ""}</div>
+            ${TV.open === e.n ? `<dl class="tl-d">${CSVH.map((h, i) => `<dt>${h}</dt><dd>${esc(row(e)[i])}</dd>`).join("")}</dl>` : ""}</li>`).join("")}</ul>`}
+      ${TV.lim ? `<div class="card lim-c"><ul class="lim">${[...new Set(T.entries.flatMap(e => e.lim))].map(l => `<li>${esc(l)}</li>`).join("") || "<li>As limitações de cada interação aparecem aqui depois do primeiro teste.</li>"}</ul></div>` : ""}`;
+    const on = (id, f) => { const x = $("#" + id, b); if (x) x.onclick = f; };
+    on("tsStart", () => { startTests(); testsWin(b); }); on("tsStop", () => { stopTests(); testsWin(b); });
+    on("tsFull", () => { TV.full = !TV.full; testsWin(b); }); on("tsLim", () => { TV.lim = !TV.lim; testsWin(b); });
+    on("tsCsv", () => download(`axon-testes-${T.id}.csv`, [CSVH, ...T.entries.map(row)].map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv"));
+    on("tsJson", () => download(`axon-testes-${T.id}.json`, JSON.stringify(T, null, 1), "application/json"));
+    $$(".tlist .tl-h", b).forEach(h => h.onclick = () => { const k = +h.parentNode.dataset.n; TV.open = TV.open === k ? null : k; testsWin(b); });
   }
   function boot() {
     if (!A() || !A().registerApp || !ST() || !ST().ext || !ST().ext().renderer) return setTimeout(boot, 120);

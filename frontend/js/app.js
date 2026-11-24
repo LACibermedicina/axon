@@ -104,35 +104,66 @@
   // ---------------------------------------------------------------- gerenciador de janelas
   const WM = { wins: {}, z: 40 };
   const APPS = {};
-  function openApp(id) {
+  // Painel de propriedades: janelas de propriedades abrem incorporadas ao painel direito; ⇱ (ou arrastar o título) solta
+  // como janela; ⇲ (ou soltar a janela sobre o painel) reincorpora. A escolha de cada janela fica guardada.
+  const DOCK0 = { patientcard: 1, patient: 1, explain: 1, tests: 1, morpho: 1, terminals: 1, monitor: 1, reflex: 1, depth: 1, relations: 1 };
+  const DOCK = (() => { try { return Object.assign({}, DOCK0, JSON.parse(localStorage.getItem("axon.dock.v1") || "{}")); } catch (e) { return Object.assign({}, DOCK0); } })();
+  const saveDock = () => { try { localStorage.setItem("axon.dock.v1", JSON.stringify(DOCK)); } catch (e) {} };
+  function propsHost() {
+    let h = $("#props"); if (h) return h; const r = $("#right"), rb = $("#rightBody"); if (!r || !rb) return null;
+    h = document.createElement("div"); h.id = "props"; h.className = "props"; h.innerHTML = `<div class="props-h" title="Painel de propriedades: arraste o título de um item para fora para soltá-lo; solte uma janela aqui para reincorporar"><i>☰</i><span>Propriedades</span></div><div class="props-list"></div>`;
+    r.insertBefore(h, rb); return h;
+  }
+  const propsState = () => { const h = $("#props"); if (h) h.classList.toggle("empty", !h.querySelector(".win")); };
+  function dockWin(id, on, at) {
+    const w = WM.wins[id], A = APPS[id]; if (!w) return; const h = propsHost(); if (on && !h) return;
+    DOCK[id] = on ? 1 : 0; saveDock(); w.dataset.big = "0";
+    if (on) { const r = $("#right"); if (r && r.classList.contains("collapsed") && g.AxonWorkbench) g.AxonWorkbench.toggleSide("right");
+      w.classList.add("docked"); w.removeAttribute("style"); h.querySelector(".props-list").prepend(w); w.classList.remove("min"); }
+    else { w.classList.remove("docked"); document.body.appendChild(w); const W = Math.min(A.w, innerWidth - 20), H = Math.min(A.h, innerHeight - 150), x = at ? at.x - 60 : Math.max(20, innerWidth / 2 - W / 2), y = at ? at.y - 14 : 90;
+      Object.assign(w.style, { width: W + "px", height: H + "px", left: Math.max(4, Math.min(innerWidth - 120, x)) + "px", top: Math.max(40, Math.min(innerHeight - 80, y)) + "px" }); focus(w); }
+    const bt = w.querySelector('[data-a="dock"]'); if (bt) { bt.textContent = on ? "⇱" : "⇲"; bt.title = on ? "Soltar como janela (ou arraste o título para fora do painel)" : "Incorporar ao painel de propriedades (ou solte a janela sobre o painel direito)"; }
+    propsState(); setTimeout(() => A.draw && A.draw(w.querySelector(".body")), 30); dockState();
+  }
+  function openApp(id, opt = {}) {
     const A = APPS[id]; if (!A) return;
-    if (WM.wins[id]) { WM.wins[id].classList.remove("min"); focus(WM.wins[id]); return; }
-    if (innerWidth <= 900) Object.keys(WM.wins).forEach(closeApp);
+    if (WM.wins[id]) { const w0 = WM.wins[id]; w0.classList.remove("min"); if (w0.classList.contains("docked")) { if (opt.max) { dockWin(id, false); maxWin(id, true); } else w0.scrollIntoView({ block: "nearest", behavior: "smooth" }); } else { if (opt.max) maxWin(id, true); focus(w0); } return; }
+    if (innerWidth <= 900 && !document.body.classList.contains("dev-mobile")) Object.keys(WM.wins).forEach(closeApp);
     const w = document.createElement("section"); w.className = "win"; w.dataset.app = id; w.setAttribute("role", "dialog"); w.setAttribute("aria-label", t(A.title));
     const desk = $("#stage").getBoundingClientRect();
     const W = Math.min(A.w, innerWidth - 20), H = Math.min(A.h, innerHeight - 150);
     const pos = A.pos ? A.pos(desk, W, H) : { x: desk.left + 40 + Object.keys(WM.wins).length * 26, y: 90 + Object.keys(WM.wins).length * 22 };
     Object.assign(w.style, { width: W + "px", height: H + "px", left: pos.x + "px", top: pos.y + "px" });
-    w.innerHTML = `<div class="tb"><div class="lights"><i title="Fechar" data-a="close"></i><i title="Minimizar" data-a="min"></i><i title="Maximizar" data-a="max"></i></div><div class="t" data-i18n="${A.title}">${t(A.title)}</div></div><div class="body"></div>`;
+    w.innerHTML = `<div class="tb"><div class="lights"><i title="Fechar" data-a="close"></i><i title="Minimizar" data-a="min"></i><i title="Maximizar" data-a="max"></i></div><div class="t" data-i18n="${A.title}">${t(A.title)}</div><button class="dockbt" data-a="dock" title="Incorporar ao painel de propriedades">⇲</button></div><div class="body"></div>`;
     document.body.appendChild(w); WM.wins[id] = w;
     w.querySelector('[data-a="close"]').onclick = () => closeApp(id);
-    w.querySelector('[data-a="min"]').onclick = () => { w.classList.add("min"); dockState(); };
-    w.querySelector('[data-a="max"]').onclick = () => { const big = w.dataset.big === "1"; w.dataset.big = big ? "0" : "1"; Object.assign(w.style, big ? { width: W + "px", height: H + "px", left: pos.x + "px", top: pos.y + "px" } : { width: (innerWidth - 40) + "px", height: (innerHeight - 170) + "px", left: "20px", top: "64px" }); A.draw && A.draw(w.querySelector(".body")); };
+    w.querySelector('[data-a="min"]').onclick = () => { if (w.classList.contains("docked")) { w.classList.toggle("fold"); return; } w.classList.add("min"); dockState(); };
+    w.querySelector('[data-a="max"]').onclick = () => { if (w.classList.contains("docked")) dockWin(id, false); maxWin(id, w.dataset.big !== "1"); };
+    w.querySelector('[data-a="dock"]').onclick = e => { e.stopPropagation(); dockWin(id, !w.classList.contains("docked")); };
     const tb = w.querySelector(".tb"); let d = null;
-    tb.addEventListener("pointerdown", e => { if (e.target.dataset.a) return; d = { x: e.clientX - w.offsetLeft, y: e.clientY - w.offsetTop }; tb.setPointerCapture(e.pointerId); focus(w); });
-    tb.addEventListener("pointermove", e => { if (!d) return; w.style.left = Math.max(-W + 80, Math.min(innerWidth - 80, e.clientX - d.x)) + "px"; w.style.top = Math.max(36, Math.min(innerHeight - 60, e.clientY - d.y)) + "px"; });
-    tb.addEventListener("pointerup", () => d = null);
-    w.addEventListener("pointerdown", () => focus(w));
+    tb.addEventListener("pointerdown", e => { if (e.target.dataset.a) return; d = { x: e.clientX - w.offsetLeft, y: e.clientY - w.offsetTop, sx: e.clientX, sy: e.clientY, docked: w.classList.contains("docked") }; tb.setPointerCapture(e.pointerId); if (!d.docked) focus(w); });
+    tb.addEventListener("pointermove", e => { if (!d) return;
+      if (d.docked) { if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 28) { dockWin(id, false, { x: e.clientX, y: e.clientY }); d = { x: e.clientX - w.offsetLeft, y: e.clientY - w.offsetTop, docked: false }; } return; }
+      w.style.left = Math.max(-W + 80, Math.min(innerWidth - 80, e.clientX - d.x)) + "px"; w.style.top = Math.max(36, Math.min(innerHeight - 60, e.clientY - d.y)) + "px";
+      const r = $("#right"); if (r) { const rr = r.getBoundingClientRect(); r.classList.toggle("drop", e.clientX > rr.left && e.clientX < rr.right && e.clientY > rr.top && e.clientY < rr.bottom); } });
+    tb.addEventListener("pointerup", e => { const r = $("#right"); if (d && !d.docked && r && r.classList.contains("drop")) { r.classList.remove("drop"); dockWin(id, true); } else if (d && d.docked && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 6 && !e.target.dataset.a) w.classList.toggle("fold"); d = null; });
+    w.addEventListener("pointerdown", () => { if (!w.classList.contains("docked")) focus(w); });
     new ResizeObserver(() => A.draw && A.draw(w.querySelector(".body"))).observe(w);
-    A.render(w.querySelector(".body")); focus(w); dockState();
+    A.render(w.querySelector(".body")); focus(w);
+    if (opt.max) maxWin(id, true); else if (DOCK[id] && opt.float !== true) dockWin(id, true);
+    dockState();
   }
-  function closeApp(id) { const w = WM.wins[id]; if (!w) return; try { APPS[id] && APPS[id].onClose && APPS[id].onClose(); } catch (e) {} w.remove(); delete WM.wins[id]; dockState(); }
-  function focus(w) { $$(".win").forEach(x => x.classList.remove("focus")); w.classList.add("focus"); w.style.zIndex = ++WM.z; }
+  function maxWin(id, on) { const w = WM.wins[id], A = APPS[id]; if (!w) return; w.dataset.big = on ? "1" : "0";
+    if (on) { w.classList.remove("min"); Object.assign(w.style, { width: (innerWidth - 40) + "px", height: (innerHeight - 170) + "px", left: "20px", top: "64px" }); focus(w); }
+    else { const W = Math.min(A.w, innerWidth - 20), H = Math.min(A.h, innerHeight - 150); Object.assign(w.style, { width: W + "px", height: H + "px", left: Math.max(20, innerWidth / 2 - W / 2) + "px", top: "90px" }); }
+    A.draw && A.draw(w.querySelector(".body")); }
+  function closeApp(id) { const w = WM.wins[id]; if (!w) return; try { APPS[id] && APPS[id].onClose && APPS[id].onClose(); } catch (e) {} w.remove(); delete WM.wins[id]; dockState(); propsState(); }
+  function focus(w) { if (w.classList.contains("docked")) return; $$(".win").forEach(x => x.classList.remove("focus")); w.classList.add("focus"); w.style.zIndex = ++WM.z; }
   function dockState() { $$(".dock button[data-app]").forEach(b => b.classList.toggle("open", !!WM.wins[b.dataset.app])); }
   // fechamento por duplo clique fora da janela (fecha a janela em foco)
   document.addEventListener("dblclick", e => {
     if (e.target.closest(".win,.dock,.side,.menubar,.bot,.scalebar")) return;
-    const f = $(".win.focus:not(.min)"); if (f) closeApp(f.dataset.app);
+    const f = $(".win.focus:not(.min):not(.docked)"); if (f) closeApp(f.dataset.app);
   });
   const redrawAll = () => Object.entries(WM.wins).forEach(([id, w]) => APPS[id].draw && !w.classList.contains("min") && APPS[id].draw(w.querySelector(".body")));
 
@@ -372,5 +403,5 @@
     fetch("api/health", { signal: ctl.signal }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.project === "axon") { st.api = true; $("#apiPill").textContent = "API " + j.version; $("#apiPill").classList.add("on"); } }).catch(() => {});
   }
   g.AxonApp = { init, openApp, closeApp, state: st, compute, update, tagHTML, esc: x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]), botSay: (s2) => botSay(s2),
-    registerApp(id, def) { APPS[id] = def; }, isOpen: id => !!WM.wins[id], body: id => WM.wins[id] && WM.wins[id].querySelector(".body"), setMod, slider, MODS, FIBERS, renderRight, renderLeft };
+    registerApp(id, def) { APPS[id] = def; }, dockWin, maxWin, DOCK, isOpen: id => !!WM.wins[id], body: id => WM.wins[id] && WM.wins[id].querySelector(".body"), setMod, slider, MODS, FIBERS, renderRight, renderLeft };
 })(window);

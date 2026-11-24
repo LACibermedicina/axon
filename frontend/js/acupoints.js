@@ -312,6 +312,14 @@
     tk && tk.done(`${ok} de ${S.pts.length} pontos posicionados`); document.dispatchEvent(new CustomEvent("axon:acu", { detail: { ready: true, n: ok } }));
     return S;
   }
+  // o paciente mudou (sexo, estatura, gestação…): cada ponto segue o seu vértice da pele; depois recalcula as correlações
+  let refT = 0;
+  document.addEventListener("axon:patient", () => { if (!S.ready) return; const m = E.S.meshByLayer.skin, pa = m.geometry.attributes.position, na = m.geometry.attributes.normal;
+    S.pts.forEach(e => Object.values(e.sides).forEach(arr => arr.forEach(q => { if (q.i == null) return; q.p.set(pa.getX(q.i), pa.getY(q.i), pa.getZ(q.i)); if (na && q.n) q.n.set(na.getX(q.i), na.getY(q.i), na.getZ(q.i)).normalize(); })));
+    draw(); if (S.msLines) drawMS(); S.ver++;
+    clearTimeout(refT); refT = setTimeout(async () => { GS = grid("skin"); GM = E.S.meshByLayer.muscles ? grid("muscles") : null; GB = grid("skeleton"); let k = 0;
+      for (const e of S.pts) { Object.values(e.sides).forEach(arr => arr.forEach(q => Object.assign(q, correlate(q)))); if (++k % 40 === 0) await new Promise(r => setTimeout(r, 0)); }
+      S.ver++; document.dispatchEvent(new CustomEvent("axon:acu", { detail: { ready: true, refreshed: true } })); }, 250); });
   function pos(id, side = "D") { const e = S.byId[id]; if (!e) return null; const s = e.sides[side] || e.sides.M || e.sides.D; return s ? s[0] : null; }
 
   // ---------------------------------------------------------------- desenho 3D

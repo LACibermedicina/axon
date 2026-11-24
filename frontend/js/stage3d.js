@@ -720,7 +720,8 @@
   function fitDist(R) { const v = camera.fov * Math.PI / 360, h = Math.atan(Math.tan(v) * camera.aspect); return R / Math.sin(Math.min(v, h)) * 1.02; }
   const BUILD = { 1: buildBody, 2: buildRegion, 3: buildFascicle, 4: buildAxon, 5: buildMembrane };
   function ensure(l) { if (S.built[l]) return; const gg = BUILD[l](); gg.visible = false; S.groups["L" + l] = gg; scene.add(gg); S.built[l] = true; refresh(); }
-  function syncLabels() { S.labels.forEach(L => L.el.style.display = L.group.visible && !L.el.dataset.hidden ? "" : "none"); }
+  const shown = o => { while (o) { if (!o.visible) return false; o = o.parent; } return true; };   // a etiqueta só aparece se o grupo e todos os pais estiverem visíveis
+  function syncLabels() { S.labels.forEach(L => L.el.style.display = shown(L.group) && !L.el.dataset.hidden ? "" : "none"); }
   function setLevel(l, quiet) {
     l = Math.max(1, Math.min(5, l)); const fade = host.querySelector(".stage-fade"); if (!quiet) fade.classList.add("on");
     setTimeout(() => {
@@ -843,7 +844,7 @@
     placeTool, reflex, nearestNerve, setSimMode(v) { S.simMode = v; if (renderer) renderer.domElement.style.cursor = v ? "crosshair" : "grab"; }, branchComp: () => S.branchComp,
     setBranching(on) { if (S.branchGroup) S.branchGroup.visible = on; },
     highlight(spec) { return highlightSet(spec); }, clearHighlight() { clearReflex(); S.rxSel = null; },
-    ext: () => ({ T, S, V3, camera, scene, renderer, cam, VIEWS, DERM, PAL, fitDist, focusOn, applyReflex, ensureMuscles, partsOf, centroid, tube, glow, lin, showLayer, label }),
+    ext: () => ({ T, S, V3, camera, scene, renderer, cam, VIEWS, DERM, PAL, fitDist, focusOn, applyReflex, ensureMuscles, partsOf, centroid, tube, glow, lin, showLayer, label, phys, glass, metal, nerveMat, LAYERS, syncLabels }),
     rebuildFascicle() { FL = null; const old = S.groups.L3; if (old) { scene.remove(old); S.labels = S.labels.filter(L => { if (L.group === old) { L.el.remove(); return false; } return true; }); delete S.groups.L3; S.built[3] = false; } if (S.level === 3) { ensure(3); S.groups.L3.visible = true; syncLabels(); } return fascLayout(); },
     fascLayout: () => fascLayout(),
     reflexPoints: () => S.rx ? S.rx.list : [], RX_CAT: Object.fromEntries(Object.entries(RX_CAT).map(([k, v]) => [k, { label: v.label, color: hexCss(v.color) }])), RX_ASSOC: Object.fromEntries(Object.entries(RX_ASSOC).map(([k, v]) => [k, hexCss(v)])),

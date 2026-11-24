@@ -237,6 +237,7 @@ def translate(texts: List[str], target: str, context: str = "") -> Dict:
 PATIENT_SYSTEM = (
     "Extract a fictional teaching case from a Portuguese description for a neuromodulation simulator. Reply ONLY with JSON: "
     '{"sex":"M"|"F"|null,"age":int|null,"height":cm|null,"weight":kg|null,"fitz":"I".."VI"|null,"eva":0-10|null,'
+    '"preg":gestational weeks 0-42|null,"ascites":grade 0-3|null,"waist":abdominal circumference cm|null,'
     '"origin":"nociceptiva"|"neuropática"|"nociplástica","dermatomes":["L5",...],"site":"short body region in Portuguese",'
     '"title":"short case title in Portuguese","mechanism":"one sentence","structures":["..."],"descriptors":["..."],'
     '"inflammation":0-1,"sensitization":0-1}. Use only what the text states or clearly implies; unknown → null. '
@@ -253,8 +254,12 @@ def patient(text: str) -> Dict:
         d = json.loads(t[t.find("{"): t.rfind("}") + 1])
     except ValueError:
         return {"mode": "erro", "data": None}
-    allowed = {"sex", "age", "height", "weight", "fitz", "eva", "origin", "dermatomes", "site", "title", "mechanism", "structures", "descriptors", "inflammation", "sensitization"}
-    return {"mode": "ia", "provider": r["provider"], "data": {k: v for k, v in d.items() if k in allowed and v is not None}}
+    allowed = {"sex", "age", "height", "weight", "fitz", "eva", "preg", "ascites", "waist", "origin", "dermatomes", "site", "title", "mechanism", "structures", "descriptors", "inflammation", "sensitization"}
+    out = {k: v for k, v in d.items() if k in allowed and v is not None}
+    for k, lo, hi in (("preg", 0, 42), ("ascites", 0, 3), ("waist", 50, 180)):   # números fora da faixa fisiológica são descartados
+        if k in out and not (isinstance(out[k], (int, float)) and lo <= out[k] <= hi):
+            out.pop(k)
+    return {"mode": "ia", "provider": r["provider"], "data": out}
 
 
 PLAN_SYSTEM = (

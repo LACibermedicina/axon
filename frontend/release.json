@@ -1,8 +1,29 @@
 {
- "version": "0.11.2-alpha",
+ "version": "0.12.0-alpha",
  "sha": "dev",
- "built_at": "2026-11-23T23:01:23Z",
+ "built_at": "2026-11-24T11:08:53Z",
  "releases": [
+  {
+   "version": "0.12.0-alpha",
+   "date": "2026-11-24",
+   "summary": "O corpo 3D passa a refletir sexo e condição do paciente, os níveis de zoom correspondem à estrutura escolhida, e a interface se adapta ao aparelho.",
+   "sections": {
+    "Adicionado": [
+     "Corpo do paciente (dissect.js): uma única malha anatômica (BodyParts3D, masculina, cerca de 165 cm) é deformada conforme o paciente: [PREMISSA] - Estatura: a malha toda segue a altura informada. - Corpo feminino: contorno, mamas e órgãos pélvicos femininos (útero e ovários esquemáticos); os órgãos masculinos são recolhidos. - Gestação de 0 a 42 semanas: um útero que cresce com a idade gestacional empurra a parede abdominal. - Altura do fundo uterino pela regra de McDonald (≈ semanas, de 20 a 36), fundo na sínfise com 12 semanas e na cicatriz umbilical com 20 semanas. [LITERATURA] - Feto esquemático com apresentação cefálica a partir de 32 semanas. [LITERATURA] - Ascite, graus 0 a 3 (International Ascites Club): distensão abdominal com flancos abaulados; no grau 3, umbigo protruso. [LITERATURA] - Perímetro abdominal-alvo: medido no próprio modelo, na altura da crista ilíaca. - Caquexia (IMC abaixo de 18,5, faixas da OMS): menos gordura e massa muscular. [LITERATURA] - Acompanham a deformação: pontos de acupuntura (cada um segue o seu vértice da pele), nervos, pontos reflexos e etiquetas. - Parâmetros biofísicos: a hipoderme acompanha IMC e sexo, e a caquexia zera a gordura. Os novos valores preg, ascites e wasting ficam no estado do simulador. - Texto livre e IA no servidor: reconhecem gestação (semanas ou trimestre), ascite, perímetro abdominal e caquexia. A IA descarta números fora da faixa fisiológica.",
+     "Alertas do paciente simulado: - Gestação: corrente elétrica sobre abdome, pelve ou região lombossacral (Houghton et al., Physiother Can 2010) e os pontos tradicionalmente evitados (OMS 1999). [LITERATURA] - Ascite grau 2 ou mais: agulha ou pressão profunda no abdome. - Caquexia: estruturas mais superficiais. - Os alertas aparecem na explicação, no assistente e no registro de testes.",
+     "Cartão do paciente: avatar conforme sexo, IMC e condição, e etiquetas de gestação, ascite, baixo peso, obesidade e perímetro.",
+     "Painel de propriedades: - O cartão do paciente, a explicação, o registro de testes, o calibre do axônio, as terminações, o monitor e outras janelas abrem incorporados ao painel direito. - ⇱ ou arrastar o título solta a janela; ⇲ ou soltar a janela sobre o painel a reincorpora. A escolha de cada janela fica guardada. - No desktop, os ícones Novo caso, Paciente e Instrumentos abrem as janelas maximizadas.",
+     "Interface por aparelho (device.js): - Reconhece celular, tablet ou desktop por ponteiro, toque, tela e navegador; a escolha pode ser trocada em Vista → Interface. - No celular: modelo em tela cheia, painéis como gavetas inferiores, barra de navegação embaixo, janelas como folhas e notas recolhidas.",
+     "Níveis por estrutura (context.js): os níveis 2 a 5 correspondem ao que foi selecionado: - Pele: camadas da pele, nervo cutâneo e corpúsculo de Pacini. - Músculo: epimísio, fascículos, ponto motor e zona de placas motoras; fascículo muscular com fuso; junção neuromuscular. - Nervo: tronco, fascículo e nós de Ranvier. - Osso: periósteo, cortical e trabecular; ósteon com canais de Havers e Volkmann. - Crânio e encéfalo: as cinco camadas do couro cabeludo, tábuas e díploe, meninges, córtex e substância branca; coluna cortical I–VI; axônio do SNC com oligodendrócito. - Um minimapa iconificado mostra onde se está no corpo e leva a qualquer nível.",
+     "Ícones 3D animados: volume, chanfro, símbolo em relevo com brilho especular; pulam com squash-and-stretch ao passar o mouse e flutuam no dock.",
+     "Painéis simplificados: - O registro de testes ganhou barra de ícones com descrição ao passar o mouse, um teste por linha que se abre ao clicar, tabela completa e limitações sob ícones. - A explicação ganhou seções com ícone e nome curto. - Os menus da barra viraram uma grade de ícones. - Dicas data-tip (segurar no toque)."
+    ],
+    "Corrigido": [
+     "Ícones repetidos (dock, área de trabalho, menus ocultos) podiam sair pretos por ids SVG duplicados; agora cada uso tem ids próprios.",
+     "Etiquetas do nível 1 apareciam nos outros níveis: a visibilidade passa a considerar os grupos pais."
+    ]
+   }
+  },
   {
    "version": "0.11.2-alpha",
    "date": "2026-11-23",
