@@ -8,7 +8,9 @@
   const TG = { lit: ["LITERATURA", "t-lit"], pre: ["PREMISSA", "t-pre"], der: ["DERIVADO", "t-der"], hip: ["HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO", "t-hip"] };
   const tag = k => `<span class="tag ${TG[k][1]}">${TG[k][0]}</span>`;
   const DD = () => g.AxonAcuData, AC = () => g.AxonAcu;
-  const W = { tab: "acu", q: "", mer: null, sel: null, side: "D", ynsa: null, ms: null, aur: null };
+  const W = { tab: "map", q: "", mer: null, sel: null, side: "D", ynsa: null, ms: null, aur: null, view: "F", tech: "acu", cat: null, z: 1, px: 0, py: 0 };
+  const R = () => g.AxonAcuRef;
+  const doi = d => d ? `<a href="https://doi.org/${esc(d)}" target="_blank" rel="noopener">doi:${esc(d)}</a>` : "";
   const REFS = [
     "WHO Western Pacific Region. WHO Standard Acupuncture Point Locations in the Western Pacific Region. Manila: WHO; 2008.",
     "World Health Organization. A proposed standard international acupuncture nomenclature: report of a WHO scientific group. Geneva: WHO; 1991 (inclui as linhas de craniopuntura MS1–MS14).",
@@ -53,8 +55,22 @@
         <tr><td>Osso mais próximo</td><td>${esc(p.bone || "—")} · ${fmt(p.depthBone)} mm</td></tr>
         <tr><td>Coordenada (malha)</td><td class="mono">${p.p.toArray().map(x => fmt(x * 1000)).join(" · ")} mm</td></tr></table>` : `<p class="note">${AC().ready ? "Sem posição calculada para este ponto." : "Posicione os pontos para ver a anatomia calculada."}</p>`}
       ${safe.length ? `<div class="warnbox">${safe.map(s => `<p>⚠ ${esc(D.SAFE_TXT[s])}</p>`).join("")}</div>` : ""}
-      <div class="row" style="gap:6px;flex-wrap:wrap">${p ? `<button class="btn" data-a="show">Mostrar no corpo</button><button class="btn ghost" data-a="apply">Aplicar instrumento aqui</button>` : ""}<button class="btn ghost" data-a="note">Anotar</button></div>
+      <div class="ibar" style="position:static;padding:6px 0">${p ? `<button class="ib" data-a="show" data-tip="Mostrar e destacar no corpo 3D">🎯</button><button class="ib" data-a="press" data-tip="Aplicar acupressão neste ponto">👆</button><button class="ib" data-a="ea" data-tip="Aplicar eletroacupuntura neste ponto">📍</button><button class="ib" data-a="apply" data-tip="Aplicar o instrumento escolhido">⚡</button>` : ""}<button class="ib" data-a="note" data-tip="Anotar este ponto nas notas">📝</button></div>
+      ${refBlock(id, p)}
       <p class="note">Especificação de posicionamento: <span class="mono">${esc(row[3])}</span> ${tag("pre")}</p>`;
+  }
+  // indicações, evidência e referências do ponto (acuref.js)
+  function refBlock(id, p) {
+    if (!R()) return ""; const I = R().info(id, p), N = R().NIVEL;
+    const cat = I.cats.length ? `<h5 class="ih" data-tip="Categoria clássica do ponto e a função atribuída a ela pelas fontes clássicas">🏷 Categorias clássicas</h5><ul class="lim">${I.cats.map(c => `<li><b>${esc(c.t)}</b> — ${esc(c.f)} ${tag("lit")}</li>`).join("")}</ul>` : "";
+    const reg = I.reg.length ? `<h5 class="ih" data-tip="Uso derivado da anatomia calculada na malha deste paciente">🧭 Uso regional e segmentar</h5><ul class="lim">${I.reg.map(t => `<li>${esc(t)} ${tag("der")}</li>`).join("")}</ul>` : "";
+    const ev = `<h5 class="ih" data-tip="Revisões sistemáticas e ensaios conferidos no PubMed; resultado como publicado">🔬 Evidência clínica</h5>${I.ev.length ? I.ev.map(e => { const E = R().EV[e.ev], nv = N[e.nivel] || ["", "t-lit"];
+        return `<div class="evc"><b>${esc(e.cond)}</b> <span class="tag ${nv[1]}">${esc(nv[0])}</span><div class="evt">${e.tec.map(t => `<i>${esc(t)}</i>`).join("")}</div><p>${esc(e.res)}</p><small>${esc(E.tipo)} · ${esc(E.ref)} PMID ${esc(E.pmid)} · ${doi(E.doi)}</small></div>`; }).join("")
+      : `<p class="note">Sem revisão sistemática ou ensaio específico deste ponto nesta base. As indicações acima vêm das categorias clássicas e da anatomia.</p>`}
+      <details class="limd"><summary class="ih" data-tip="Evidência por condição, em que os pontos variam entre os ensaios">ⓘ Evidência por condição (pontos variam)</summary>${R().COND.map(c => { const E = R().EV[c.ev]; return `<div class="evc"><b>${esc(c.cond)}</b><p>${esc(c.res)}</p><small>${esc(E.ref)} PMID ${esc(E.pmid)} · ${doi(E.doi)}</small></div>`; }).join("")}</details>`;
+    const pr = `<h5 class="ih" data-tip="Adequação do ponto à acupressão (pressão digital)">👆 Acupressão</h5><p class="${I.press.ok ? "" : "warnbox"}" style="margin:0">${esc(I.press.t)}</p>`;
+    const refs = `<h5 class="ih" data-tip="Fontes usadas nesta ficha">📚 Referências deste ponto</h5><ol class="refs small">${[...I.src.map(esc), ...I.evRefs.map(E => `${esc(E.ref)} PMID ${esc(E.pmid)}. ${doi(E.doi)}`)].map(r => `<li>${r}</li>`).join("")}</ol>`;
+    return `<div class="acref">${cat}${reg}${ev}${pr}${refs}</div>`;
   }
   function wireDet(b) {
     const box = $("#atDet", b); if (!box) return;
@@ -62,9 +78,97 @@
     $$("[data-a]", box).forEach(x => x.onclick = () => {
       const e = AC().S.byId[W.sel], sd = e && (e.sides[W.side] ? W.side : Object.keys(e.sides)[0]), p = e && e.sides[sd] && e.sides[sd][0];
       if (x.dataset.a === "show") { AC().setShow(true); AC().select(W.sel); }
-      if (x.dataset.a === "apply" && p && g.AxonInteract) g.AxonInteract.applyAt({ point: p.p.toArray(), normal: p.n ? p.n.toArray() : null, code: p.derm, name: `${W.sel} (${sd})`, source: "atlas" });
+      if ((x.dataset.a === "press" || x.dataset.a === "ea") && g.AxonWorkbench) g.AxonWorkbench.setInstr(x.dataset.a === "press" ? "acu" : "ea");
+      if ((x.dataset.a === "apply" || x.dataset.a === "press" || x.dataset.a === "ea") && p && g.AxonInteract) g.AxonInteract.applyAt({ point: p.p.toArray(), normal: p.n ? p.n.toArray() : null, code: p.derm, name: `${W.sel} (${sd})`, source: "atlas" });
       if (x.dataset.a === "note" && g.AxonNotes) g.AxonNotes.add({ title: `${W.sel} · ${e ? e.py : ""}`, text: `${e ? e.loc : ""}${p ? ` — dermátomo ${p.derm}, ${p.muscle || ""}` : ""}`, kind: "ponto", method: "acupuntura" });
     });
+  }
+
+  // ------------------------------------------------------------------ mapa integrado (corpo do paciente projetado)
+  const VW = { F: ["Frente", "🧍", (x, y, z) => [x, y, z], n => n.z], B: ["Costas", "🔙", (x, y, z) => [-x, y, -z], n => -n.z], R: ["Lateral direita", "◀", (x, y, z) => [z, y, -x], n => -n.x], L: ["Lateral esquerda", "▶", (x, y, z) => [-z, y, x], n => n.x] };
+  const CATN = { yuan: "Yuan-fonte", luo: "Luo", xi: "Xi-fenda", bshu: "Shu dorsal", mu: "Mu frontal", hui: "Hui", conf: "Confluente", hei: "He inferior", cmd: "Comando", shu: "Cinco shu", ev: "Com evidência clínica" };
+  const MAP = { bg: {}, hits: [], ver: -1 };
+  function passes(id) {
+    const D = DD(); if (W.mer) { const m = D.M[W.mer]; if (!m || !m.p.some(r => r[0] === id)) return false; }
+    if (W.cat && R()) { if (!R().allCats()[W.cat].includes(id)) return false; }
+    if (W.tech === "press" && R() && !R().pressNote(id).ok) return false;
+    if (W.q.trim()) { const q = W.q.trim().toLowerCase(), e = AC().S.byId[id]; const t = (id + " " + (e ? e.py + " " + e.loc : "")).toLowerCase(); if (!t.includes(q) && !(MAP.qhit && MAP.qhit.has(id))) return false; }
+    return true;
+  }
+  // corpo do paciente renderizado de verdade (malha da pele deformada), câmera ortográfica por vista, renderizador próprio
+  function bodyImage(v) {
+    const S = AC().S, E = g.AxonStage.ext(), sk = E.S.meshByLayer.skin, ver = (S.ver || 0) + "|" + v; if (MAP.bg[v] && MAP.bg[v].ver === ver) return MAP.bg[v];
+    const T = E.T, geo = sk.geometry; if (!geo.boundingBox) geo.computeBoundingBox(); const bb = geo.boundingBox, f = VW[v][2];
+    const cs = [[bb.min.x, bb.min.y, bb.min.z], [bb.max.x, bb.max.y, bb.max.z], [bb.min.x, bb.max.y, bb.max.z], [bb.max.x, bb.min.y, bb.min.z], [bb.min.x, bb.min.y, bb.max.z], [bb.max.x, bb.max.y, bb.min.z]].map(q => f(...q));
+    const pad = .05, x0 = Math.min(...cs.map(q => q[0])) - pad, x1 = Math.max(...cs.map(q => q[0])) + pad, y0 = bb.min.y - pad, y1 = bb.max.y + pad, K = 420;
+    const cw = Math.ceil((x1 - x0) * K), ch = Math.ceil((y1 - y0) * K);
+    if (!MAP.r) { MAP.r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); MAP.r.setPixelRatio(1); if (T.sRGBEncoding) MAP.r.outputEncoding = T.sRGBEncoding; }
+    const r = MAP.r; r.setSize(cw, ch, false); r.setClearColor(0x000000, 0);
+    const sc = new T.Scene(), mat = new T.MeshStandardMaterial({ color: 0xd9a982, roughness: .62, metalness: 0 }), m = new T.Mesh(geo, mat); sc.add(m);
+    sc.add(new T.HemisphereLight(0xfff4ea, 0x2a3a40, .75)); const key = new T.DirectionalLight(0xffffff, .95), rim = new T.DirectionalLight(0x9fe8ff, .55);
+    // câmera olhando o corpo pela vista escolhida
+    const dir = { F: [0, 0, 1], B: [0, 0, -1], R: [-1, 0, 0], L: [1, 0, 0] }[v], cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2, cy = (y0 + y1) / 2;
+    const cam = new T.OrthographicCamera(-(x1 - x0) / 2, (x1 - x0) / 2, (y1 - y0) / 2, -(y1 - y0) / 2, .01, 20);
+    // centro horizontal da projeção: o mesmo usado por f() para os pontos
+    const mid = (x0 + x1) / 2, c3 = { F: [mid, cy, cz + 5], B: [-mid, cy, cz - 5], R: [cx - 5, cy, mid], L: [cx + 5, cy, -mid] }[v];   // centro em que f(x,y,z)[0] = mid
+    cam.position.set(...c3); cam.up.set(0, 1, 0); cam.lookAt(c3[0] - dir[0] * 5, cy, c3[2] - dir[2] * 5);
+    key.position.set(c3[0] + 2, cy + 3, c3[2] + (v === "R" || v === "L" ? 2 : 0)); rim.position.set(c3[0] - dir[0] * 10 + 2, cy + 1, c3[2] - dir[2] * 10 - 1); sc.add(key, rim);
+    r.render(sc, cam); const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch; cv.getContext("2d").drawImage(r.domElement, 0, 0); mat.dispose();
+    return (MAP.bg[v] = { cv, x0, y1, K, ver });
+  }
+  function drawMap(cv) {
+    if (!cv || !AC().ready) return; const v = W.view, bg = bodyImage(v), c = cv.getContext("2d"), Wd = cv.clientWidth, Hd = cv.clientHeight, dpr = devicePixelRatio || 1;
+    if (cv.width !== Wd * dpr) { cv.width = Wd * dpr; cv.height = Hd * dpr; } c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, Wd, Hd);
+    const fit = Math.min(Wd / bg.cv.width, Hd / bg.cv.height) * .96, s = fit * W.z, ox = Wd / 2 - bg.cv.width * s / 2 + W.px, oy = Hd / 2 - bg.cv.height * s / 2 + W.py;
+    c.imageSmoothingQuality = "high"; c.drawImage(bg.cv, ox, oy, bg.cv.width * s, bg.cv.height * s);
+    const toS = q => [ox + (q[0] - bg.x0) * bg.K * s, oy + (bg.y1 - q[1]) * bg.K * s], D = DD(), S = AC().S, f = VW[v][2], fc = VW[v][3];
+    MAP.hits = []; const evs = R() ? new Set(R().allCats().ev) : new Set();
+    Object.entries(D.M).forEach(([mk, m]) => { const seq = {};
+      m.p.forEach(r => { const e = S.byId[r[0]]; if (!e) return; Object.entries(e.sides).forEach(([sd, arr]) => { const q = arr[0]; if (!q || !q.p) return; const pr = f(q.p.x, q.p.y, q.p.z), vis = fc(q.n || { x: 0, y: 0, z: 1 }) > -.12;
+        const [sx, sy] = toS(pr), ok = passes(r[0]); (seq[sd] = seq[sd] || []).push(vis ? { sx, sy, ok, w: q.p } : null); if (vis) MAP.hits.push({ id: r[0], sd, sx, sy, ok, col: m.col, ev: evs.has(r[0]), d: pr[2] }); }); });
+      c.strokeStyle = m.col; c.globalAlpha = W.mer && W.mer !== mk ? .08 : .45; c.lineWidth = 1.4;
+      Object.values(seq).forEach(arr => { for (let i = 1; i < arr.length; i++) { const a = arr[i - 1], b = arr[i]; if (a && b && a.w.distanceTo(b.w) < .55) { c.beginPath(); c.moveTo(a.sx, a.sy); c.lineTo(b.sx, b.sy); c.stroke(); } } }); });
+    c.globalAlpha = 1; MAP.hits.sort((a, b) => a.d - b.d); const r0 = Math.max(2.6, Math.min(6, 2.4 * Math.sqrt(W.z)));
+    MAP.hits.forEach(h => { c.globalAlpha = h.ok ? 1 : .16; c.beginPath(); c.arc(h.sx, h.sy, r0, 0, 6.283); c.fillStyle = h.col; c.fill(); c.lineWidth = 1; c.strokeStyle = "rgba(10,20,25,.85)"; c.stroke();
+      if (h.ev && h.ok) { c.beginPath(); c.arc(h.sx, h.sy, r0 + 2.6, 0, 6.283); c.strokeStyle = "#ffd166"; c.lineWidth = 1.6; c.stroke(); } });
+    c.globalAlpha = 1; c.font = "600 11px Inter,system-ui,sans-serif"; c.textBaseline = "middle";
+    MAP.hits.forEach(h => { const sel = h.id === W.sel, hov = MAP.hov && MAP.hov.id === h.id && MAP.hov.sd === h.sd; if (!(sel || hov || (W.z >= 3.4 && h.ok))) return;
+      if (sel) { c.beginPath(); c.arc(h.sx, h.sy, r0 + 6, 0, 6.283); c.strokeStyle = "#ff7a59"; c.lineWidth = 2.4; c.stroke(); }
+      const t = h.id + (sel || hov ? " · " + (S.byId[h.id] ? S.byId[h.id].py : "") : ""), w = c.measureText(t).width; c.fillStyle = "rgba(8,22,27,.85)"; c.fillRect(h.sx + r0 + 3, h.sy - 8, w + 8, 16); c.fillStyle = sel ? "#ffb59e" : "#e4f6f2"; c.fillText(t, h.sx + r0 + 7, h.sy); });
+    const lg = cv.parentNode.querySelector(".am-leg"); if (lg) { const vis = MAP.hits.filter(h => h.ok).length; lg.textContent = `${VW[v][0]} · ${vis} pontos visíveis${W.mer || W.cat || W.q || W.tech === "press" ? " (filtro ativo)" : ""} · roda: zoom · arrastar: mover`; }
+  }
+  function mapTab(b) {
+    const D = DD(), ready = AC().ready;
+    MAP.qhit = W.q && R() ? R().search(W.q) : null;
+    b.innerHTML = `<div class="amap"><div class="ibar am-bar" style="position:static;flex-wrap:wrap">
+        ${Object.entries(VW).map(([k, [n, ic]]) => `<button class="ib ${W.view === k ? "on" : ""}" data-v="${k}" data-tip="Vista: ${n}">${ic}</button>`).join("")}<button class="ib" data-t2="scalp" data-tip="Couro cabeludo: YNSA e linhas MS">🧠</button><button class="ib" data-t2="ear" data-tip="Orelha: 91 pontos auriculares">👂</button>
+        <span class="sp"></span><div class="seg mini"><button data-tc="acu" class="${W.tech === "acu" ? "on" : ""}" data-tip="Acupuntura: todos os pontos">📍 Acupuntura</button><button data-tc="press" class="${W.tech === "press" ? "on" : ""}" data-tip="Acupressão: só pontos adequados à pressão digital">👆 Acupressão</button></div>
+        <input id="amQ" type="search" placeholder="ponto ou indicação: náusea, dor, PC6…" value="${esc(W.q)}" style="flex:1;min-width:180px"></div>
+      <div class="am-chips">${Object.entries(CATN).map(([k, n]) => `<button class="amc ${W.cat === k ? "on" : ""}" data-c="${k}" data-tip="Filtrar: ${n}">${n}</button>`).join("")}</div>
+      <div class="merchips">${Object.entries(D.M).map(([k, m]) => `<button data-m="${k}" class="${W.mer === k ? "on" : ""}" style="--c:${m.col}" data-tip="${esc(m.n)} (${m.p.length} pontos)">${k}</button>`).join("")}</div>
+      <div class="am-main"><div class="am-cv">${ready ? `<canvas></canvas><div class="am-leg"></div><div class="am-zoom"><button class="ib" data-zm="1.4" data-tip="Aproximar">+</button><button class="ib" data-zm="0.7" data-tip="Afastar">−</button><button class="ib" data-zm="0" data-tip="Corpo inteiro">⤢</button></div>`
+        : `<div class="empty"><div class="eic">🗺</div><p>Os ${D.count()} pontos ainda não foram posicionados no corpo deste paciente.</p><button class="btn" id="amBuild">Posicionar os pontos</button></div>`}</div>
+      <div class="atdet" id="atDet">${W.sel ? detail(W.sel) : `<p class="note">Clique num ponto do mapa. Anel dourado: ponto com evidência clínica conferida. Busque por indicação (náusea, parto, íleo…) ou filtre por categoria.</p>`}</div></div>
+      <p class="note">${tag("lit")} localização OMS 2008; categorias clássicas; evidência conferida no PubMed. ${tag("pre")} posição por proporção corporal sobre a malha do paciente. ${tag("der")} uso regional e segmentar pela anatomia calculada.</p></div>`;
+    $$("[data-v]", b).forEach(x => x.onclick = () => { W.view = x.dataset.v; W.z = 1; W.px = W.py = 0; mapTab(b); });
+    $$("[data-t2]", b).forEach(x => x.onclick = () => { W.tab = x.dataset.t2; win(b.closest(".body") || b.parentNode.parentNode); });
+    $$("[data-tc]", b).forEach(x => x.onclick = () => { W.tech = x.dataset.tc; mapTab(b); });
+    $$("[data-c]", b).forEach(x => x.onclick = () => { W.cat = W.cat === x.dataset.c ? null : x.dataset.c; mapTab(b); });
+    $$(".merchips [data-m]", b).forEach(x => x.onclick = () => { W.mer = W.mer === x.dataset.m ? null : x.dataset.m; mapTab(b); });
+    $("#amQ", b).oninput = e => { W.q = e.target.value; clearTimeout(W.t); W.t = setTimeout(() => { mapTab(b); const i = $("#amQ", b); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 220); };
+    const bb = $("#amBuild", b); if (bb) bb.onclick = async () => { bb.disabled = true; bb.textContent = "Calculando…"; try { await AC().build(); AC().setShow(true); } catch (e) { bb.textContent = "Erro: " + e.message; return; } mapTab(b); };
+    wireDet(b); const cv = $(".am-cv canvas", b); if (!cv) return;
+    const redraw = () => drawMap(cv); requestAnimationFrame(() => { redraw(); if (W.focus && W.sel) { W.focus = false; const h = MAP.hits.find(x => x.id === W.sel && x.sd === W.side) || MAP.hits.find(x => x.id === W.sel);
+      // tela: sx = cx + a·z + px  →  com z' = 2,6 e o ponto no centro: px' = −a·z'
+      if (h) { const cx = cv.clientWidth / 2, cy = cv.clientHeight / 2, ax = (h.sx - cx - W.px) / W.z, ay = (h.sy - cy - W.py) / W.z; W.z = 2.6; W.px = -ax * W.z; W.py = -ay * W.z; redraw(); } } }); new ResizeObserver(redraw).observe(cv);
+    $$("[data-zm]", b).forEach(x => x.onclick = () => { const k = +x.dataset.zm; if (!k) { W.z = 1; W.px = W.py = 0; } else W.z = Math.max(.6, Math.min(12, W.z * k)); redraw(); });
+    cv.addEventListener("wheel", e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left - r.width / 2, my = e.clientY - r.top - r.height / 2, k = e.deltaY < 0 ? 1.18 : 1 / 1.18, z2 = Math.max(.6, Math.min(12, W.z * k)), kk = z2 / W.z;
+      W.px = mx - (mx - W.px) * kk; W.py = my - (my - W.py) * kk; W.z = z2; redraw(); }, { passive: false });
+    let dr = null; cv.addEventListener("pointerdown", e => { dr = { x: e.clientX, y: e.clientY, px: W.px, py: W.py, m: false }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      if (dr) { const dx = e.clientX - dr.x, dy = e.clientY - dr.y; if (Math.hypot(dx, dy) > 4) dr.m = true; if (dr.m) { W.px = dr.px + dx; W.py = dr.py + dy; redraw(); return; } }
+      let best = null, bd = 12; MAP.hits.forEach(h => { const d = Math.hypot(h.sx - x, h.sy - y); if (d < bd) { bd = d; best = h; } }); if ((best && best.id) !== (MAP.hov && MAP.hov.id)) { MAP.hov = best; cv.style.cursor = best ? "pointer" : "grab"; redraw(); } });
+    cv.addEventListener("pointerup", e => { const moved = dr && dr.m; dr = null; if (moved || !MAP.hov) return; W.sel = MAP.hov.id; W.side = MAP.hov.sd; const box = $("#atDet", b); box.innerHTML = detail(W.sel); wireDet(b); box.scrollTop = 0; redraw(); });
   }
 
   // ------------------------------------------------------------------ craniopuntura
@@ -132,16 +236,19 @@
   }
 
   function win(b) {
-    b.innerHTML = `<div class="seg mtabs">${[["acu", "Acupuntura (361 + extras)"], ["scalp", "Craniopuntura"], ["ear", "Aurículo"], ["refs", "Referências"]].map(([k, l]) => `<button data-t="${k}" class="${W.tab === k ? "on" : ""}">${l}</button>`).join("")}</div><div id="atBody"></div>`;
+    b.innerHTML = `<div class="seg mtabs">${[["map", "🗺 Mapa"], ["acu", "Lista (361 + extras)"], ["scalp", "Craniopuntura"], ["ear", "Aurículo"], ["refs", "Referências"]].map(([k, l]) => `<button data-t="${k}" class="${W.tab === k ? "on" : ""}">${l}</button>`).join("")}</div><div id="atBody"></div>`;
     $$(".mtabs button", b).forEach(x => x.onclick = () => { W.tab = x.dataset.t; win(b); });
     const body = $("#atBody", b);
-    if (W.tab === "acu") acuTab(body); else if (W.tab === "scalp") scalpTab(body); else if (W.tab === "ear") earTab(body);
-    else body.innerHTML = `<div class="card"><ol class="refs">${REFS.map(r => `<li>${esc(r)}</li>`).join("")}</ol></div>`;
+    if (W.tab === "map") mapTab(body); else if (W.tab === "acu") acuTab(body); else if (W.tab === "scalp") scalpTab(body); else if (W.tab === "ear") earTab(body);
+    else { const Rf = R(), ev = Rf ? Object.values(Rf.EV) : [], extra = Rf ? Object.values(Rf.SRC).filter(t => !REFS.some(r => r.slice(0, 40) === t.slice(0, 40))) : [];
+      body.innerHTML = `<div class="card"><h4>Localização, nomenclatura e anatomia</h4><ol class="refs">${[...REFS, ...extra].map(r => `<li>${esc(r)}</li>`).join("")}</ol>
+        <h4>Evidência clínica (conferida no PubMed)</h4><ol class="refs">${ev.map(E => `<li>${esc(E.ref)} PMID ${esc(E.pmid)}. ${doi(E.doi)} <small>— ${esc(E.tipo)}</small></li>`).join("")}</ol></div>`; }
   }
   function boot() { const A = g.AxonApp; if (!A || !A.registerApp || !g.AxonAcuData) return setTimeout(boot, 80);
-    A.registerApp("atlas", { title: "atlas", w: 720, h: 800, render: win });
-    document.addEventListener("axon:acupoint", e => { W.sel = e.detail.id; W.tab = "acu"; if (A.isOpen("atlas")) win(A.body("atlas")); });
+    A.registerApp("atlas", { title: "atlas", w: 1120, h: 820, render: win, draw: b => { const cv = b.querySelector(".am-cv canvas"); if (cv) drawMap(cv); } });
+    document.addEventListener("axon:acu", () => { if (A.isOpen("atlas") && W.tab === "map") { const cv = A.body("atlas").querySelector(".am-cv canvas"); if (cv) drawMap(cv); else win(A.body("atlas")); } });
+    document.addEventListener("axon:acupoint", e => { W.sel = e.detail.id; if (W.tab !== "map") W.tab = "acu"; if (A.isOpen("atlas")) win(A.body("atlas")); });
   }
   boot();
-  g.AxonAtlas = { W, open: (tab, sel) => { if (tab) W.tab = tab; if (sel) W.sel = sel; const A = g.AxonApp; if (A.isOpen("atlas")) win(A.body("atlas")); else A.openApp("atlas"); } };
+  g.AxonAtlas = { W, open: (tab, sel) => { if (tab) W.tab = tab; if (sel) { W.sel = sel; W.focus = true; } const A = g.AxonApp; if (A.isOpen("atlas")) win(A.body("atlas")); else A.openApp("atlas"); } };
 })(window);

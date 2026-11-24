@@ -1,8 +1,23 @@
 {
- "version": "0.12.0-alpha",
+ "version": "0.13.0-alpha",
  "sha": "dev",
- "built_at": "2026-11-24T11:08:53Z",
+ "built_at": "2026-11-24T13:26:53Z",
  "releases": [
+  {
+   "version": "0.13.0-alpha",
+   "date": "2026-11-24",
+   "summary": "O atlas ganhou um mapa integrado de todos os pontos, com indicações de uso e referências bibliográficas em cada ficha.",
+   "sections": {
+    "Adicionado": [
+     "Mapa integrado (atlas → 🗺 Mapa): - Mostra os 361 pontos dos meridianos e os 14 extras sobre o corpo do próprio paciente, que segue sexo, gestação e as demais condições. O corpo é renderizado com câmera ortográfica. - Vistas: frente, costas, lateral direita e lateral esquerda, mais atalhos para couro cabeludo (YNSA e linhas MS) e orelha (91 pontos). - Linhas dos meridianos, zoom pela roda, arrastar para mover, clique para abrir a ficha. Um anel dourado marca os pontos com evidência clínica. - Filtros por meridiano, categoria clássica e técnica (o modo acupressão mostra só os pontos adequados à pressão digital), e busca por indicação (\"náusea\", \"parto\", \"íleo\"…).",
+     "Indicações e referências por ponto (acuref.js): - Categorias clássicas: cinco pontos shu, com a função de cada um segundo o Nan Jing 68; yuan; luo; xi; shu dorsal; mu frontal; pontos hui, segundo o Nan Jing 45; confluentes; he inferiores, segundo o Ling Shu 4; e pontos de comando, segundo o Zhenjiu Dacheng. [LITERATURA] - Uso regional e segmentar: calculado na anatomia do paciente (dermátomo, nervo, músculo e segmento visceral correspondente). [DERIVADO] - Evidência clínica conferida no PubMed, com PMID e DOI, e o resultado como publicado, inclusive o inconclusivo ou negativo: - PC6: náusea pós-operatória, náusea por quimioterapia e náusea na gestação. - LI4 e SP6: dor no parto. - BL67: moxabustão na apresentação pélvica. - SP6: dismenorreia. - ST36, SP6, LI4 e TE6: íleo pós-operatório. - ST36: eixo vago-adrenal, em camundongos. [HIPÓTESE / EVIDÊNCIA EM INVESTIGAÇÃO] - Protocolo auricular NADA: dependência de cocaína, sem efeito demonstrado. - Por condição, sem ponto específico: dor crônica e enxaqueca. - Acupressão: adequação de cada ponto, como seio carotídeo, região periorbital, gestação e vasos. - Lista de referências da ficha e aba Referências ampliada.",
+     "Não há lista de indicações tradicionais escrita de memória ponto a ponto. Cada indicação vem de uma categoria clássica, da anatomia ou de evidência conferida."
+    ],
+    "Corrigido": [
+     "O alerta de gestação cita o guia de agentes eletrofísicos (Physiother Can. 2010;62(5):1-80, PMID 21886384) como o PubMed o registra."
+    ]
+   }
+  },
   {
    "version": "0.12.0-alpha",
    "date": "2026-11-24",

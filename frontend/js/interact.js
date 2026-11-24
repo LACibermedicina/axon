@@ -64,7 +64,7 @@
     const alerts = [], V = st.v || {}, D = g.AxonDissect, zone = D && D.trunkZone ? D.trunkZone(det.point) : null, elec = ["tens", "ea", "tavns"].includes(tl);
     const code = (det.name || "").toUpperCase(), SAF = g.AxonAcuData && g.AxonAcuData.SAFETY;
     if (V.preg > 0) {
-      if (elec && zone) alerts.push(`Gestação de ${V.preg} semanas: corrente elétrica sobre ${zone === "lombossacral" ? "a região lombossacral" : zone === "pelve" ? "a pelve" : "o abdome"} é contraindicada ou exige precaução [LITERATURA: Houghton et al., Physiother Can 2010, agentes eletrofísicos]`);
+      if (elec && zone) alerts.push(`Gestação de ${V.preg} semanas: corrente elétrica sobre ${zone === "lombossacral" ? "a região lombossacral" : zone === "pelve" ? "a pelve" : "o abdome"} é contraindicada ou exige precaução [LITERATURA: Electrophysical agents – contraindications and precautions, Physiother Can 2010;62(5):1-80]`);
       if (SAF && SAF.pregnancy.includes(code)) alerts.push(`${code} está entre os pontos tradicionalmente evitados na gestação (estímulo uterino) [LITERATURA: OMS, Guidelines on basic training and safety in acupuncture, 1999]`);
     }
     if (V.ascites >= 2 && zone && zone !== "lombossacral" && (tl === "ea" || tl === "acu")) alerts.push(`Ascite grau ${V.ascites}: parede abdominal distendida; agulha ou pressão profunda no abdome podem atingir líquido e vísceras [PREMISSA]`);
